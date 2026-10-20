@@ -25,11 +25,19 @@ export type Opening = {
 /** What you see once the wall is gone. */
 export type Achtergrond = 'tuin' | 'binnen';
 
+/** How the wall is finished, which is most of what makes a room itself. */
+export type Afwerking = 'oker' | 'kalk' | 'behang';
+
+/** Things standing in the room that are not part of the puzzle. */
+export type Prop = 'boekenkast' | 'balk' | 'tv' | 'aanrecht' | 'stofzuiger' | 'lamp';
+
 export type Surface = {
   readonly id: string;
   readonly ruimte: RoomId;
   readonly naam: string;
   readonly achtergrond: Achtergrond;
+  readonly afwerking: Afwerking;
+  readonly props: readonly Prop[];
   /** Metres. */
   readonly width: number;
   readonly height: number;
@@ -48,6 +56,8 @@ export const SURFACES: readonly Surface[] = [
   {
     id: 'woonkamer-tuinwand',
     achtergrond: 'tuin',
+    afwerking: 'kalk',
+    props: ['boekenkast', 'lamp'],
     ruimte: 'woonkamer',
     naam: 'TUINWAND',
     bron: 'scan2 wand 1, x 6.00-11.35',
@@ -61,6 +71,8 @@ export const SURFACES: readonly Surface[] = [
   {
     id: 'keuken-achterwand',
     achtergrond: 'tuin',
+    afwerking: 'kalk',
+    props: ['aanrecht'],
     ruimte: 'keuken',
     naam: 'ACHTERWAND',
     bron: 'scan2 wand 2, x 5.00-11.25',
@@ -75,6 +87,8 @@ export const SURFACES: readonly Surface[] = [
   {
     id: 'tvkamer-kopgevel',
     achtergrond: 'tuin',
+    afwerking: 'behang',
+    props: ['tv', 'stofzuiger'],
     ruimte: 'tvkamer',
     naam: 'KOPGEVEL',
     bron: 'scan2 wand 6',

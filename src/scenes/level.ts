@@ -10,8 +10,13 @@ import {
 } from '../puzzles/sloop/model.ts';
 import { solve, type Swing } from '../puzzles/sloop/solver.ts';
 import { gridFor, type SloopLevel } from '../puzzles/sloop/levels.ts';
+import { openingCells } from '../puzzles/sloop/generate.ts';
+import { SURFACES, type Surface } from '../data/house.ts';
+import {
+  layout, drawCeiling, drawFloor, drawWallGround, drawWindow, drawOutsideSlice, drawProps,
+  type RoomLayout,
+} from './room.ts';
 
-const TILE = 17;
 const TOP_H = 16;
 const BOTTOM_H = 30;
 
@@ -32,16 +37,34 @@ export class LevelScene implements Scene {
   private hint: Swing | null = null;
   private refused = 0;
 
+  private readonly surface: Surface;
+  private readonly room: RoomLayout;
+  private readonly tile: number;
   private originX = 0;
   private originY = 0;
+  /** The wall as it started, so a window can be told from a hole. */
+  private readonly original: Grid;
 
   constructor(level: SloopLevel, save: Save) {
     this.level = level;
     this.save = save;
     this.grid = gridFor(level);
+    this.original = cloneGrid(this.grid);
     this.par = solve(cloneGrid(this.grid)).par;
-    this.originX = Math.round((WIDTH - this.grid.width * TILE) / 2);
-    this.originY = TOP_H + Math.round((HEIGHT - TOP_H - BOTTOM_H - this.grid.height * TILE) / 2);
+
+    const surface = SURFACES.find((s) => `sloop-${s.id}` === level.id);
+    if (!surface) throw new Error(`no surface behind ${level.id}`);
+    this.surface = surface;
+
+    this.room = layout(TOP_H, BOTTOM_H, HEIGHT);
+    // The wall fills the room exactly, so the puzzle is the wall rather than a
+    // board floating in front of one.
+    this.tile = Math.max(6, Math.min(
+      Math.floor(this.room.wallH / this.grid.height),
+      Math.floor((WIDTH - 24) / this.grid.width),
+    ));
+    this.originX = Math.round((WIDTH - this.grid.width * this.tile) / 2);
+    this.originY = this.room.floorY - this.grid.height * this.tile;
   }
 
   update(dt: number, ctx: SceneContext): void {
@@ -78,8 +101,8 @@ export class LevelScene implements Scene {
   }
 
   private cellUnderMouse(ctx: SceneContext): { x: number; y: number } | null {
-    const x = Math.floor((ctx.input.mouseX - this.originX) / TILE);
-    const y = Math.floor((ctx.input.mouseY - this.originY) / TILE);
+    const x = Math.floor((ctx.input.mouseX - this.originX) / this.tile);
+    const y = Math.floor((ctx.input.mouseY - this.originY) / this.tile);
     if (!ctx.input.mouseOver || at(this.grid, x, y) === undefined) return null;
     return { x, y };
   }
@@ -97,8 +120,8 @@ export class LevelScene implements Scene {
     this.shake = cleared > 0 ? 1 : 0.4;
 
     for (const i of footprint(this.grid, this.tool, x, y)) {
-      const cx = this.originX + (i % this.grid.width) * TILE + TILE / 2;
-      const cy = this.originY + Math.floor(i / this.grid.width) * TILE + TILE / 2;
+      const cx = this.originX + (i % this.grid.width) * this.tile + this.tile / 2;
+      const cy = this.originY + Math.floor(i / this.grid.width) * this.tile + this.tile / 2;
       for (let n = 0; n < 5; n++) {
         this.dust.push({
           x: cx, y: cy,
@@ -118,11 +141,19 @@ export class LevelScene implements Scene {
   }
 
   render(screen: Screen, ctx: SceneContext): void {
-    screen.clear(C.ROET);
     const shakeX = this.shake > 0 ? Math.round(Math.sin(this.time * 70) * this.shake * 2) : 0;
     const shakeY = this.shake > 0 ? Math.round(Math.cos(this.time * 61) * this.shake * 2) : 0;
 
-    this.drawGrid(screen, shakeX, shakeY);
+    // The room, back to front: outside, ceiling, wall, openings, floor, props.
+    screen.clear(C.ZWART);
+    drawCeiling(screen, this.room);
+    drawWallGround(screen, this.room, this.surface.afwerking);
+    this.drawWall(screen, shakeX, shakeY);
+    this.drawOpenings(screen, shakeX, shakeY);
+    drawFloor(screen, this.room, 'marmer');
+    drawProps(screen, this.room, this.surface.props,
+      this.originX, this.originX + this.grid.width * this.tile);
+
     if (!this.won) this.drawPreview(screen, ctx, shakeX, shakeY);
     for (const d of this.dust) screen.set(Math.round(d.x), Math.round(d.y), d.color);
 
@@ -131,90 +162,111 @@ export class LevelScene implements Scene {
     if (this.won) this.drawWon(screen);
   }
 
-  private drawGrid(screen: Screen, sx: number, sy: number): void {
-    screen.fillRect(this.originX - 3 + sx, this.originY - 3 + sy,
-      this.grid.width * TILE + 6, this.grid.height * TILE + 6, C.ZWART);
+  /** Only the cells that are still wall, or have been knocked through. */
+  private drawWall(screen: Screen, sx: number, sy: number): void {
     for (let y = 0; y < this.grid.height; y++) {
       for (let x = 0; x < this.grid.width; x++) {
-        this.drawCell(screen, x, y, this.originX + x * TILE + sx, this.originY + y * TILE + sy);
+        const cell = at(this.grid, x, y)!;
+        // Openings are drawn as whole windows afterwards, not tile by tile.
+        if (at(this.original, x, y) === CELL.LEEG) continue;
+        this.drawCell(screen, x, y, cell,
+          this.originX + x * this.tile + sx, this.originY + y * this.tile + sy);
       }
     }
   }
 
-  private drawCell(screen: Screen, gx: number, gy: number, px: number, py: number): void {
-    const cell = at(this.grid, gx, gy)!;
+  private drawCell(screen: Screen, gx: number, gy: number, cell: CellValue, px: number, py: number): void {
+    const tile = this.tile;
     switch (cell) {
       case CELL.PUIN: {
-        // Old plaster over brick: courses offset every other row.
-        screen.fillRect(px, py, TILE, TILE, C.KALK);
-        screen.ditherRect(px, py, TILE, 4, C.ZANDGRIJS, C.KALK);
-        const offset = (gy % 2) * 8;
-        screen.fillRect(px, py + 8, TILE, 1, C.ZANDGRIJS);
-        screen.fillRect(px + ((offset + 4) % TILE), py, 1, 8, C.ZANDGRIJS);
-        screen.fillRect(px + ((offset + 12) % TILE), py + 9, 1, TILE - 9, C.ZANDGRIJS);
-        screen.fillRect(px, py, TILE, 1, C.WIT);
-        screen.fillRect(px, py + TILE - 1, TILE, 1, C.STEEN);
+        // Plaster over brick, courses offset every other row.
+        screen.fillRect(px, py, tile, tile, C.KALK);
+        screen.ditherRect(px, py, tile, 3, C.ZANDGRIJS, C.KALK);
+        const offset = (gy % 2) * Math.round(tile / 2);
+        screen.fillRect(px, py + Math.round(tile / 2), tile, 1, C.ZANDGRIJS);
+        screen.fillRect(px + ((offset + 4) % tile), py, 1, Math.round(tile / 2), C.ZANDGRIJS);
+        screen.fillRect(px + ((offset + 12) % tile), py + Math.round(tile / 2) + 1, 1, tile, C.ZANDGRIJS);
+        screen.fillRect(px, py, tile, 1, C.WIT);
+        screen.fillRect(px, py + tile - 1, tile, 1, C.STEEN);
         break;
       }
       case CELL.LEEG:
-        this.drawBackdrop(screen, gy, px, py);
+        // Knocked through: you are looking at the garden.
+        this.drawHole(screen, px, py);
         break;
       case CELL.BALK:
-        screen.fillRect(px, py, TILE, TILE, C.HOUT);
-        screen.fillRect(px, py, TILE, 2, C.LICHTHOUT);
-        screen.fillRect(px, py + TILE - 2, TILE, 2, C.STEEN);
-        screen.fillRect(px + 3, py + 6, TILE - 7, 1, C.STEEN);
-        screen.fillRect(px + 5, py + 11, TILE - 9, 1, C.STEEN);
+        screen.fillRect(px, py, tile, tile, C.HOUT);
+        screen.fillRect(px, py, tile, 2, C.LICHTHOUT);
+        screen.fillRect(px, py + tile - 2, tile, 2, C.STEEN);
+        screen.fillRect(px + 3, py + 6, tile - 7, 1, C.STEEN);
+        screen.fillRect(px + 5, py + 11, tile - 9, 1, C.STEEN);
         break;
       case CELL.LEIDING:
-        screen.fillRect(px, py, TILE, TILE, C.ZWART);
+        this.drawHole(screen, px, py);
         this.drawRun(screen, gx, gy, px, py, CELL.LEIDING, C.ASGRIJS, C.ZANDGRIJS);
         break;
       case CELL.KABEL:
-        screen.fillRect(px, py, TILE, TILE, C.ZWART);
+        this.drawHole(screen, px, py);
         this.drawRun(screen, gx, gy, px, py, CELL.KABEL, C.DONKERROOD, C.LICHTOKER);
         break;
     }
   }
 
   /**
-   * What shows through a hole. On an outside wall that is the garden, which
-   * makes knocking the wall down feel like something rather than like deleting
-   * tiles — and it is what he would actually see.
+   * A hole you made. On an outside wall that shows the garden — the same
+   * garden the windows look at, drawn as a slice of one backdrop so a hole
+   * next to a window lines up with it.
    */
-  private drawBackdrop(screen: Screen, gy: number, px: number, py: number): void {
+  private drawHole(screen: Screen, px: number, py: number): void {
     if (this.level.achtergrond === 'binnen') {
-      screen.fillRect(px, py, TILE, TILE, C.ZWART);
-      screen.ditherRect(px + 2, py + 2, TILE - 4, TILE - 4, C.ROET, C.ZWART);
+      screen.fillRect(px, py, this.tile, this.tile, C.ZWART);
+      screen.ditherRect(px + 2, py + 2, this.tile - 4, this.tile - 4, C.ROET, C.ZWART);
       return;
     }
-    const horizon = this.grid.height - 2;
-    if (gy < horizon - 1) {
-      screen.fillRect(px, py, TILE, TILE, C.LUCHTBLAUW);
-    } else if (gy < horizon) {
-      screen.fillRect(px, py, TILE, TILE, C.LUCHTBLAUW);
-      screen.ditherRect(px, py + TILE - 6, TILE, 6, C.MOSGROEN, C.LUCHTBLAUW);
-      screen.fillRect(px, py + TILE - 2, TILE, 2, C.MOSGROEN);
-    } else {
-      screen.fillRect(px, py, TILE, TILE, C.MOSGROEN);
-      screen.ditherRect(px, py, TILE, 3, C.DONKERSALIE, C.MOSGROEN);
-    }
+    drawOutsideSlice(screen, px, py, this.tile, this.tile, this.band().x, this.band().y, this.band().w, this.band().h);
+  }
+
+  /** The strip of outside that sits behind the whole wall. */
+  private band(): { x: number; y: number; w: number; h: number } {
+    return {
+      x: this.originX,
+      y: this.originY,
+      w: this.grid.width * this.tile,
+      h: this.grid.height * this.tile,
+    };
   }
 
   /** Pipes and cables join up with their neighbours instead of sitting as tiles. */
   private drawRun(screen: Screen, gx: number, gy: number, px: number, py: number,
                   kind: CellValue, body: number, shine: number): void {
-    const mid = Math.floor(TILE / 2) - 2;
+    const mid = Math.floor(this.tile / 2) - 2;
     const thick = 5;
     const horizontal = at(this.grid, gx - 1, gy) === kind || at(this.grid, gx + 1, gy) === kind;
     const vertical = at(this.grid, gx, gy - 1) === kind || at(this.grid, gx, gy + 1) === kind;
     if (horizontal || (!horizontal && !vertical)) {
-      screen.fillRect(px, py + mid, TILE, thick, body);
-      screen.fillRect(px, py + mid + 1, TILE, 1, shine);
+      screen.fillRect(px, py + mid, this.tile, thick, body);
+      screen.fillRect(px, py + mid + 1, this.tile, 1, shine);
     }
     if (vertical) {
-      screen.fillRect(px + mid, py, thick, TILE, body);
-      screen.fillRect(px + mid + 1, py, 1, TILE, shine);
+      screen.fillRect(px + mid, py, thick, this.tile, body);
+      screen.fillRect(px + mid + 1, py, 1, this.tile, shine);
+    }
+  }
+
+  /** The windows and doors, drawn whole. */
+  private drawOpenings(screen: Screen, sx: number, sy: number): void {
+    for (const opening of this.surface.openings) {
+      const cells = openingCells(this.surface, opening);
+      if (!cells) continue;
+      drawWindow(
+        screen,
+        this.originX + cells.c0 * this.tile + sx,
+        this.originY + cells.r0 * this.tile + sy,
+        (cells.c1 - cells.c0 + 1) * this.tile,
+        (cells.r1 - cells.r0 + 1) * this.tile,
+        opening.kind,
+        this.band(),
+      );
     }
   }
 
@@ -229,10 +281,10 @@ export class LevelScene implements Scene {
     const pulse = Math.floor(this.time * 8) % 2 === 0;
     const color = legal ? C.SALIE : pulse ? C.ROESTROOD : C.DONKERROOD;
     for (const i of footprint(this.grid, tool, target.x, target.y)) {
-      const px = this.originX + (i % this.grid.width) * TILE + sx;
-      const py = this.originY + Math.floor(i / this.grid.width) * TILE + sy;
-      screen.strokeRect(px, py, TILE, TILE, color);
-      if (!legal) screen.strokeRect(px + 1, py + 1, TILE - 2, TILE - 2, color);
+      const px = this.originX + (i % this.grid.width) * this.tile + sx;
+      const py = this.originY + Math.floor(i / this.grid.width) * this.tile + sy;
+      screen.strokeRect(px, py, this.tile, this.tile, color);
+      if (!legal) screen.strokeRect(px + 1, py + 1, this.tile - 2, this.tile - 2, color);
     }
   }
 
