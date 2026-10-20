@@ -186,7 +186,19 @@ floor plan drops in later without touching puzzle code.
 
 ---
 
-## 9. Open
+## 9. Stand van zaken
+
+Week 1 done: engine, palette, save, house map, and **Sloop playable end to end**.
+
+The Sloop mechanic is minimum set cover with forbidden cells. Hazards are
+visible, so nothing is guesswork: the puzzle is working out where the
+voorhamer still fits and where you have to reach for the beitel. Par is
+computed by an exact solver rather than written down by hand, so it can never
+drift from the level, and the same solver powers the hint.
+
+Three levels, par 8 / 10 / 10, each one pulling in another tool.
+
+## 10. Open
 
 - Final title
 - Final surface selection (needs floor plan)

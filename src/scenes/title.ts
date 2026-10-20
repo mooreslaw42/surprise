@@ -1,6 +1,8 @@
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
+import type { Save } from '../engine/save.ts';
+import { HouseMapScene } from './housemap.ts';
 
 const CEILING_H = 30;
 const WALL_Y = CEILING_H + 6;
@@ -17,10 +19,16 @@ const PAPERED_X = 112;    // ochre wall up to here, wallpaper after it
  * and wool on the right. The whole game in one picture.
  */
 export class TitleScene implements Scene {
+  private readonly save: Save;
   private time = 0;
 
-  update(dt: number, _ctx: SceneContext): void {
+  constructor(save: Save) {
+    this.save = save;
+  }
+
+  update(dt: number, ctx: SceneContext): void {
     this.time += dt;
+    if (ctx.input.confirmed() || ctx.input.mouseClicked) ctx.push(new HouseMapScene(this.save));
   }
 
   render(screen: Screen, _ctx: SceneContext): void {

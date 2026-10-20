@@ -2,6 +2,7 @@ import { Input } from './engine/input.ts';
 import { PALETTE } from './engine/palette.ts';
 import { Screen, WIDTH, HEIGHT } from './engine/screen.ts';
 import type { Scene, SceneContext } from './engine/scene.ts';
+import { Save } from './engine/save.ts';
 import { DesignSheetScene } from './scenes/designsheet.ts';
 import { TitleScene } from './scenes/title.ts';
 
@@ -107,6 +108,7 @@ class Game implements SceneContext {
 
 const canvas = document.getElementById('screen');
 if (!(canvas instanceof HTMLCanvasElement)) throw new Error('canvas #screen missing');
+const save = new Save(typeof localStorage === 'undefined' ? null : localStorage);
 const game = new Game(canvas);
-game.push(new TitleScene());
+game.push(new TitleScene(save));
 game.start();
