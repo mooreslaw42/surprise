@@ -2,6 +2,7 @@ import { Input } from './engine/input.ts';
 import { PALETTE } from './engine/palette.ts';
 import { Screen, WIDTH, HEIGHT } from './engine/screen.ts';
 import type { Scene, SceneContext } from './engine/scene.ts';
+import { DesignSheetScene } from './scenes/designsheet.ts';
 import { TitleScene } from './scenes/title.ts';
 
 /** Fixed timestep, so puzzle logic never sees a variable dt. */
@@ -62,6 +63,12 @@ class Game implements SceneContext {
   private step(dt: number): void {
     if (this.input.justPressed('KeyS')) this.screen.scanlines = !this.screen.scanlines;
     if (this.input.justPressed('KeyP')) this.showPalette = !this.showPalette;
+    // Toggled here rather than inside the scene: if both ends handled the key,
+    // the push and the pop would land on the same frame.
+    if (this.input.justPressed('KeyD')) {
+      if (this.current() instanceof DesignSheetScene) this.pop();
+      else this.push(new DesignSheetScene());
+    }
     if (this.input.justPressed('KeyF')) void document.documentElement.requestFullscreen?.();
 
     this.current()?.update(dt, this);

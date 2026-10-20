@@ -2,128 +2,174 @@ import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
 
-const FLOOR_Y = 176;
-const STUD_SPACING = 40;
-const STUD_W = 6;
+const CEILING_H = 30;
+const WALL_Y = CEILING_H + 6;
+const FLOOR_Y = 168;
+const FOOTER_H = 14;
+
+/** Where the renovation front has got to, left to right. */
+const STRIPPED_X = 236;   // wallpaper gone from here right
+const PAPERED_X = 112;    // ochre wall up to here, wallpaper after it
 
 /**
- * Title screen. A half-stripped wall: studs exposed, insulation half in, floor
- * half laid. The state of the real house, in other words.
+ * Title screen: one wall of the house, caught mid-renovation. Finished ochre
+ * on the left, the old check wallpaper in the middle, stripped back to studs
+ * and wool on the right. The whole game in one picture.
  */
 export class TitleScene implements Scene {
   private time = 0;
 
-  update(dt: number, ctx: SceneContext): void {
+  update(dt: number, _ctx: SceneContext): void {
     this.time += dt;
-    if (ctx.input.confirmed()) {
-      // Placeholder until the house map lands in week 1.
-      this.time = 0;
-    }
   }
 
   render(screen: Screen, _ctx: SceneContext): void {
-    screen.clear(C.BLACK);
+    screen.clear(C.ZWART);
+    this.drawCeiling(screen);
     this.drawWall(screen);
-    this.drawWindow(screen, 300, 98, 60, 46);
     this.drawFloor(screen);
-    this.drawSledgehammer(screen, 26, 118);
+    this.drawSledgehammer(screen, 100, 118);
     this.drawTitle(screen);
 
     if (Math.floor(this.time * 1.6) % 2 === 0) {
-      screen.textCenteredShadow('DRUK OP ENTER OM TE SLOPEN', WIDTH / 2, 152, C.PAINT);
+      screen.textCenteredShadow('DRUK OP ENTER OM TE SLOPEN', WIDTH / 2, 150, C.LICHTOKER, C.ZWART);
     }
-    screen.fillRect(0, HEIGHT - 14, WIDTH, 14, C.BLACK);
-    screen.fillRect(0, HEIGHT - 14, WIDTH, 1, C.STEEL);
-    screen.text('S = SCANLINES   P = PALET   F = VOLLEDIG SCHERM', 6, HEIGHT - 10, C.GREY);
-    screen.text('V0.1', WIDTH - 29, HEIGHT - 10, C.DARKGREY);
+
+    screen.fillRect(0, HEIGHT - FOOTER_H, WIDTH, FOOTER_H, C.ZWART);
+    screen.fillRect(0, HEIGHT - FOOTER_H, WIDTH, 1, C.STEEN);
+    screen.text('S = SCANLINES   P = PALET   D = ONTWERP   F = SCHERM', 6, HEIGHT - 10, C.ASGRIJS);
+    screen.text('V0.2', WIDTH - 29, HEIGHT - 10, C.STEEN);
   }
 
-  /** Stud frame with the cavities dark and a few of them insulated. */
+  /** Tongue-and-groove boards in salie, white beams across. The signature. */
+  private drawCeiling(screen: Screen): void {
+    screen.fillRect(0, 0, WIDTH, CEILING_H, C.SALIE);
+    for (let y = 2; y < CEILING_H; y += 4) {
+      screen.fillRect(0, y, WIDTH, 1, C.DONKERSALIE);
+    }
+    for (let x = 18; x < WIDTH; x += 54) {
+      screen.fillRect(x, 0, 7, CEILING_H, C.KALK);
+      screen.fillRect(x, 0, 1, CEILING_H, C.WIT);
+      screen.fillRect(x + 6, 0, 1, CEILING_H, C.ZANDGRIJS);
+    }
+    // Cornice.
+    screen.fillRect(0, CEILING_H, WIDTH, 4, C.WIT);
+    screen.fillRect(0, CEILING_H + 4, WIDTH, 2, C.ZANDGRIJS);
+  }
+
   private drawWall(screen: Screen): void {
-    screen.fillRect(0, 0, WIDTH, FLOOR_Y, C.DARKGREY);
-    screen.ditherRect(0, 0, WIDTH, FLOOR_Y, C.DARKGREY, C.BLACK);
+    const h = FLOOR_Y - WALL_Y;
 
-    // How full each cavity is, left to right. The house in one array.
-    const FILL = [0, 0.75, 1, 0, 0.45, 1, 0.9, 0, 1, 0.3];
+    // Finished ochre, with the little arched window.
+    screen.fillRect(0, WALL_Y, PAPERED_X, h, C.OKER);
+    screen.ditherRect(0, WALL_Y, PAPERED_X, 10, C.DONKEROKER, C.OKER);
+    this.drawArchedWindow(screen, 40, 108, 42, 32);
 
-    let stud = 0;
-    for (let x = -8; x < WIDTH; x += STUD_SPACING, stud++) {
-      const fill = FILL[stud % FILL.length]!;
+    // The old check wallpaper.
+    this.drawWallpaper(screen, PAPERED_X, WALL_Y, STRIPPED_X - PAPERED_X, h);
+
+    // Stripped back: plaster, studs, and wool in the cavities.
+    screen.fillRect(STRIPPED_X, WALL_Y, WIDTH - STRIPPED_X, h, C.ROET);
+    const FILL = [1, 0.55, 0, 1, 0.8];
+    let cavity = 0;
+    for (let x = STRIPPED_X; x < WIDTH; x += 30, cavity++) {
+      const fill = FILL[cavity % FILL.length]!;
       if (fill > 0) {
-        const cavityX = x + STUD_W;
-        const cavityW = STUD_SPACING - STUD_W;
-        const h = Math.round(FLOOR_Y * fill);
-        screen.ditherRect(cavityX, FLOOR_Y - h, cavityW, h, C.LIGHTRED, C.PLASTER);
-        screen.fillRect(cavityX, FLOOR_Y - h, cavityW, 1, C.PLASTER);
+        const wh = Math.round(h * fill);
+        screen.ditherRect(x + 5, FLOOR_Y - wh, 25, wh, C.BOTERGEEL, C.LICHTOKER);
+        screen.fillRect(x + 5, FLOOR_Y - wh, 25, 1, C.WIT);
       }
-      screen.fillRect(x, 0, STUD_W, FLOOR_Y, C.WOOD);
-      screen.fillRect(x, 0, 1, FLOOR_Y, C.PINE);
-      screen.fillRect(x + STUD_W - 1, 0, 1, FLOOR_Y, C.BROWN);
+      screen.fillRect(x, WALL_Y, 5, h, C.HOUT);
+      screen.fillRect(x, WALL_Y, 1, h, C.LICHTHOUT);
+      screen.fillRect(x + 4, WALL_Y, 1, h, C.STEEN);
     }
 
-    // Horizontal regel across the studs.
-    screen.fillRect(0, 96, WIDTH, 5, C.WOOD);
-    screen.fillRect(0, 96, WIDTH, 1, C.PINE);
-    screen.fillRect(0, 100, WIDTH, 1, C.BROWN);
-  }
-
-  /** A hole to the outside, because it is December and the frame is not in yet. */
-  private drawWindow(screen: Screen, x: number, y: number, w: number, h: number): void {
-    screen.fillRect(x, y, w, h, C.BLUE);
-    screen.ditherRect(x, y, w, 10, C.BLUE, C.BLACK);
-    for (const [sx, sy] of [[8, 8], [22, 16], [40, 6], [50, 22], [14, 30], [34, 34]] as const) {
-      screen.set(x + sx, y + sy, C.WHITE);
+    // The torn edge where the paper stops.
+    for (let y = WALL_Y; y < FLOOR_Y; y += 3) {
+      const jag = ((y * 7919) % 13) - 6;
+      const curl = ((y * 104729) % 5) + 2;
+      screen.fillRect(STRIPPED_X + jag - curl, y, curl, 3, C.KALK);
+      screen.fillRect(STRIPPED_X + jag - curl, y, 1, 3, C.ZANDGRIJS);
     }
-    screen.fillRect(x + w - 18, y + 6, 8, 8, C.PAINT);
-    screen.fillRect(x + w - 16, y + 6, 6, 6, C.BLUE);
-    screen.strokeRect(x - 1, y - 1, w + 2, h + 2, C.STEEL);
   }
 
-  /** Planks laid from the left, bare screed on the right. */
+  /** Cream ground, yellow grid, faint grey cross-line. Straight off the wall. */
+  private drawWallpaper(screen: Screen, x: number, y: number, w: number, h: number): void {
+    screen.fillRect(x, y, w, h, C.KALK);
+    for (let gx = x; gx < x + w; gx += 8) screen.fillRect(gx, y, 1, h, C.LICHTOKER);
+    for (let gy = y; gy < y + h; gy += 8) screen.fillRect(x, gy, w, 1, C.LICHTOKER);
+    for (let gx = x + 4; gx < x + w; gx += 24) screen.fillRect(gx, y, 1, h, C.ZANDGRIJS);
+    for (let gy = y + 4; gy < y + h; gy += 24) screen.fillRect(x, gy, w, 1, C.ZANDGRIJS);
+  }
+
+  private drawArchedWindow(screen: Screen, x: number, y: number, w: number, h: number): void {
+    screen.fillRect(x, y + 4, w, h - 4, C.LUCHTBLAUW);
+    screen.fillRect(x + 3, y + 1, w - 6, 4, C.LUCHTBLAUW);   // shallow arch
+    screen.fillRect(x + 9, y, w - 18, 2, C.LUCHTBLAUW);
+    screen.ditherRect(x, y + h - 12, w, 12, C.MOSGROEN, C.LUCHTBLAUW);
+    screen.fillRect(x, y + h - 6, w, 6, C.MOSGROEN);
+    for (let mx = x + 13; mx < x + w - 2; mx += 13) screen.fillRect(mx, y + 1, 1, h - 1, C.WIT);
+    for (let my = y + 11; my < y + h - 2; my += 11) screen.fillRect(x, my, w, 1, C.WIT);
+    screen.strokeRect(x - 2, y - 2, w + 4, h + 4, C.WIT);
+    screen.fillRect(x - 3, y + h + 1, w + 6, 3, C.KALK);
+  }
+
+  /** Mahogany laid from the left, bare subfloor where the work is. */
   private drawFloor(screen: Screen): void {
-    screen.fillRect(0, FLOOR_Y, WIDTH, HEIGHT - FLOOR_Y, C.GREY);
-    screen.ditherRect(0, FLOOR_Y, WIDTH, HEIGHT - FLOOR_Y, C.GREY, C.DARKGREY);
+    const laidTo = STRIPPED_X - 40;
+    const h = HEIGHT - FLOOR_Y;
 
-    const laidTo = 232;
-    for (let y = FLOOR_Y; y < HEIGHT; y += 7) {
-      const row = (y - FLOOR_Y) / 7;
-      screen.fillRect(0, y, laidTo, 7, row % 2 === 0 ? C.WOOD : C.PINE);
-      screen.fillRect(0, y, laidTo, 1, C.BROWN);
-      // Staggered end joints, the whole point of the Vloeren stage.
-      for (let jx = (row % 3) * 26; jx < laidTo; jx += 78) {
-        screen.fillRect(jx, y, 1, 7, C.BROWN);
+    // Bare subfloor everywhere, then real boards over the finished part.
+    screen.fillRect(0, FLOOR_Y, WIDTH, h, C.LICHTHOUT);
+    screen.ditherRect(laidTo, FLOOR_Y, WIDTH - laidTo, h, C.LICHTHOUT, C.HOUT);
+
+    const BOARD_H = 11;
+    for (let i = 0, y = FLOOR_Y; y < HEIGHT; i++, y += BOARD_H) {
+      screen.fillRect(0, y, laidTo, BOARD_H, C.MAHONIE);
+      screen.fillRect(0, y, laidTo, 1, C.ROET);                   // board edge
+      screen.fillRect(0, y + 1, laidTo, 1, C.DONKERROOD);         // shadow under it
+      // Grain: a few long dashes, offset per board so it never tiles visibly.
+      for (let gx = (i * 37) % 41; gx < laidTo; gx += 41) {
+        screen.fillRect(gx, y + 4 + (gx % 4), 7, 1, C.DONKERROOD);
+      }
+      // Butt joints, staggered.
+      for (let jx = ((i % 3) + 1) * 31; jx < laidTo; jx += 93) {
+        screen.fillRect(jx, y, 1, BOARD_H, C.ROET);
       }
     }
-    screen.fillRect(laidTo, FLOOR_Y, 2, HEIGHT - FLOOR_Y, C.BROWN);
+    screen.fillRect(laidTo, FLOOR_Y, 2, h, C.ROET);
+    screen.fillRect(0, FLOOR_Y - 3, WIDTH, 3, C.WIT);             // plint
+    screen.fillRect(0, FLOOR_Y - 3, WIDTH, 1, C.ZANDGRIJS);
   }
 
   private drawSledgehammer(screen: Screen, x: number, y: number): void {
-    for (let i = 0; i < 56; i++) {
-      const hx = x + Math.round(i * 0.4);
-      screen.fillRect(hx, y + i, 4, 1, C.WOOD);
-      screen.fillRect(hx, y + i, 1, 1, C.PINE);
+    for (let i = 0; i < 58; i++) {
+      const hx = x + Math.round(i * 0.38);
+      screen.fillRect(hx, y + i, 4, 1, C.HOUT);
+      screen.fillRect(hx, y + i, 1, 1, C.LICHTHOUT);
     }
-    screen.fillRect(x - 9, y - 11, 22, 13, C.STEEL);
-    screen.fillRect(x - 9, y - 11, 22, 3, C.LIGHTGREY);
-    screen.fillRect(x - 9, y - 1, 22, 3, C.BLACK);
-    screen.fillRect(x - 2, y - 11, 8, 13, C.DARKGREY);
+    screen.fillRect(x - 9, y - 11, 22, 13, C.ASGRIJS);
+    screen.fillRect(x - 9, y - 11, 22, 3, C.ZANDGRIJS);
+    screen.fillRect(x - 9, y - 1, 22, 3, C.ROET);
+    screen.fillRect(x - 2, y - 11, 8, 13, C.STEEN);
   }
 
   private drawTitle(screen: Screen): void {
     const top = 'DE EEUWIGE';
     const bottom = 'VERBOUWING';
-    const topX = Math.round((WIDTH - screen.textScaledWidth(top, 3)) / 2);
+    const topX = Math.round((WIDTH - screen.textScaledWidth(top, 2)) / 2);
     const bottomX = Math.round((WIDTH - screen.textScaledWidth(bottom, 4)) / 2);
 
-    screen.fillRect(0, 20, WIDTH, 76, C.BLACK);
-    screen.fillRect(0, 20, WIDTH, 1, C.STEEL);
-    screen.fillRect(0, 95, WIDTH, 1, C.STEEL);
+    // The banner sits below the cornice, so the salie ceiling stays visible.
+    screen.fillRect(0, 40, WIDTH, 60, C.ZWART);
+    screen.fillRect(0, 40, WIDTH, 1, C.MAGENTA);
+    screen.fillRect(0, 99, WIDTH, 1, C.MAGENTA);
 
-    screen.textScaled(top, topX + 2, 26, C.BROWN, 3);
-    screen.textScaled(top, topX, 24, C.YELLOW, 3);
-    screen.textScaled(bottom, bottomX + 2, 50, C.RED, 4);
-    screen.textScaled(bottom, bottomX, 48, C.PAINT, 4);
+    screen.textScaled(top, topX + 1, 47, C.DONKEROKER, 2);
+    screen.textScaled(top, topX, 46, C.LICHTOKER, 2);
+    screen.textScaled(bottom, bottomX + 2, 64, C.DONKERROOD, 4);
+    screen.textScaled(bottom, bottomX, 62, C.KALK, 4);
 
-    screen.textCentered('EEN SINTERKLAASSURPRISE VOOR WOUTER', WIDTH / 2, 85, C.LIGHTGREY);
+    screen.textCentered('EEN SINTERKLAASSURPRISE VOOR WOUTER', WIDTH / 2, 91, C.SALIE);
   }
 }
