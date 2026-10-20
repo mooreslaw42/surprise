@@ -204,6 +204,12 @@ real ceiling height, real windows, with a lintel over each opening. Knock a
 hole in an outside wall and you see the garden.
 
 Which wall belongs to which room is still a guess, and marked so in the data.
+Nothing downstream depends on it: relabelling is three fields in house.ts.
+
+Week 2, Elektra: run a cable from every stopcontact to the meterkast without
+any two crossing, around the real windows and lintels. The no-crossing rule
+took three goes to get right — see model.ts — and the solver that sets par
+also proves every level is wireable.
 
 ## 10. Open
 

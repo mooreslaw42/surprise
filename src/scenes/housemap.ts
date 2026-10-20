@@ -5,7 +5,10 @@ import type { Save } from '../engine/save.ts';
 import { ROOM_NAMES } from '../data/house.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import { SLOOP_LEVELS } from '../puzzles/sloop/levels.ts';
+import { ELEKTRA_LEVELS } from '../puzzles/elektra/levels.ts';
+import { STAGES } from '../data/stages.ts';
 import { LevelScene } from './level.ts';
+import { ElektraScene } from './elektra.ts';
 
 const CARD_W = 108;
 const CARD_H = 92;
@@ -18,21 +21,40 @@ const CARD_Y = 54;
 export class HouseMapScene implements Scene {
   private readonly save: Save;
   private selected = 0;
+  private stage = 0;
   private time = 0;
 
   constructor(save: Save) {
     this.save = save;
+    // Drop the player at the furthest stage they have opened.
+    while (this.stage + 1 < STAGES.length && this.stageDone(this.stage)) this.stage++;
+  }
+
+  private entries() {
+    return STAGES[this.stage]!.entries;
+  }
+
+  private stageDone(stage: number): boolean {
+    return STAGES[stage]!.entries.every((e) => this.save.isDone(e.id));
   }
 
   private cardX(i: number): number {
     const gap = 12;
-    const total = SLOOP_LEVELS.length * CARD_W + (SLOOP_LEVELS.length - 1) * gap;
+    const n = this.entries().length;
+    const total = n * CARD_W + (n - 1) * gap;
     return Math.round((WIDTH - total) / 2) + i * (CARD_W + gap);
   }
 
   update(dt: number, ctx: SceneContext): void {
     this.time += dt;
-    const n = SLOOP_LEVELS.length;
+    const n = this.entries().length;
+    if (ctx.input.justPressed('Tab')) {
+      // Only ever forward into a stage that has actually been unlocked.
+      if (this.stage + 1 < STAGES.length && this.stageDone(this.stage)) this.stage++;
+      else if (this.stage > 0) this.stage--;
+      this.selected = 0;
+      return;
+    }
     if (ctx.input.justPressed('ArrowLeft')) this.selected = (this.selected + n - 1) % n;
     if (ctx.input.justPressed('ArrowRight')) this.selected = (this.selected + 1) % n;
     if (ctx.input.justPressed('Escape')) ctx.pop();
@@ -51,7 +73,15 @@ export class HouseMapScene implements Scene {
   }
 
   private open(ctx: SceneContext, index: number): void {
-    ctx.push(new LevelScene(SLOOP_LEVELS[index]!, this.save));
+    const entry = this.entries()[index];
+    if (!entry) return;
+    if (STAGES[this.stage]!.kind === 'sloop') {
+      const level = SLOOP_LEVELS.find((l) => l.id === entry.id);
+      if (level) ctx.push(new LevelScene(level, this.save));
+    } else {
+      const level = ELEKTRA_LEVELS.find((l) => l.id === entry.id);
+      if (level) ctx.push(new ElektraScene(level, this.save));
+    }
   }
 
   render(screen: Screen, _ctx: SceneContext): void {
@@ -60,28 +90,31 @@ export class HouseMapScene implements Scene {
 
     screen.fillRect(0, 0, WIDTH, 20, C.ZWART);
     screen.fillRect(0, 19, WIDTH, 1, C.STEEN);
-    screen.text('FASE 1 - SLOOP', 6, 7, C.LICHTOKER);
+    const stage = STAGES[this.stage]!;
+    screen.text(`FASE ${stage.nummer} - ${stage.naam}`, 6, 7, C.LICHTOKER);
 
-    const done = SLOOP_LEVELS.filter((l) => this.save.isDone(l.id)).length;
-    const label = `${done} / ${SLOOP_LEVELS.length} RUIMTES`;
-    screen.text(label, WIDTH - 6 - label.length * 6, 7, done === SLOOP_LEVELS.length ? C.SALIE : C.ASGRIJS);
+    const entries = this.entries();
+    const done = entries.filter((e) => this.save.isDone(e.id)).length;
+    const label = `${done} / ${entries.length} RUIMTES`;
+    screen.text(label, WIDTH - 6 - label.length * 6, 7, done === entries.length ? C.SALIE : C.ASGRIJS);
 
     screen.textCentered('KIES EEN RUIMTE', WIDTH / 2, 32, C.ASGRIJS);
 
-    for (let i = 0; i < SLOOP_LEVELS.length; i++) this.drawCard(screen, i);
+    for (let i = 0; i < entries.length; i++) this.drawCard(screen, i);
 
-    const gated = done < SLOOP_LEVELS.length;
+    const gated = done < entries.length;
+    const next = STAGES[this.stage + 1];
     screen.fillRect(0, HEIGHT - 26, WIDTH, 26, C.ZWART);
     screen.fillRect(0, HEIGHT - 26, WIDTH, 1, C.STEEN);
-    screen.textCentered(
-      gated ? 'FASE 2 - ISOLATIE: EERST ALLE RUIMTES SLOPEN' : 'FASE 2 - ISOLATIE IS OPEN',
-      WIDTH / 2, HEIGHT - 19, gated ? C.STEEN : C.SALIE,
-    );
-    screen.textCentered('PIJLTJES = KIEZEN   ENTER = SLOPEN', WIDTH / 2, HEIGHT - 9, C.ASGRIJS);
+    const footer = next
+      ? (gated ? `FASE ${next.nummer} - ${next.naam}: EERST ALLE RUIMTES` : `FASE ${next.nummer} - ${next.naam} IS OPEN. TAB.`)
+      : 'LAATSTE FASE';
+    screen.textCentered(footer, WIDTH / 2, HEIGHT - 19, gated ? C.STEEN : C.SALIE);
+    screen.textCentered('PIJLTJES = KIEZEN   ENTER = AAN DE SLAG', WIDTH / 2, HEIGHT - 9, C.ASGRIJS);
   }
 
   private drawCard(screen: Screen, i: number): void {
-    const level = SLOOP_LEVELS[i]!;
+    const level = this.entries()[i]!;
     const x = this.cardX(i);
     const active = i === this.selected;
     const record = this.save.get(level.id);
@@ -95,8 +128,8 @@ export class HouseMapScene implements Scene {
     screen.textCentered(level.vlak, x + CARD_W / 2, CARD_Y + 18, C.ASGRIJS);
 
     // A thumbnail of the wall, straight from the level data.
-    const rows = level.rows;
-    const cols = rows[0]!.length;
+    const rows = level.rows ?? SLOOP_LEVELS.find((l) => l.ruimte === level.ruimte)?.rows ?? [];
+    const cols = rows[0]?.length ?? 0;
     const cell = Math.max(2, Math.floor(72 / cols));
     const gx = x + Math.round((CARD_W - cols * cell) / 2);
     const gy = CARD_Y + 30;
