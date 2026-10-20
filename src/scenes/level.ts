@@ -1,6 +1,7 @@
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
+import { ROOM_NAMES } from '../data/house.ts';
 import type { Save } from '../engine/save.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import {
@@ -156,8 +157,7 @@ export class LevelScene implements Scene {
         break;
       }
       case CELL.LEEG:
-        screen.fillRect(px, py, TILE, TILE, C.ZWART);
-        screen.ditherRect(px + 2, py + 2, TILE - 4, TILE - 4, C.ROET, C.ZWART);
+        this.drawBackdrop(screen, gy, px, py);
         break;
       case CELL.BALK:
         screen.fillRect(px, py, TILE, TILE, C.HOUT);
@@ -174,6 +174,30 @@ export class LevelScene implements Scene {
         screen.fillRect(px, py, TILE, TILE, C.ZWART);
         this.drawRun(screen, gx, gy, px, py, CELL.KABEL, C.DONKERROOD, C.LICHTOKER);
         break;
+    }
+  }
+
+  /**
+   * What shows through a hole. On an outside wall that is the garden, which
+   * makes knocking the wall down feel like something rather than like deleting
+   * tiles — and it is what he would actually see.
+   */
+  private drawBackdrop(screen: Screen, gy: number, px: number, py: number): void {
+    if (this.level.achtergrond === 'binnen') {
+      screen.fillRect(px, py, TILE, TILE, C.ZWART);
+      screen.ditherRect(px + 2, py + 2, TILE - 4, TILE - 4, C.ROET, C.ZWART);
+      return;
+    }
+    const horizon = this.grid.height - 2;
+    if (gy < horizon - 1) {
+      screen.fillRect(px, py, TILE, TILE, C.LUCHTBLAUW);
+    } else if (gy < horizon) {
+      screen.fillRect(px, py, TILE, TILE, C.LUCHTBLAUW);
+      screen.ditherRect(px, py + TILE - 6, TILE, 6, C.MOSGROEN, C.LUCHTBLAUW);
+      screen.fillRect(px, py + TILE - 2, TILE, 2, C.MOSGROEN);
+    } else {
+      screen.fillRect(px, py, TILE, TILE, C.MOSGROEN);
+      screen.ditherRect(px, py, TILE, 3, C.DONKERSALIE, C.MOSGROEN);
     }
   }
 
@@ -215,7 +239,7 @@ export class LevelScene implements Scene {
   private drawTopBar(screen: Screen): void {
     screen.fillRect(0, 0, WIDTH, TOP_H, C.ZWART);
     screen.fillRect(0, TOP_H - 1, WIDTH, 1, C.STEEN);
-    screen.text(`${this.level.ruimte.toUpperCase()} - ${this.level.vlak}`, 6, 5, C.LICHTOKER);
+    screen.text(`${ROOM_NAMES[this.level.ruimte]} - ${this.level.vlak}`, 6, 5, C.LICHTOKER);
 
     const label = `SLAGEN ${String(this.swings).padStart(2, '0')}   PAR ${String(this.par).padStart(2, '0')}`;
     const over = this.swings > this.par;
@@ -236,9 +260,10 @@ export class LevelScene implements Scene {
       screen.text(`${i + 1} ${tool.naam}`, bx + 4, y + 7, active ? C.WIT : C.ASGRIJS);
     }
 
+    screen.text('H = HINT', WIDTH - 6 - 8 * 6, y + 7, C.STEEN);
     const message = this.refused > 0 ? 'DAAR ZIT IETS ACHTER. NIET DOEN.' : this.level.praatje;
     screen.text(message, 6, y + 20, this.refused > 0 ? C.ROESTROOD : C.ASGRIJS);
-    screen.text('H = HINT   ESC = TERUG', WIDTH - 6 - 22 * 6, y + 20, C.STEEN);
+    screen.text('ESC = TERUG', WIDTH - 6 - 11 * 6, y + 20, C.STEEN);
   }
 
   private drawWon(screen: Screen): void {

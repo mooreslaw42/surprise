@@ -1,65 +1,37 @@
+import { SURFACES, type Achtergrond, type RoomId } from '../../data/house.ts';
+import { surfaceToRows } from './generate.ts';
 import { parseGrid, type Grid } from './model.ts';
 
 /**
- * Sloop levels, authored as ASCII art.
- *   '.' already open   '#' rubble
- *   'B' dragende balk  'L' leiding   'K' kabel
+ * Sloop levels, generated from the measured surfaces in data/house.ts rather
+ * than drawn by hand. The wall you are knocking down is the wall that is
+ * actually there, windows and all.
  *
- * Par is computed by the solver rather than written down, so it can never
- * drift away from the level.
+ * Par is computed by the solver, never written down, so it cannot drift.
  */
 export type SloopLevel = {
   readonly id: string;
-  readonly ruimte: string;
+  readonly ruimte: RoomId;
   readonly vlak: string;
   readonly praatje: string;
+  readonly achtergrond: Achtergrond;
   readonly rows: readonly string[];
 };
 
-export const SLOOP_LEVELS: readonly SloopLevel[] = [
-  {
-    id: 'sloop-woonkamer-binnenmuur',
-    ruimte: 'woonkamer',
-    vlak: 'BINNENMUUR',
-    praatje: 'DEZE MUUR MAG WEG. DE BALK NIET.',
-    rows: [
-      '.########.',
-      '##########',
-      '###BBBB###',
-      '##########',
-      '##########',
-      '.########.',
-    ],
-  },
-  {
-    id: 'sloop-keuken-achterwand',
-    ruimte: 'keuken',
-    vlak: 'ACHTERWAND',
-    praatje: 'ACHTER HET AANRECHT LOPEN DE LEIDINGEN.',
-    rows: [
-      '############',
-      '##L######L##',
-      '##L######L##',
-      '##LLLLLLLL##',
-      '############',
-      '############',
-    ],
-  },
-  {
-    id: 'sloop-tvkamer-plafond',
-    ruimte: 'tvkamer',
-    vlak: 'PLAFOND',
-    praatje: 'KABELS IN HET PLAFOND. RUSTIG AAN.',
-    rows: [
-      '##K#####K###',
-      '#.K#BBB#K#.#',
-      '#.KKKKKKK#.#',
-      '#.#######.#.',
-      '############',
-      '############',
-    ],
-  },
-];
+const PRAATJES: Record<string, string> = {
+  'woonkamer-tuinwand': 'DE LATEIEN BOVEN DE RAMEN BLIJVEN.',
+  'keuken-achterwand': 'TWEE DEUREN, TWEE LATEIEN.',
+  'tvkamer-kopgevel': 'KOPGEVEL. EEN RAAM, EEN LATEI.',
+};
+
+export const SLOOP_LEVELS: readonly SloopLevel[] = SURFACES.map((surface) => ({
+  id: `sloop-${surface.id}`,
+  ruimte: surface.ruimte,
+  vlak: surface.naam,
+  achtergrond: surface.achtergrond,
+  praatje: PRAATJES[surface.id] ?? 'SLOPEN MAAR. VOORZICHTIG.',
+  rows: surfaceToRows(surface),
+}));
 
 export function gridFor(level: SloopLevel): Grid {
   return parseGrid(level.rows);

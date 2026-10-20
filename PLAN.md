@@ -196,7 +196,14 @@ voorhamer still fits and where you have to reach for the beitel. Par is
 computed by an exact solver rather than written down by hand, so it can never
 drift from the level, and the same solver powers the hint.
 
-Three levels, par 8 / 10 / 10, each one pulling in another tool.
+Levels are no longer drawn by hand. tools/walls.py finds the wall planes in
+the lidar scan, projects each one into an elevation, and detects the openings
+as gaps bounded by wall above and below. data/house.ts holds the result as
+measured surfaces, and the Sloop grid is generated from those: real width,
+real ceiling height, real windows, with a lintel over each opening. Knock a
+hole in an outside wall and you see the garden.
+
+Which wall belongs to which room is still a guess, and marked so in the data.
 
 ## 10. Open
 

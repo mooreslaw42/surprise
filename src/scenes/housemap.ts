@@ -2,6 +2,7 @@ import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
 import type { Save } from '../engine/save.ts';
+import { ROOM_NAMES } from '../data/house.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import { SLOOP_LEVELS } from '../puzzles/sloop/levels.ts';
 import { LevelScene } from './level.ts';
@@ -9,12 +10,6 @@ import { LevelScene } from './level.ts';
 const CARD_W = 108;
 const CARD_H = 92;
 const CARD_Y = 54;
-
-const RUIMTE_NAAM: Record<string, string> = {
-  woonkamer: 'WOONKAMER',
-  keuken: 'KEUKEN',
-  tvkamer: 'TV-KAMER',
-};
 
 /**
  * Pick a room. Free order within a stage; the stage itself is gated, which is
@@ -95,7 +90,7 @@ export class HouseMapScene implements Scene {
     screen.strokeRect(x, CARD_Y, CARD_W, CARD_H, active ? C.LICHTOKER : C.STEEN);
     if (active) screen.strokeRect(x + 1, CARD_Y + 1, CARD_W - 2, CARD_H - 2, C.DONKEROKER);
 
-    screen.textCentered(RUIMTE_NAAM[level.ruimte] ?? level.ruimte.toUpperCase(),
+    screen.textCentered(ROOM_NAMES[level.ruimte],
       x + CARD_W / 2, CARD_Y + 8, active ? C.WIT : C.KALK);
     screen.textCentered(level.vlak, x + CARD_W / 2, CARD_Y + 18, C.ASGRIJS);
 

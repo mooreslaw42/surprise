@@ -6,6 +6,8 @@ import {
 } from './model.ts';
 import { solve } from './solver.ts';
 import { SLOOP_LEVELS, gridFor } from './levels.ts';
+import { SURFACES } from '../../data/house.ts';
+import { surfaceToRows, openingCells, gridSize, CELL_M } from './generate.ts';
 
 const beitel = toolById('beitel');
 const voorhamer = toolById('voorhamer');
@@ -136,7 +138,48 @@ test('the level set teaches every tool', () => {
   }
 });
 
-test('difficulty climbs across the set', () => {
+test('the set spans a sensible range of effort', () => {
+  // Rooms can be played in any order, so monotonic difficulty is not a thing
+  // to assert; what matters is that no level is trivial or a slog.
   const pars = SLOOP_LEVELS.map((l) => solve(gridFor(l)).par);
-  assert.deepEqual(pars, [...pars].sort((a, b) => a - b), `pars go ${pars.join(', ')}`);
+  assert.ok(Math.min(...pars) >= 5, `easiest level is only par ${Math.min(...pars)}`);
+  assert.ok(Math.max(...pars) <= 16, `hardest level is par ${Math.max(...pars)}`);
+  assert.ok(Math.max(...pars) - Math.min(...pars) >= 3, `pars barely differ: ${pars.join(', ')}`);
+});
+
+test('generated grids match the measured surface', () => {
+  for (const surface of SURFACES) {
+    const rows = surfaceToRows(surface);
+    assert.equal(rows.length, Math.round(surface.height / CELL_M), `${surface.id} wrong height`);
+    assert.equal(rows[0]!.length, Math.round(surface.width / CELL_M), `${surface.id} wrong width`);
+  }
+});
+
+test('every opening is open across its whole extent, with a lintel over it', () => {
+  for (const surface of SURFACES) {
+    const rows = surfaceToRows(surface);
+    for (const opening of surface.openings) {
+      const extent = openingCells(surface, opening);
+      if (!extent) throw new Error(`${surface.id}: ${opening.kind} at ${opening.x}m vanished`);
+      const { c0, c1, r0, r1 } = extent;
+      for (let row = r0; row <= r1; row++) {
+        for (let col = c0; col <= c1; col++) {
+          assert.equal(rows[row]![col], '.', `${surface.id}: ${opening.kind} not open at ${col},${row}`);
+        }
+      }
+      assert.ok(r0 === 0 || rows[r0 - 1]!.includes('B'),
+        `${surface.id}: no latei above the ${opening.kind} at ${opening.x}m`);
+    }
+  }
+});
+
+test('a door opens to the floor', () => {
+  for (const surface of SURFACES) {
+    const { rows } = gridSize(surface);
+    for (const opening of surface.openings) {
+      if (opening.kind !== 'deur') continue;
+      const e = openingCells(surface, opening)!;
+      assert.equal(e.r1, rows - 1, `${surface.id}: a deur should reach the floor`);
+    }
+  }
 });
