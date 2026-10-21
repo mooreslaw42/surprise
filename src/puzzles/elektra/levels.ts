@@ -17,11 +17,14 @@ export type ElektraLevel = {
 };
 
 type Placement = {
-  readonly meterkast: Point;
+  /** One cell per groep in the meterkast, each with its own 16A breaker. */
+  readonly groepen: readonly { cel: Point; naam: string }[];
   readonly stopcontacten: readonly Point[];
   readonly belasting: readonly number[];
   readonly praatje: string;
 };
+
+const MAX_AMP = 16;
 
 /**
  * Hand-placed, because where a socket goes is a decision about the room, not
@@ -29,22 +32,23 @@ type Placement = {
  */
 const PLACEMENTS: Record<string, Placement> = {
   'woonkamer-tuinwand': {
-    meterkast: { x: 0, y: 6 },
+    groepen: [{ cel: { x: 0, y: 5 }, naam: 'G1' }, { cel: { x: 0, y: 6 }, naam: 'G2' }],
     stopcontacten: [{ x: 14, y: 3 }, { x: 7, y: 2 }, { x: 11, y: 0 }],
-    belasting: [6, 4, 2],
-    praatje: 'GEEN DRAAD MAG EEN ANDERE KRUISEN.',
+    // 20A over two 16A groepen: they cannot all hang on one.
+    belasting: [10, 6, 4],
+    praatje: 'SAMEN 20A. EEN GROEP TREKT ER 16.',
   },
   'keuken-achterwand': {
-    meterkast: { x: 6, y: 6 },
+    groepen: [{ cel: { x: 6, y: 5 }, naam: 'G1' }, { cel: { x: 6, y: 6 }, naam: 'G2' }],
     stopcontacten: [{ x: 11, y: 2 }, { x: 8, y: 0 }, { x: 11, y: 6 }],
-    belasting: [8, 4, 2],
-    praatje: 'TUSSEN DE DEUREN DOOR. MEER RUIMTE IS ER NIET.',
+    belasting: [8, 8, 6],
+    praatje: 'DE OVEN ALLEEN OP EEN GROEP.',
   },
   'tvkamer-kopgevel': {
-    meterkast: { x: 0, y: 6 },
+    groepen: [{ cel: { x: 0, y: 5 }, naam: 'G1' }, { cel: { x: 0, y: 6 }, naam: 'G2' }],
     stopcontacten: [{ x: 8, y: 1 }, { x: 1, y: 2 }, { x: 8, y: 3 }],
-    belasting: [5, 3, 3],
-    praatje: 'DRIE STOPCONTACTEN, EEN METERKAST.',
+    belasting: [6, 6, 6],
+    praatje: 'DRIE KEER ZES. DAT WORDT TWEE GROEPEN.',
   },
 };
 
@@ -65,12 +69,11 @@ export function boardFor(surface: Surface): Board {
 
   const board: Board = {
     width, height, tiles,
-    meterkast: placement.meterkast,
+    groepen: placement.groepen.map((g) => ({ ...g, maxAmp: MAX_AMP })),
     stopcontacten: placement.stopcontacten,
     belasting: placement.belasting,
-    maxAmp: 16,
   };
-  tiles[index(board, placement.meterkast)] = TILE.METERKAST;
+  for (const groep of board.groepen) tiles[index(board, groep.cel)] = TILE.METERKAST;
   for (const socket of placement.stopcontacten) {
     tiles[index(board, socket)] = TILE.STOPCONTACT;
   }

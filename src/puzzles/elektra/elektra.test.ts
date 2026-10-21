@@ -2,25 +2,30 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TILE, type Board, type Route,
-  axisAt, axesCompatible, cableLength, faults, isSolved, routable, stars, tileAt,
+  axisAt, axesCompatible, cableLength, faults, groupLoads, groupOf, isSolved,
+  isTerminal, routable, stars, tileAt,
 } from './model.ts';
 import { solve } from './solver.ts';
 import { ELEKTRA_LEVELS, boardFor } from './levels.ts';
 import { SURFACES } from '../../data/house.ts';
 
-/** A 5x3 open wall with the meterkast bottom-left. */
-function openBoard(stopcontacten: { x: number; y: number }[]): Board {
+/** A 5x3 open wall with one groep bottom-left, unless more are asked for. */
+function openBoard(
+  stopcontacten: { x: number; y: number }[],
+  belasting?: number[],
+  groepen: { cel: { x: number; y: number }; naam: string; maxAmp: number }[] =
+    [{ cel: { x: 0, y: 2 }, naam: 'G1', maxAmp: 16 }],
+): Board {
   const width = 5;
   const height = 3;
   const board: Board = {
     width, height,
     tiles: new Array(width * height).fill(TILE.MUUR),
-    meterkast: { x: 0, y: 2 },
+    groepen,
     stopcontacten,
-    belasting: stopcontacten.map(() => 2),
-    maxAmp: 16,
+    belasting: belasting ?? stopcontacten.map(() => 2),
   };
-  board.tiles[2 * width + 0] = TILE.METERKAST;
+  for (const g of groepen) board.tiles[g.cel.y * width + g.cel.x] = TILE.METERKAST;
   for (const s of stopcontacten) board.tiles[s.y * width + s.x] = TILE.STOPCONTACT;
   return board;
 }
@@ -71,9 +76,41 @@ test('an unfinished or broken run is reported', () => {
   assert.ok(faults(board, [jump]).some((f) => f.kind === 'onderbroken'));
 });
 
-test('an overloaded group is reported', () => {
-  const board = { ...openBoard([{ x: 4, y: 0 }]), belasting: [20], maxAmp: 16 };
-  assert.ok(faults(board, [[{ x: 4, y: 0 }, { x: 3, y: 0 }]]).some((f) => f.kind === 'overbelast'));
+test('a groep over 16A trips, and splitting them does not', () => {
+  const sockets = [{ x: 4, y: 0 }, { x: 4, y: 2 }];
+  const groepen = [
+    { cel: { x: 0, y: 2 }, naam: 'G1', maxAmp: 16 },
+    { cel: { x: 0, y: 1 }, naam: 'G2', maxAmp: 16 },
+  ];
+  const board = openBoard(sockets, [10, 10], groepen);
+
+  // Both on G1: 20A through one breaker.
+  const bothOnG1: Route[] = [
+    [{ x: 4, y: 0 }, { x: 3, y: 0 }, { x: 2, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }],
+    [{ x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }, { x: 0, y: 2 }],
+  ];
+  assert.deepEqual(groupLoads(board, bothOnG1), [20, 0]);
+  assert.ok(faults(board, bothOnG1).some((f) => f.kind === 'overbelast'));
+
+  // One each: 10A apiece, and the breakers hold.
+  const split: Route[] = [
+    [{ x: 4, y: 0 }, { x: 3, y: 0 }, { x: 2, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 1 }],
+    [{ x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }, { x: 0, y: 2 }],
+  ];
+  assert.deepEqual(groupLoads(board, split), [10, 10]);
+  assert.deepEqual(faults(board, split).filter((f) => f.kind === 'overbelast'), []);
+});
+
+test('a route is credited to the groep it actually lands on', () => {
+  const groepen = [
+    { cel: { x: 0, y: 2 }, naam: 'G1', maxAmp: 16 },
+    { cel: { x: 0, y: 1 }, naam: 'G2', maxAmp: 16 },
+  ];
+  const board = openBoard([{ x: 4, y: 1 }], [7], groepen);
+  assert.ok(isTerminal(board, { x: 0, y: 1 }));
+  const toG2: Route = [{ x: 4, y: 1 }, { x: 3, y: 1 }, { x: 2, y: 1 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+  assert.equal(groupOf(board, toG2), 1);
+  assert.deepEqual(groupLoads(board, [toG2]), [0, 7]);
 });
 
 test('the solver wires every shipped level, and its answer is legal', () => {
@@ -92,7 +129,8 @@ test('par is at least the sum of the shortest possible runs', () => {
     const { par } = solve(level.board);
     let floor = 0;
     for (const socket of level.board.stopcontacten) {
-      floor += Math.abs(socket.x - level.board.meterkast.x) + Math.abs(socket.y - level.board.meterkast.y);
+      floor += Math.min(...level.board.groepen.map(
+        (g) => Math.abs(socket.x - g.cel.x) + Math.abs(socket.y - g.cel.y)));
     }
     assert.ok(par >= floor, `${level.id}: par ${par} beats the straight-line floor ${floor}`);
   }
@@ -101,7 +139,9 @@ test('par is at least the sum of the shortest possible runs', () => {
 test('every socket and the meterkast sit on a cell cable can reach', () => {
   for (const surface of SURFACES) {
     const board = boardFor(surface);
-    assert.ok(routable(board, board.meterkast), `${surface.id}: meterkast is walled in`);
+    for (const groep of board.groepen) {
+      assert.ok(routable(board, groep.cel), `${surface.id}: ${groep.naam} is walled in`);
+    }
     for (const socket of board.stopcontacten) {
       assert.ok(routable(board, socket), `${surface.id}: a socket is inside a window`);
     }

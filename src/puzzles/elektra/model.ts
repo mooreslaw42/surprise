@@ -35,17 +35,46 @@ export type TileValue = (typeof TILE)[keyof typeof TILE];
 
 export type Point = { readonly x: number; readonly y: number };
 
+/**
+ * One breaker in the meterkast. Everything wired back to it shares its 16A,
+ * which is what decides whether two sockets can go on the same group.
+ */
+export type Groep = {
+  readonly cel: Point;
+  readonly naam: string;
+  readonly maxAmp: number;
+};
+
 export type Board = {
   readonly width: number;
   readonly height: number;
   readonly tiles: TileValue[];
-  readonly meterkast: Point;
+  readonly groepen: readonly Groep[];
   readonly stopcontacten: readonly Point[];
   /** Amps drawn by each stopcontact, in the same order. */
   readonly belasting: readonly number[];
-  /** Maximum amps on one group before the breaker goes. */
-  readonly maxAmp: number;
 };
+
+export function isTerminal(board: Board, p: Point): boolean {
+  return board.groepen.some((g) => samePoint(g.cel, p));
+}
+
+/** Which group a route ends on, or -1 if it ends nowhere. */
+export function groupOf(board: Board, route: Route): number {
+  const end = route[route.length - 1];
+  if (!end) return -1;
+  return board.groepen.findIndex((g) => samePoint(g.cel, end));
+}
+
+/** Amps on each group, given where the routes currently land. */
+export function groupLoads(board: Board, routes: readonly Route[]): number[] {
+  const loads = board.groepen.map(() => 0);
+  for (let i = 0; i < routes.length; i++) {
+    const g = groupOf(board, routes[i] ?? []);
+    if (g >= 0) loads[g] = loads[g]! + (board.belasting[i] ?? 0);
+  }
+  return loads;
+}
 
 export function index(board: Board, p: Point): number {
   return p.y * board.width + p.x;
@@ -90,7 +119,7 @@ export type Fault =
   | { kind: 'kruising'; at: Point }
   | { kind: 'onderbroken'; which: number }
   | { kind: 'verboden'; which: number; at: Point }
-  | { kind: 'overbelast'; amps: number };
+  | { kind: 'overbelast'; groep: number; amps: number };
 
 /** How a route passes through one of its cells. */
 export type Axis = 'h' | 'v' | 'hoek';
@@ -123,8 +152,7 @@ export function faults(board: Board, routes: readonly Route[]): Fault[] {
       out.push({ kind: 'los', which: i });
       continue;
     }
-    if (!samePoint(route[0]!, board.stopcontacten[i]!) ||
-        !samePoint(route[route.length - 1]!, board.meterkast)) {
+    if (!samePoint(route[0]!, board.stopcontacten[i]!) || !isTerminal(board, route[route.length - 1]!)) {
       out.push({ kind: 'los', which: i });
       continue;
     }
@@ -151,7 +179,7 @@ export function faults(board: Board, routes: readonly Route[]): Fault[] {
     const route = routes[i] ?? [];
     for (let s = 0; s < route.length; s++) {
       const p = route[s]!;
-      if (samePoint(p, board.meterkast)) continue;
+      if (isTerminal(board, p)) continue;
       const axis = axisAt(route, s);
       const key = index(board, p);
       const held = seen.get(key);
@@ -165,8 +193,14 @@ export function faults(board: Board, routes: readonly Route[]): Fault[] {
     }
   }
 
-  const amps = board.belasting.reduce((n, a) => n + a, 0);
-  if (amps > board.maxAmp) out.push({ kind: 'overbelast', amps });
+  // Each breaker only carries so much. This is what stops you hanging every
+  // socket on one group and running the least possible cable.
+  const loads = groupLoads(board, routes);
+  for (let g = 0; g < board.groepen.length; g++) {
+    if (loads[g]! > board.groepen[g]!.maxAmp) {
+      out.push({ kind: 'overbelast', groep: g, amps: loads[g]! });
+    }
+  }
 
   return out;
 }

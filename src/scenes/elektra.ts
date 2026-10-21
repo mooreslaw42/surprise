@@ -7,7 +7,8 @@ import { ROOM_NAMES, SURFACES, type Surface } from '../data/house.ts';
 import { openingCells } from '../puzzles/sloop/generate.ts';
 import {
   type Point, type Route,
-  axisAt, axesCompatible, cableLength, faults, index, isSolved, routable, samePoint, stars, tileAt,
+  axisAt, axesCompatible, cableLength, faults, groupLoads, groupOf, index, isSolved,
+  isTerminal, routable, samePoint, stars, tileAt,
 } from '../puzzles/elektra/model.ts';
 import { solve } from '../puzzles/elektra/solver.ts';
 import type { ElektraLevel } from '../puzzles/elektra/levels.ts';
@@ -35,6 +36,8 @@ export class ElektraScene implements Scene {
   private time = 0;
   private won = false;
   private wonAt = 0;
+  /** The rules panel, open until it has been read once. */
+  private uitleg = true;
 
   constructor(level: ElektraLevel, save: Save) {
     this.level = level;
@@ -67,6 +70,13 @@ export class ElektraScene implements Scene {
       if (this.time - this.wonAt > 0.5 && ctx.input.confirmed()) ctx.pop();
       return;
     }
+    if (this.uitleg) {
+      if (ctx.input.confirmed() || ctx.input.mouseClicked || ctx.input.justPressed('KeyU')) {
+        this.uitleg = false;
+      }
+      return;
+    }
+    if (ctx.input.justPressed('KeyU')) { this.uitleg = true; return; }
     if (ctx.input.justPressed('Escape')) ctx.pop();
     if (ctx.input.justPressed('KeyH')) {
       this.routes = solve(this.level.board).routes;
@@ -94,7 +104,7 @@ export class ElektraScene implements Scene {
     if (!ctx.input.mouseDown && this.drawing !== null) {
       const route = this.routes[this.drawing]!;
       // Only a run that actually reaches the meterkast counts.
-      if (route.length < 2 || !samePoint(route[route.length - 1]!, this.level.board.meterkast)) {
+      if (route.length < 2 || !isTerminal(this.level.board, route[route.length - 1]!)) {
         this.routes[this.drawing] = [];
       }
       this.drawing = null;
@@ -127,8 +137,10 @@ export class ElektraScene implements Scene {
     if (otherSocket) return;
     if (this.wouldCross(which, route, cell)) return;
 
+    // Deliberately does not stop at the first terminal it touches: a cable may
+    // pass behind the meterkast to reach the other groep, and which groep you
+    // land on is the player's choice. The run ends where the mouse is let go.
     route.push(cell);
-    if (samePoint(cell, this.level.board.meterkast)) this.drawing = null;
   }
 
   /** Refuse the step that would put a straight run across another one. */
@@ -138,7 +150,7 @@ export class ElektraScene implements Scene {
     const axis = axisAt(probe, i);
     if (axis === 'hoek') return false;
     const cell = probe[i]!;
-    if (samePoint(cell, this.level.board.meterkast)) return false;
+    if (isTerminal(this.level.board, cell)) return false;
     for (let other = 0; other < this.routes.length; other++) {
       if (other === which) continue;
       const theirs = this.routes[other]!;
@@ -176,6 +188,36 @@ export class ElektraScene implements Scene {
     this.drawTopBar(screen);
     this.drawBottomBar(screen);
     if (this.won) this.drawWon(screen);
+    if (this.uitleg) this.drawUitleg(screen);
+  }
+
+  private drawUitleg(screen: Screen): void {
+    const w = 290;
+    const h = 108;
+    const x = Math.round((WIDTH - w) / 2);
+    const y = Math.round((HEIGHT - h) / 2);
+    screen.fillRect(x, y, w, h, C.ZWART);
+    screen.strokeRect(x, y, w, h, C.LICHTOKER);
+    screen.strokeRect(x + 2, y + 2, w - 4, h - 4, C.DONKEROKER);
+    screen.textCentered('ZO WERKT HET', WIDTH / 2, y + 8, C.LICHTOKER);
+
+    const lines: [string, number][] = [
+      ['ELK STOPCONTACT WIL EEN DRAAD NAAR', C.KALK],
+      ['DE METERKAST. SLEEP HEM ERHEEN.', C.KALK],
+      ['', C.KALK],
+      ['HET GETAL IS WAT HIJ TREKT, IN AMPERE.', C.BOTERGEEL],
+      ['EEN GROEP HOUDT ER 16. SAMEN MEER?', C.BOTERGEEL],
+      ['DAN MOETEN ZE OVER TWEE GROEPEN.', C.BOTERGEEL],
+      ['', C.KALK],
+      ['DRADEN MOGEN NAAST ELKAAR LOPEN,', C.SALIE],
+      ['MAAR NOOIT OVER ELKAAR HEEN.', C.SALIE],
+    ];
+    lines.forEach(([text, colour], i) => {
+      if (text) screen.text(text, x + 10, y + 22 + i * 9, colour);
+    });
+    if (Math.floor(this.time * 2) % 2 === 0) {
+      screen.textCentered('ENTER', WIDTH / 2, y + h - 11, C.SALIE);
+    }
   }
 
   /** The wall at this stage is stripped back to studs and wool. */
@@ -224,7 +266,8 @@ export class ElektraScene implements Scene {
     }
     for (let i = 0; i < this.routes.length; i++) {
       const route = this.routes[i]!;
-      const colour = DRAAD[i % DRAAD.length]!;
+      const groep = groupOf(this.level.board, route);
+      const colour = DRAAD[(groep >= 0 ? groep : i) % DRAAD.length]!;
       for (let s = 1; s < route.length; s++) {
         const a = this.centre(route[s - 1]!);
         const b = this.centre(route[s]!);
@@ -237,21 +280,39 @@ export class ElektraScene implements Scene {
 
   private drawTerminals(screen: Screen): void {
     const board = this.level.board;
-    const m = this.centre(board.meterkast);
-    screen.fillRect(m.x - 7, m.y - 9, 15, 19, C.ASGRIJS);
-    screen.fillRect(m.x - 6, m.y - 8, 13, 17, C.ZANDGRIJS);
-    screen.fillRect(m.x - 4, m.y - 6, 9, 5, C.ROET);
-    for (let i = 0; i < 3; i++) screen.fillRect(m.x - 4 + i * 3, m.y - 5, 2, 3, C.LICHTOKER);
-    screen.strokeRect(m.x - 7, m.y - 9, 15, 19, C.ROET);
+    const loads = groupLoads(board, this.routes);
+
+    // One cabinet covering every groep cell, with a labelled terminal each.
+    const cells = board.groepen.map((g) => this.centre(g.cel));
+    const left = Math.min(...cells.map((c) => c.x)) - 10;
+    const right = Math.max(...cells.map((c) => c.x)) + 10;
+    const top = Math.min(...cells.map((c) => c.y)) - 10;
+    const bottom = Math.max(...cells.map((c) => c.y)) + 10;
+    screen.fillRect(left, top, right - left, bottom - top, C.ASGRIJS);
+    screen.fillRect(left + 1, top + 1, right - left - 2, bottom - top - 2, C.ZANDGRIJS);
+    screen.strokeRect(left, top, right - left, bottom - top, C.ROET);
+
+    for (let g = 0; g < board.groepen.length; g++) {
+      const groep = board.groepen[g]!;
+      const c = cells[g]!;
+      const over = loads[g]! > groep.maxAmp;
+      screen.fillRect(c.x - 8, c.y - 5, 17, 11, C.ROET);
+      // The breaker: up when it is carrying, red when it has had enough.
+      screen.fillRect(c.x - 7, c.y - 4, 5, 9, over ? C.ROESTROOD : C.KALK);
+      screen.fillRect(c.x - 7, over ? c.y + 1 : c.y - 4, 5, 4, over ? C.DONKERROOD : C.SALIE);
+      screen.text(groep.naam, c.x - 1, c.y - 3, over ? C.ROESTROOD : C.LICHTOKER);
+    }
 
     for (let i = 0; i < board.stopcontacten.length; i++) {
       const s = this.centre(board.stopcontacten[i]!);
-      const done = this.routes[i]!.length > 1;
-      screen.fillRect(s.x - 5, s.y - 5, 11, 11, C.WIT);
-      screen.strokeRect(s.x - 5, s.y - 5, 11, 11, done ? DRAAD[i % DRAAD.length]! : C.ASGRIJS);
-      screen.fillRect(s.x - 2, s.y - 2, 2, 2, C.ROET);
-      screen.fillRect(s.x + 1, s.y - 2, 2, 2, C.ROET);
-      screen.text(String(board.belasting[i] ?? 0), s.x - 2, s.y + 1, C.ASGRIJS);
+      const groep = groupOf(board, this.routes[i]!);
+      const colour = groep >= 0 ? DRAAD[groep % DRAAD.length]! : C.ASGRIJS;
+      screen.fillRect(s.x - 6, s.y - 6, 13, 13, C.WIT);
+      screen.strokeRect(s.x - 6, s.y - 6, 13, 13, colour);
+      screen.fillRect(s.x - 3, s.y - 3, 2, 2, C.ROET);
+      screen.fillRect(s.x + 2, s.y - 3, 2, 2, C.ROET);
+      // The amps this socket pulls: the number that decides its groep.
+      screen.text(`${board.belasting[i] ?? 0}A`, s.x - 5, s.y + 1, C.ROET);
     }
   }
 
@@ -277,9 +338,19 @@ export class ElektraScene implements Scene {
     const y = HEIGHT - BOTTOM_H;
     screen.fillRect(0, y, WIDTH, BOTTOM_H, C.ZWART);
     screen.fillRect(0, y, WIDTH, 1, C.STEEN);
+    const board = this.level.board;
+    const loads = groupLoads(board, this.routes);
+    let x = 6;
+    for (let g = 0; g < board.groepen.length; g++) {
+      const groep = board.groepen[g]!;
+      const over = loads[g]! > groep.maxAmp;
+      const label = `${groep.naam} ${loads[g]}/${groep.maxAmp}A`;
+      screen.text(label, x, y + 7, over ? C.ROESTROOD : DRAAD[g % DRAAD.length]!);
+      x += label.length * 6 + 10;
+    }
     const done = this.routes.filter((r) => r.length > 1).length;
-    screen.text(`AANGESLOTEN ${done} / ${this.routes.length}`, 6, y + 7, C.KALK);
-    screen.text('H = HINT', WIDTH - 6 - 8 * 6, y + 7, C.STEEN);
+    screen.text(`${done}/${this.routes.length}`, x, y + 7, C.KALK);
+    screen.text('U = UITLEG   H = HINT', WIDTH - 6 - 21 * 6, y + 7, C.STEEN);
     screen.text(this.level.praatje, 6, y + 20, C.ASGRIJS);
     screen.text('R = OPNIEUW', WIDTH - 6 - 11 * 6, y + 20, C.STEEN);
   }

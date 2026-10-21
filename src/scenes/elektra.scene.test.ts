@@ -42,6 +42,11 @@ function context(mouse: Mouse, keys: Set<string> = new Set()): SceneContext {
   };
 }
 
+/** The rules panel opens over a fresh level and swallows input until read. */
+function dismissUitleg(scene: ElektraScene): void {
+  scene.update(1 / 60, context({ x: 0, y: 0, down: false, clicked: false }, new Set(['Enter'])));
+}
+
 /** Lay one route by dragging from the socket to the meterkast. */
 function drag(scene: ElektraScene, width: number, height: number, route: { x: number; y: number }[]): void {
   const first = cellCentre(width, height, route[0]!);
@@ -58,6 +63,7 @@ test('wiring every socket by hand completes the level', () => {
   for (const level of ELEKTRA_LEVELS) {
     const save = new Save(null);
     const scene = new ElektraScene(level, save);
+    dismissUitleg(scene);
     const { routes } = solve(level.board);
     for (const route of routes) {
       drag(scene, level.board.width, level.board.height, route);
@@ -74,6 +80,7 @@ test('an abandoned drag leaves no half cable behind', () => {
   const level = ELEKTRA_LEVELS[0]!;
   const save = new Save(null);
   const scene = new ElektraScene(level, save);
+  dismissUitleg(scene);
   const { width, height } = level.board;
   const socket = level.board.stopcontacten[0]!;
 
@@ -85,4 +92,20 @@ test('an abandoned drag leaves no half cable behind', () => {
   scene.update(1 / 60, context({ x: next.x, y: next.y, down: false, clicked: false }));
 
   assert.equal(save.isDone(level.id), false);
+});
+
+test('the rules panel holds input until it is read', () => {
+  const level = ELEKTRA_LEVELS[0]!;
+  const save = new Save(null);
+  const scene = new ElektraScene(level, save);
+  const { width, height } = level.board;
+  const { routes } = solve(level.board);
+
+  // Without dismissing it, dragging does nothing at all.
+  for (const route of routes) drag(scene, width, height, route);
+  assert.equal(save.isDone(level.id), false);
+
+  dismissUitleg(scene);
+  for (const route of routes) drag(scene, width, height, route);
+  assert.ok(save.isDone(level.id), 'should wire normally once the panel is gone');
 });
