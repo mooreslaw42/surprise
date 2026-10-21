@@ -248,12 +248,16 @@ than the cavity needs and the awkward shapes carry the most Rc, so which
 batts get the space is the decision — the number on a batt changes the
 outcome rather than decorating it.
 
-Water is the verdeler: every floor-heating loop runs off one manifold and
-they fight each other for flow, so opening one valve shuts its neighbours.
-Getting them all flowing at once is the job, and it is deduction rather
-than routing or placing — the same shape as Lights Out. The plan had this
-stage as pipe rotation with slope, but rotation became the ventilation
-boss, so it needed a different dynamic.
+Water is the afvoer, drawn in section straight through the room with the
+appliances along the top and the standleiding at the end. Two rules and
+nothing else: water runs right and down, never up, and it may not run flat
+for more than two cells or it stops. The water is drawn running as far as
+it actually gets, so the rules demonstrate themselves. Runs may join, and a
+shared length is only paid for once.
+
+It replaced a manifold-balancing puzzle that was mechanically neat and
+completely opaque. If the rule needs explaining twice it is the wrong rule.
+That one is in git history at 25736df if it is ever wanted.
 
 ## 10. Waiting on the wall designs
 

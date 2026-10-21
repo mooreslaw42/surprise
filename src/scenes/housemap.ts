@@ -14,8 +14,8 @@ import { SCHUIF_LEVELS } from '../puzzles/schuifwerk/levels.ts';
 import { KanalenScene } from './kanalen.ts';
 import { IsolatieScene } from './isolatie.ts';
 import { ISOLATIE_LEVELS } from '../puzzles/isolatie/levels.ts';
-import { VerdelerScene } from './verdeler.ts';
-import { VERDELER_LEVELS } from '../puzzles/verdeler/levels.ts';
+import { AfvoerScene } from './afvoer.ts';
+import { AFVOER_LEVELS } from '../puzzles/afvoer/levels.ts';
 import { KANAAL_LEVELS } from '../puzzles/kanalen/levels.ts';
 
 const CARD_W = 112;
@@ -112,9 +112,9 @@ export class HouseMapScene implements Scene {
     } else if (kind === 'isolatie') {
       const level = ISOLATIE_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new IsolatieScene(level, this.save));
-    } else if (kind === 'verdeler') {
-      const level = VERDELER_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new VerdelerScene(level, this.save));
+    } else if (kind === 'afvoer') {
+      const level = AFVOER_LEVELS.find((l) => l.id === entry.id);
+      if (level) ctx.push(new AfvoerScene(level, this.save));
     } else if (kind === 'kanalen') {
       const level = KANAAL_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new KanalenScene(level, this.save));
