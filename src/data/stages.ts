@@ -3,6 +3,7 @@ import { ELEKTRA_LEVELS } from '../puzzles/elektra/levels.ts';
 import { SCHUIF_LEVELS } from '../puzzles/schuifwerk/levels.ts';
 import { KANAAL_LEVELS } from '../puzzles/kanalen/levels.ts';
 import { ISOLATIE_LEVELS } from '../puzzles/isolatie/levels.ts';
+import { VERDELER_LEVELS } from '../puzzles/verdeler/levels.ts';
 import type { RoomId } from './house.ts';
 
 /**
@@ -11,7 +12,7 @@ import type { RoomId } from './house.ts';
  *
  * Only the two built so far are listed; the rest of the ladder is in PLAN.md.
  */
-export type StageKind = 'leeghalen' | 'sloop' | 'isolatie' | 'elektra' | 'kanalen';
+export type StageKind = 'leeghalen' | 'sloop' | 'isolatie' | 'elektra' | 'verdeler' | 'kanalen';
 
 export type StageEntry = {
   readonly id: string;
@@ -91,10 +92,21 @@ export const STAGES: readonly Stage[] = [
       };
     }),
   },
+  {
+    kind: 'verdeler',
+    nummer: 5,
+    naam: 'WATER',
+    entries: VERDELER_LEVELS.map((l) => ({
+      id: l.id,
+      ruimte: 'woonkamer' as RoomId,
+      vlak: l.ruimte,
+      samenvatting: `${l.verdeler.open.length} LUSSEN`,
+    })),
+  },
   kanaalStap(2),
   {
     kind: 'kanalen',
-    nummer: 5,
+    nummer: 6,
     naam: 'OPLEVERING',
     entries: [{
       id: KANAAL_LEVELS[2]!.id,

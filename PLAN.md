@@ -248,7 +248,27 @@ than the cavity needs and the awkward shapes carry the most Rc, so which
 batts get the space is the decision — the number on a batt changes the
 outcome rather than decorating it.
 
-## 10. Open
+Water is the verdeler: every floor-heating loop runs off one manifold and
+they fight each other for flow, so opening one valve shuts its neighbours.
+Getting them all flowing at once is the job, and it is deduction rather
+than routing or placing — the same shape as Lights Out. The plan had this
+stage as pipe rotation with slope, but rotation became the ventilation
+boss, so it needed a different dynamic.
+
+## 10. Waiting on the wall designs
+
+Deferred on purpose until the real wall drawings arrive, because they will
+decide both:
+
+- **Level content.** Every stage's levels should sit on the actual walls.
+  Sloop and Elektra already do, from the scan; Isolatie's cavities and
+  Ventilatie's plans are still stand-ins.
+- **Difficulty.** The puzzles are a notch too easy across the board. Tuning
+  them before the real geometry lands would only mean tuning them twice.
+
+The data is all in `data/`, so both are data edits rather than rewrites.
+
+## 11. Open
 
 - Final title
 - Final surface selection (needs floor plan)
