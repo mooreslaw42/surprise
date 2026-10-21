@@ -228,6 +228,13 @@ remaining decision is which of two socket groups each stopcontact goes on —
 decided by the amps. Some walls also carry waterleiding that was already
 there and has to be routed around.
 
+Ventilatie is built. Seen from above rather than from the wall, because it
+is a drawing and not a job. Duct runs from every rooster back to the WTW,
+trunks may be shared, and a shared segment carries both rooms' air — so the
+answer is a tree rather than a set of paths, and a trunk over capacity is
+the thing you plan around. One plan drops in between phases, a little
+bigger each time. Each is approved, costed, and not delivered.
+
 ## 10. Open
 
 - Final title

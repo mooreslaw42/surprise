@@ -1,5 +1,6 @@
 import { SLOOP_LEVELS } from '../puzzles/sloop/levels.ts';
 import { ELEKTRA_LEVELS } from '../puzzles/elektra/levels.ts';
+import { VENTILATIE_LEVELS } from '../puzzles/ventilatie/levels.ts';
 import type { RoomId } from './house.ts';
 
 /**
@@ -8,7 +9,7 @@ import type { RoomId } from './house.ts';
  *
  * Only the two built so far are listed; the rest of the ladder is in PLAN.md.
  */
-export type StageKind = 'sloop' | 'elektra';
+export type StageKind = 'sloop' | 'elektra' | 'ventilatie';
 
 export type StageEntry = {
   readonly id: string;
@@ -24,8 +25,27 @@ export type Stage = {
   readonly kind: StageKind;
   readonly nummer: number;
   readonly naam: string;
+  /** Not a phase of the work: a drawing that happens between phases. */
+  readonly tussendoor?: boolean;
   readonly entries: readonly StageEntry[];
 };
+
+/** One ventilation plan, slotted between two phases of actual work. */
+function ventilatieStap(n: number): Stage {
+  const level = VENTILATIE_LEVELS[n - 1]!;
+  return {
+    kind: 'ventilatie',
+    nummer: n,
+    naam: 'VENTILATIEPLAN',
+    tussendoor: true,
+    entries: [{
+      id: level.id,
+      ruimte: 'woonkamer',
+      vlak: `PLAN ${n}`,
+      samenvatting: `${level.plan.roosters.length} ROOSTERS`,
+    }],
+  };
+}
 
 export const STAGES: readonly Stage[] = [
   {
@@ -34,6 +54,7 @@ export const STAGES: readonly Stage[] = [
     naam: 'SLOOP',
     entries: SLOOP_LEVELS.map((l) => ({ id: l.id, ruimte: l.ruimte, vlak: l.vlak, rows: l.rows })),
   },
+  ventilatieStap(1),
   {
     kind: 'elektra',
     nummer: 2,
@@ -51,4 +72,5 @@ export const STAGES: readonly Stage[] = [
       };
     }),
   },
+  ventilatieStap(2),
 ];

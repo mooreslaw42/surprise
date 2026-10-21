@@ -9,6 +9,8 @@ import { ELEKTRA_LEVELS } from '../puzzles/elektra/levels.ts';
 import { STAGES } from '../data/stages.ts';
 import { LevelScene } from './level.ts';
 import { ElektraScene } from './elektra.ts';
+import { VentilatieScene } from './ventilatie.ts';
+import { VENTILATIE_LEVELS } from '../puzzles/ventilatie/levels.ts';
 
 const CARD_W = 112;
 const CARD_Y = 34;
@@ -94,9 +96,13 @@ export class HouseMapScene implements Scene {
   private open(ctx: SceneContext, index: number): void {
     const entry = this.entries()[index];
     if (!entry) return;
-    if (STAGES[this.stage]!.kind === 'sloop') {
+    const kind = STAGES[this.stage]!.kind;
+    if (kind === 'sloop') {
       const level = SLOOP_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new LevelScene(level, this.save));
+    } else if (kind === 'ventilatie') {
+      const level = VENTILATIE_LEVELS.find((l) => l.id === entry.id);
+      if (level) ctx.push(new VentilatieScene(level, this.save));
     } else {
       const level = ELEKTRA_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new ElektraScene(level, this.save));
@@ -110,7 +116,10 @@ export class HouseMapScene implements Scene {
     screen.fillRect(0, 0, WIDTH, 20, C.ZWART);
     screen.fillRect(0, 19, WIDTH, 1, C.STEEN);
     const stage = STAGES[this.stage]!;
-    screen.text(`FASE ${stage.nummer} - ${stage.naam}`, 6, 7, C.LICHTOKER);
+    screen.text(
+      stage.tussendoor ? `TUSSENDOOR - ${stage.naam} ${stage.nummer}` : `FASE ${stage.nummer} - ${stage.naam}`,
+      6, 7, stage.tussendoor ? C.MAGENTA : C.LICHTOKER,
+    );
 
     const entries = this.entries();
     const done = entries.filter((e) => this.save.isDone(e.id)).length;
@@ -123,8 +132,11 @@ export class HouseMapScene implements Scene {
     const next = STAGES[this.stage + 1];
     screen.fillRect(0, HEIGHT - 26, WIDTH, 26, C.ZWART);
     screen.fillRect(0, HEIGHT - 26, WIDTH, 1, C.STEEN);
+    const volgende = next
+      ? (next.tussendoor ? `${next.naam} ${next.nummer}` : `FASE ${next.nummer} - ${next.naam}`)
+      : '';
     const footer = next
-      ? (gated ? `FASE ${next.nummer} - ${next.naam}: EERST ALLE RUIMTES` : `FASE ${next.nummer} - ${next.naam} IS OPEN. TAB.`)
+      ? (gated ? `${volgende}: EERST ALLES HIER` : `${volgende} IS OPEN. TAB.`)
       : 'LAATSTE FASE';
     screen.textCentered(footer, WIDTH / 2, HEIGHT - 19, gated ? C.STEEN : C.SALIE);
     screen.textCentered('PIJLTJES = KIEZEN   ENTER = AAN DE SLAG', WIDTH / 2, HEIGHT - 9, C.ASGRIJS);
