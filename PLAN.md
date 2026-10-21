@@ -211,6 +211,11 @@ any two crossing, around the real windows and lintels. The no-crossing rule
 took three goes to get right — see model.ts — and the solver that sets par
 also proves every level is wireable.
 
+Six walls now, so six levels per stage. Elektra escalates: sockets to the
+meterkast, then a lamp that must reach a schakelaar first, then two lamps
+sharing one switch. A lamp's amps land on whichever groep its switch
+reached, so the chain decides the load as well as the route.
+
 ## 10. Open
 
 - Final title

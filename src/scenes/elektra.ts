@@ -8,8 +8,8 @@ import { ROOM_NAMES, SURFACES, type Surface } from '../data/house.ts';
 import { openingCells } from '../puzzles/sloop/generate.ts';
 import {
   type Point, type Route,
-  axisAt, axesCompatible, cableLength, faults, groupLoads, groupOf, index, isSolved,
-  isTerminal, routable, samePoint, stars, tileAt,
+  axisAt, axesCompatible, cableLength, faults, groepVoor, groupLoads, index, isSolved,
+  isTerminal, routable, samePoint, stars, targetsFor, tileAt,
 } from '../puzzles/elektra/model.ts';
 import { solve } from '../puzzles/elektra/solver.ts';
 import type { ElektraLevel } from '../puzzles/elektra/levels.ts';
@@ -38,22 +38,19 @@ export class ElektraScene implements Scene {
   private won = false;
   private wonAt = 0;
   /** Pim explains the stage, once, before you start. */
-  private uitleg: Dialogue | null = new Dialogue([
-      'ELK STOPCONTACT WIL EEN DRAAD NAAR DE METERKAST. SLEEP HEM ERHEEN.',
-      'HET GETAL EROP IS WAT HIJ TREKT, IN AMPERE. EEN GROEP HOUDT ER 16. SAMEN MEER? DAN MOETEN ZE OVER TWEE GROEPEN.',
-      'DRADEN MOGEN NAAST ELKAAR LOPEN, MAAR NOOIT OVER ELKAAR HEEN.',
-    ]);
+  private uitleg: Dialogue | null;
 
   constructor(level: ElektraLevel, save: Save) {
     this.level = level;
     this.save = save;
     this.par = solve(level.board).par;
-    this.routes = level.board.stopcontacten.map(() => []);
+    this.routes = level.board.devices.map(() => []);
 
     const surface = SURFACES.find((s) => `elektra-${s.id}` === level.id);
     if (!surface) throw new Error(`no surface behind ${level.id}`);
     this.surface = surface;
 
+    this.uitleg = new Dialogue(level.uitleg);
     this.room = layout(TOP_H, BOTTOM_H, HEIGHT);
     const geometry = wallGeometry(level.board.width, level.board.height, WIDTH, HEIGHT);
     this.tile = geometry.tile;
@@ -98,10 +95,10 @@ export class ElektraScene implements Scene {
     const cell = this.cellAt(ctx);
 
     if (ctx.input.mouseClicked && cell) {
-      const socket = this.level.board.stopcontacten.findIndex((s) => samePoint(s, cell));
-      if (socket >= 0) {
-        this.drawing = socket;
-        this.routes[socket] = [cell];
+      const device = this.level.board.devices.findIndex((d) => samePoint(d.cel, cell));
+      if (device >= 0) {
+        this.drawing = device;
+        this.routes[device] = [cell];
       } else {
         // Clicking a laid cable takes it out again.
         const owner = this.routes.findIndex((r) => r.some((p) => samePoint(p, cell)));
@@ -114,7 +111,8 @@ export class ElektraScene implements Scene {
     if (!ctx.input.mouseDown && this.drawing !== null) {
       const route = this.routes[this.drawing]!;
       // Only a run that actually reaches the meterkast counts.
-      if (route.length < 2 || !isTerminal(this.level.board, route[route.length - 1]!)) {
+      const ends = targetsFor(this.level.board, this.drawing);
+      if (route.length < 2 || !ends.some((t) => samePoint(t, route[route.length - 1]!))) {
         this.routes[this.drawing] = [];
       }
       this.drawing = null;
@@ -141,10 +139,12 @@ export class ElektraScene implements Scene {
       return;
     }
     if (route.some((p) => samePoint(p, cell))) return;
-    // Another socket is a device, not a junction box.
-    const otherSocket = this.level.board.stopcontacten.some(
-      (s, i) => i !== which && samePoint(s, cell));
-    if (otherSocket) return;
+    // A run may end on its own target, but never pass through another device.
+    const targets = targetsFor(this.level.board, which);
+    const isTarget = targets.some((t) => samePoint(t, cell));
+    const otherDevice = this.level.board.devices.some(
+      (d, i) => i !== which && samePoint(d.cel, cell));
+    if (otherDevice && !isTarget) return;
     if (this.wouldCross(which, route, cell)) return;
 
     // Deliberately does not stop at the first terminal it touches: a cable may
@@ -160,7 +160,7 @@ export class ElektraScene implements Scene {
     const axis = axisAt(probe, i);
     if (axis === 'hoek') return false;
     const cell = probe[i]!;
-    if (isTerminal(this.level.board, cell)) return false;
+    if (this.isJunction(cell)) return false;
     for (let other = 0; other < this.routes.length; other++) {
       if (other === which) continue;
       const theirs = this.routes[other]!;
@@ -170,6 +170,12 @@ export class ElektraScene implements Scene {
       }
     }
     return false;
+  }
+
+  /** Terminals and devices are where runs legitimately meet. */
+  private isJunction(p: Point): boolean {
+    return isTerminal(this.level.board, p) ||
+      this.level.board.devices.some((d) => samePoint(d.cel, p));
   }
 
   private check(): void {
@@ -248,8 +254,8 @@ export class ElektraScene implements Scene {
     }
     for (let i = 0; i < this.routes.length; i++) {
       const route = this.routes[i]!;
-      const groep = groupOf(this.level.board, route);
-      const colour = DRAAD[(groep >= 0 ? groep : i) % DRAAD.length]!;
+      const groep = groepVoor(this.level.board, this.routes, i);
+      const colour = groep >= 0 ? DRAAD[groep % DRAAD.length]! : C.ASGRIJS;
       for (let s = 1; s < route.length; s++) {
         const a = this.centre(route[s - 1]!);
         const b = this.centre(route[s]!);
@@ -285,17 +291,49 @@ export class ElektraScene implements Scene {
       screen.text(groep.naam, c.x - 1, c.y - 3, over ? C.ROESTROOD : C.LICHTOKER);
     }
 
-    for (let i = 0; i < board.stopcontacten.length; i++) {
-      const s = this.centre(board.stopcontacten[i]!);
-      const groep = groupOf(board, this.routes[i]!);
+    for (let i = 0; i < board.devices.length; i++) {
+      const device = board.devices[i]!;
+      const at = this.centre(device.cel);
+      const groep = groepVoor(board, this.routes, i);
       const colour = groep >= 0 ? DRAAD[groep % DRAAD.length]! : C.ASGRIJS;
-      screen.fillRect(s.x - 6, s.y - 6, 13, 13, C.WIT);
-      screen.strokeRect(s.x - 6, s.y - 6, 13, 13, colour);
-      screen.fillRect(s.x - 3, s.y - 3, 2, 2, C.ROET);
-      screen.fillRect(s.x + 2, s.y - 3, 2, 2, C.ROET);
-      // The amps this socket pulls: the number that decides its groep.
-      screen.text(`${board.belasting[i] ?? 0}A`, s.x - 5, s.y + 1, C.ROET);
+      switch (device.kind) {
+        case 'lamp': this.drawLamp(screen, at, colour, groep >= 0); break;
+        case 'schakelaar': this.drawSchakelaar(screen, at, colour); break;
+        default: this.drawStopcontact(screen, at, colour, device.amp);
+      }
     }
+  }
+
+  private drawStopcontact(screen: Screen, at: { x: number; y: number }, colour: number, amp: number): void {
+    screen.fillRect(at.x - 6, at.y - 6, 13, 13, C.WIT);
+    screen.strokeRect(at.x - 6, at.y - 6, 13, 13, colour);
+    screen.fillRect(at.x - 3, at.y - 3, 2, 2, C.ROET);
+    screen.fillRect(at.x + 2, at.y - 3, 2, 2, C.ROET);
+    screen.text(`${amp}A`, at.x - 5, at.y + 1, C.ROET);
+  }
+
+  /** A bulb, lit once its switch has found a groep. */
+  private drawLamp(screen: Screen, at: { x: number; y: number }, colour: number, live: boolean): void {
+    screen.fillRect(at.x - 1, at.y - 8, 2, 3, C.ROET);
+    screen.fillEllipse(at.x, at.y, 6, 6, live ? C.BOTERGEEL : C.ASGRIJS);
+    screen.strokeEllipse(at.x, at.y, 6, 6, colour);
+    screen.fillRect(at.x - 3, at.y - 5, 6, 2, live ? C.WIT : C.ZANDGRIJS);
+    screen.fillRect(at.x - 3, at.y + 4, 7, 2, C.ROET);
+    if (live) {
+      // A little glow, so a working light reads at a glance.
+      for (const [dx, dy] of [[-9, -6], [9, -6], [-10, 2], [10, 2], [0, -11]] as const) {
+        screen.set(at.x + dx, at.y + dy, C.BOTERGEEL);
+      }
+    }
+  }
+
+  /** A rocker switch on the wall. */
+  private drawSchakelaar(screen: Screen, at: { x: number; y: number }, colour: number): void {
+    screen.fillRect(at.x - 6, at.y - 6, 13, 13, C.WIT);
+    screen.strokeRect(at.x - 6, at.y - 6, 13, 13, colour);
+    screen.fillRect(at.x - 3, at.y - 4, 7, 9, C.KALK);
+    screen.fillRect(at.x - 3, at.y - 4, 7, 4, C.ZANDGRIJS);
+    screen.fillRect(at.x - 3, at.y, 7, 1, C.ROET);
   }
 
   private drawCursorCell(screen: Screen, ctx: SceneContext): void {

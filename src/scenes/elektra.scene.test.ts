@@ -87,7 +87,7 @@ test('an abandoned drag leaves no half cable behind', () => {
   const scene = new ElektraScene(level, save);
   dismissUitleg(scene);
   const { width, height } = level.board;
-  const socket = level.board.stopcontacten[0]!;
+  const socket = level.board.devices[0]!.cel;
 
   const start = cellCentre(width, height, socket);
   scene.update(1 / 60, context({ x: start.x, y: start.y, down: true, clicked: true }));

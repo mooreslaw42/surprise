@@ -1,6 +1,10 @@
 /**
- * Elektra: run a cable from every stopcontact back to the meterkast without
- * any two cables crossing.
+ * Elektra: wire the wall without any two runs crossing.
+ *
+ * A stopcontact goes back to a groep in the meterkast. A lamp does not: it
+ * goes to a schakelaar, and the schakelaar goes to a groep. So a switched
+ * light is two runs in series, and its amps land on whichever groep its
+ * switch ended up on.
  *
  * Cables may share a chase: two runs lying side by side, or turning the same
  * corner, are normal work. What they may not do is cross.
@@ -19,26 +23,31 @@
  * requiring routes to be vertex-disjoint, which stops three sockets ever
  * reaching one meterkast down a shared corridor, then forbidding shared
  * corners, which stops them ever turning into it.)
- *
- * The wall's real windows and lintels are the obstacles — you cannot chase a
- * cable through a window, and you do not drill the latei.
  */
 
 export const TILE = {
-  MUUR: 0,       // free wall, cable may run here
-  GESLOTEN: 1,   // window, door, lintel: no cable
+  MUUR: 0,
+  GESLOTEN: 1,
   METERKAST: 2,
   STOPCONTACT: 3,
+  LAMP: 4,
+  SCHAKELAAR: 5,
 } as const;
 
 export type TileValue = (typeof TILE)[keyof typeof TILE];
 
 export type Point = { readonly x: number; readonly y: number };
 
-/**
- * One breaker in the meterkast. Everything wired back to it shares its 16A,
- * which is what decides whether two sockets can go on the same group.
- */
+export type DeviceKind = 'stopcontact' | 'lamp' | 'schakelaar';
+
+export type Device = {
+  readonly kind: DeviceKind;
+  readonly cel: Point;
+  /** Amps drawn. A schakelaar draws nothing itself. */
+  readonly amp: number;
+};
+
+/** One breaker in the meterkast. Everything on it shares its 16A. */
 export type Groep = {
   readonly cel: Point;
   readonly naam: string;
@@ -50,31 +59,8 @@ export type Board = {
   readonly height: number;
   readonly tiles: TileValue[];
   readonly groepen: readonly Groep[];
-  readonly stopcontacten: readonly Point[];
-  /** Amps drawn by each stopcontact, in the same order. */
-  readonly belasting: readonly number[];
+  readonly devices: readonly Device[];
 };
-
-export function isTerminal(board: Board, p: Point): boolean {
-  return board.groepen.some((g) => samePoint(g.cel, p));
-}
-
-/** Which group a route ends on, or -1 if it ends nowhere. */
-export function groupOf(board: Board, route: Route): number {
-  const end = route[route.length - 1];
-  if (!end) return -1;
-  return board.groepen.findIndex((g) => samePoint(g.cel, end));
-}
-
-/** Amps on each group, given where the routes currently land. */
-export function groupLoads(board: Board, routes: readonly Route[]): number[] {
-  const loads = board.groepen.map(() => 0);
-  for (let i = 0; i < routes.length; i++) {
-    const g = groupOf(board, routes[i] ?? []);
-    if (g >= 0) loads[g] = loads[g]! + (board.belasting[i] ?? 0);
-  }
-  return loads;
-}
 
 export function index(board: Board, p: Point): number {
   return p.y * board.width + p.x;
@@ -92,26 +78,30 @@ export function samePoint(a: Point, b: Point): boolean {
   return a.x === b.x && a.y === b.y;
 }
 
-/** Cable may occupy wall, a stopcontact, or the meterkast itself. */
 export function routable(board: Board, p: Point): boolean {
   const tile = tileAt(board, p);
   return tile !== undefined && tile !== TILE.GESLOTEN;
+}
+
+export function isTerminal(board: Board, p: Point): boolean {
+  return board.groepen.some((g) => samePoint(g.cel, p));
+}
+
+/** Where device i is allowed to end: a groep, or a schakelaar if it is a lamp. */
+export function targetsFor(board: Board, i: number): Point[] {
+  const device = board.devices[i];
+  if (!device) return [];
+  if (device.kind === 'lamp') {
+    return board.devices.filter((d) => d.kind === 'schakelaar').map((d) => d.cel);
+  }
+  return board.groepen.map((g) => g.cel);
 }
 
 export const STEPS: readonly Point[] = [
   { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
 ];
 
-export function neighbours(board: Board, p: Point): Point[] {
-  const out: Point[] = [];
-  for (const step of STEPS) {
-    const q = { x: p.x + step.x, y: p.y + step.y };
-    if (routable(board, q)) out.push(q);
-  }
-  return out;
-}
-
-/** A route as drawn by the player: stopcontact first, meterkast last. */
+/** A route as drawn: the device first, its target last. */
 export type Route = Point[];
 
 export type Fault =
@@ -142,44 +132,100 @@ export function axesCompatible(a: Axis, b: Axis): boolean {
   return !((a === 'h' && b === 'v') || (a === 'v' && b === 'h'));
 }
 
-/** Every way a set of routes can be wrong, in the order worth reporting. */
+/** Which device a route ends on, or -1. */
+export function deviceAtEnd(board: Board, route: Route): number {
+  const end = route[route.length - 1];
+  if (!end) return -1;
+  return board.devices.findIndex((d) => samePoint(d.cel, end));
+}
+
+/** Which groep a route ends on, or -1. */
+export function groupOf(board: Board, route: Route): number {
+  const end = route[route.length - 1];
+  if (!end) return -1;
+  return board.groepen.findIndex((g) => samePoint(g.cel, end));
+}
+
+/**
+ * The groep a device finally hangs on, following a lamp through its
+ * schakelaar. -1 when the chain is not finished.
+ */
+export function groepVoor(board: Board, routes: readonly Route[], i: number): number {
+  const route = routes[i];
+  if (!route || route.length < 2) return -1;
+  const direct = groupOf(board, route);
+  if (direct >= 0) return direct;
+  const via = deviceAtEnd(board, route);
+  if (via < 0 || board.devices[via]!.kind !== 'schakelaar') return -1;
+  return groepVoor(board, routes, via);
+}
+
+/** Amps on each breaker, with lamps counted through their switch. */
+export function groupLoads(board: Board, routes: readonly Route[]): number[] {
+  const loads = board.groepen.map(() => 0);
+  for (let i = 0; i < board.devices.length; i++) {
+    const groep = groepVoor(board, routes, i);
+    if (groep >= 0) loads[groep] = loads[groep]! + board.devices[i]!.amp;
+  }
+  return loads;
+}
+
+/** Every way a set of routes can be wrong. */
 export function faults(board: Board, routes: readonly Route[]): Fault[] {
   const out: Fault[] = [];
 
-  for (let i = 0; i < board.stopcontacten.length; i++) {
+  for (let i = 0; i < board.devices.length; i++) {
     const route = routes[i];
-    if (!route || route.length === 0) {
+    const device = board.devices[i]!;
+    if (!route || route.length < 2) {
       out.push({ kind: 'los', which: i });
       continue;
     }
-    if (!samePoint(route[0]!, board.stopcontacten[i]!) || !isTerminal(board, route[route.length - 1]!)) {
+    const targets = targetsFor(board, i);
+    if (!samePoint(route[0]!, device.cel) ||
+        !targets.some((t) => samePoint(t, route[route.length - 1]!))) {
       out.push({ kind: 'los', which: i });
       continue;
     }
+    let broken = false;
     for (let s = 1; s < route.length; s++) {
       const a = route[s - 1]!;
       const b = route[s]!;
       if (Math.abs(a.x - b.x) + Math.abs(a.y - b.y) !== 1) {
         out.push({ kind: 'onderbroken', which: i });
+        broken = true;
         break;
       }
     }
+    if (broken) continue;
+    const end = route[route.length - 1]!;
     for (const p of route) {
       if (!routable(board, p)) {
+        out.push({ kind: 'verboden', which: i, at: p });
+        break;
+      }
+      // A run may touch its own device and the one it ends on, nothing else:
+      // cable does not pass straight through someone else's socket.
+      const other = board.devices.findIndex((d) => samePoint(d.cel, p));
+      if (other >= 0 && other !== i && !samePoint(p, end)) {
         out.push({ kind: 'verboden', which: i, at: p });
         break;
       }
     }
   }
 
-  // Cables may run together along the same axis, but never cross and never
-  // share a corner. The meterkast is where they all arrive, so it is exempt.
+  // Runs may share a chase but never cross. A groep terminal is where
+  // everything arrives, and a device is a junction — a lamp's run ending
+  // inside a schakelaar that another run leaves is the point, not a crossing.
+  const junction = (p: Point): boolean =>
+    isTerminal(board, p) || board.devices.some((d) => samePoint(d.cel, p));
+
   const seen = new Map<number, { route: number; axis: Axis }>();
   for (let i = 0; i < routes.length; i++) {
     const route = routes[i] ?? [];
     for (let s = 0; s < route.length; s++) {
       const p = route[s]!;
-      if (isTerminal(board, p)) continue;
+      if (junction(p)) continue;
       const axis = axisAt(route, s);
       const key = index(board, p);
       const held = seen.get(key);
@@ -188,13 +234,11 @@ export function faults(board: Board, routes: readonly Route[]): Fault[] {
       } else if (held.route !== i && !axesCompatible(held.axis, axis)) {
         out.push({ kind: 'kruising', at: p });
       } else if (held.route === i) {
-        out.push({ kind: 'kruising', at: p });   // a route doubling back on itself
+        out.push({ kind: 'kruising', at: p });   // doubling back on itself
       }
     }
   }
 
-  // Each breaker only carries so much. This is what stops you hanging every
-  // socket on one group and running the least possible cable.
   const loads = groupLoads(board, routes);
   for (let g = 0; g < board.groepen.length; g++) {
     if (loads[g]! > board.groepen[g]!.maxAmp) {
@@ -209,7 +253,7 @@ export function isSolved(board: Board, routes: readonly Route[]): boolean {
   return faults(board, routes).length === 0;
 }
 
-/** Cable used, in cells. The meterkast cell is shared, so it is not counted. */
+/** Cable used, in cells. */
 export function cableLength(routes: readonly Route[]): number {
   return routes.reduce((n, route) => n + Math.max(0, route.length - 1), 0);
 }
