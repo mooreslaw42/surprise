@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  TILE, type Board, type Device, type Route,
+  TILE, type Board, type Device, type Groep, type Route,
   axisAt, axesCompatible, cableLength, faults, groepVoor, groupLoads, groupOf, isSolved,
-  isTerminal, routable, stars, targetsFor, tileAt,
+  endpointsFor, isTerminal, routable, stars, targetsFor, tileAt,
 } from './model.ts';
 import { solve } from './solver.ts';
 import { ELEKTRA_LEVELS, boardFor } from './levels.ts';
@@ -13,8 +13,7 @@ import { SURFACES } from '../../data/house.ts';
 function openBoard(
   sockets: { x: number; y: number }[],
   belasting?: number[],
-  groepen: { cel: { x: number; y: number }; naam: string; maxAmp: number }[] =
-    [{ cel: { x: 0, y: 2 }, naam: 'G1', maxAmp: 16 }],
+  groepen: Groep[] = [{ cel: { x: 0, y: 2 }, naam: 'WCD1', soort: 'wcd', maxAmp: 16 }],
   extra: Device[] = [],
 ): Board {
   const width = 5;
@@ -82,9 +81,9 @@ test('an unfinished or broken run is reported', () => {
 
 test('a groep over 16A trips, and splitting them does not', () => {
   const sockets = [{ x: 4, y: 0 }, { x: 4, y: 2 }];
-  const groepen = [
-    { cel: { x: 0, y: 2 }, naam: 'G1', maxAmp: 16 },
-    { cel: { x: 0, y: 1 }, naam: 'G2', maxAmp: 16 },
+  const groepen: Groep[] = [
+    { cel: { x: 0, y: 2 }, naam: 'WCD1', soort: 'wcd', maxAmp: 16 },
+    { cel: { x: 0, y: 1 }, naam: 'WCD2', soort: 'wcd', maxAmp: 16 },
   ];
   const board = openBoard(sockets, [10, 10], groepen);
 
@@ -106,9 +105,9 @@ test('a groep over 16A trips, and splitting them does not', () => {
 });
 
 test('a route is credited to the groep it actually lands on', () => {
-  const groepen = [
-    { cel: { x: 0, y: 2 }, naam: 'G1', maxAmp: 16 },
-    { cel: { x: 0, y: 1 }, naam: 'G2', maxAmp: 16 },
+  const groepen: Groep[] = [
+    { cel: { x: 0, y: 2 }, naam: 'WCD1', soort: 'wcd', maxAmp: 16 },
+    { cel: { x: 0, y: 1 }, naam: 'WCD2', soort: 'wcd', maxAmp: 16 },
   ];
   const board = openBoard([{ x: 4, y: 1 }], [7], groepen);
   assert.ok(isTerminal(board, { x: 0, y: 1 }));
@@ -159,18 +158,18 @@ test('stars are awarded against par', () => {
 });
 
 test('a lamp hangs on the groep its schakelaar reaches', () => {
-  const groepen = [
-    { cel: { x: 0, y: 2 }, naam: 'G1', maxAmp: 16 },
-    { cel: { x: 0, y: 0 }, naam: 'G2', maxAmp: 16 },
+  const groepen: Groep[] = [
+    { cel: { x: 0, y: 2 }, naam: 'LICHT', soort: 'licht', maxAmp: 16 },
+    { cel: { x: 0, y: 0 }, naam: 'WCD1', soort: 'wcd', maxAmp: 16 },
   ];
   const board = openBoard([], [], groepen, [
     { kind: 'lamp', cel: { x: 4, y: 0 }, amp: 7 },
     { kind: 'schakelaar', cel: { x: 4, y: 2 }, amp: 0 },
   ]);
 
-  // The lamp may only end on a schakelaar; the schakelaar only on a groep.
+  // The lamp may only end on a schakelaar; the schakelaar only on LICHT.
   assert.deepEqual(targetsFor(board, 0), [{ x: 4, y: 2 }]);
-  assert.deepEqual(targetsFor(board, 1), groepen.map((g) => g.cel));
+  assert.deepEqual(targetsFor(board, 1), [{ x: 0, y: 2 }]);
 
   const lampRun: Route = [{ x: 4, y: 0 }, { x: 4, y: 1 }, { x: 4, y: 2 }];
   const switchRun: Route = [{ x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }, { x: 0, y: 2 }];
@@ -179,7 +178,7 @@ test('a lamp hangs on the groep its schakelaar reaches', () => {
 });
 
 test('a lamp wired straight to the meterkast is not connected', () => {
-  const groepen = [{ cel: { x: 0, y: 2 }, naam: 'G1', maxAmp: 16 }];
+  const groepen: Groep[] = [{ cel: { x: 0, y: 2 }, naam: 'LICHT', soort: 'licht', maxAmp: 16 }];
   const board = openBoard([], [], groepen, [
     { kind: 'lamp', cel: { x: 4, y: 0 }, amp: 7 },
     { kind: 'schakelaar', cel: { x: 4, y: 2 }, amp: 0 },
@@ -191,7 +190,7 @@ test('a lamp wired straight to the meterkast is not connected', () => {
 });
 
 test('a dangling schakelaar leaves its lamp unpowered', () => {
-  const groepen = [{ cel: { x: 0, y: 2 }, naam: 'G1', maxAmp: 16 }];
+  const groepen: Groep[] = [{ cel: { x: 0, y: 2 }, naam: 'LICHT', soort: 'licht', maxAmp: 16 }];
   const board = openBoard([], [], groepen, [
     { kind: 'lamp', cel: { x: 4, y: 0 }, amp: 7 },
     { kind: 'schakelaar', cel: { x: 4, y: 2 }, amp: 0 },
@@ -205,4 +204,47 @@ test('cable may not pass through a device it does not belong to', () => {
   const board = openBoard([{ x: 4, y: 0 }, { x: 2, y: 0 }]);
   const through: Route = [{ x: 4, y: 0 }, { x: 3, y: 0 }, { x: 2, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }];
   assert.ok(faults(board, [through, []]).some((f) => f.kind === 'verboden'));
+});
+
+test('lights and sockets may not share a breaker', () => {
+  const groepen: Groep[] = [
+    { cel: { x: 0, y: 2 }, naam: 'LICHT', soort: 'licht', maxAmp: 16 },
+    { cel: { x: 0, y: 0 }, naam: 'WCD1', soort: 'wcd', maxAmp: 16 },
+  ];
+  const board = openBoard([{ x: 4, y: 1 }], [8], groepen, [
+    { kind: 'lamp', cel: { x: 4, y: 2 }, amp: 6 },
+    { kind: 'schakelaar', cel: { x: 2, y: 2 }, amp: 0 },
+  ]);
+
+  // A socket belongs on WCD, a schakelaar on LICHT, and neither may swap.
+  assert.deepEqual(targetsFor(board, 0), [{ x: 0, y: 0 }]);
+  assert.deepEqual(targetsFor(board, 2), [{ x: 0, y: 2 }]);
+
+  // A cable dragged to the wrong breaker still attaches, so the player can
+  // see what they did, but the level is not finished.
+  assert.ok(endpointsFor(board, 0).some((p) => p.x === 0 && p.y === 2));
+  const socketOnLicht: Route = [{ x: 4, y: 1 }, { x: 3, y: 1 }, { x: 2, y: 1 }, { x: 1, y: 1 }, { x: 0, y: 1 }, { x: 0, y: 2 }];
+  const found = faults(board, [socketOnLicht, [], []]);
+  assert.ok(found.some((f) => f.kind === 'verkeerdegroep'), 'should name the wrong breaker');
+  assert.ok(!found.some((f) => f.kind === 'los' && f.which === 0), 'and not call it unconnected');
+});
+
+test('every shipped level keeps lights and sockets apart', () => {
+  for (const level of ELEKTRA_LEVELS) {
+    const { routes } = solve(level.board);
+    for (let i = 0; i < level.board.devices.length; i++) {
+      const groep = groepVoor(level.board, routes, i);
+      assert.ok(groep >= 0, `${level.id}: device ${i} ended up on nothing`);
+      const want = level.board.devices[i]!.kind === 'stopcontact' ? 'wcd' : 'licht';
+      assert.equal(level.board.groepen[groep]!.soort, want,
+        `${level.id}: a ${level.board.devices[i]!.kind} landed on a ${level.board.groepen[groep]!.soort} groep`);
+    }
+  }
+});
+
+test('the later levels ask more than the first', () => {
+  const counts = ELEKTRA_LEVELS.map((l) => l.board.devices.length);
+  assert.ok(Math.max(...counts) >= 5, 'at least one level should have five runs');
+  assert.ok(ELEKTRA_LEVELS.some((l) => l.board.groepen.length === 3), 'and one should have three groepen');
+  assert.ok(ELEKTRA_LEVELS.some((l) => l.blokkade.length > 0), 'and one should have a pipe in the way');
 });

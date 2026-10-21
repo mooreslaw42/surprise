@@ -1,6 +1,8 @@
 import { SURFACES, type RoomId, type Surface } from '../../data/house.ts';
 import { surfaceToRows } from '../sloop/generate.ts';
-import { TILE, type Board, type Device, type Point, type TileValue, index } from './model.ts';
+import {
+  TILE, type Board, type Device, type GroepSoort, type Point, type TileValue, index,
+} from './model.ts';
 
 /**
  * Elektra levels on the same measured walls as Sloop. Windows, doors and
@@ -16,12 +18,15 @@ export type ElektraLevel = {
   readonly vlak: string;
   readonly praatje: string;
   readonly uitleg: readonly string[];
+  readonly blokkade: readonly Point[];
   readonly board: Board;
 };
 
 type Placement = {
-  readonly groepen: readonly { cel: Point; naam: string }[];
+  readonly groepen: readonly { cel: Point; naam: string; soort: GroepSoort }[];
   readonly devices: readonly Device[];
+  /** Waterleiding already on the wall. Cable cannot cross it. */
+  readonly blokkade?: readonly Point[];
   readonly praatje: string;
 };
 
@@ -34,9 +39,22 @@ const lamp = (x: number, y: number, amp: number): Device =>
 const schakelaar = (x: number, y: number): Device =>
   ({ kind: 'schakelaar', cel: { x, y }, amp: 0 });
 
-const TWEE_GROEPEN = (x: number, yTop: number) => [
-  { cel: { x, y: yTop }, naam: 'G1' },
-  { cel: { x, y: yTop + 1 }, naam: 'G2' },
+/** Two socket groups, for the stages before the lights arrive. */
+const TWEE_WCD = (x: number, yTop: number) => [
+  { cel: { x, y: yTop }, naam: 'WCD1', soort: 'wcd' as const },
+  { cel: { x, y: yTop + 1 }, naam: 'WCD2', soort: 'wcd' as const },
+];
+
+/**
+ * A lighting group and two socket groups. Lights and sockets may not share a
+ * breaker, so the lamps are forced onto LICHT — the choice that is left is
+ * which of the two socket groups each stopcontact goes on, and that is
+ * decided by the amps.
+ */
+const LICHT_EN_WCD = (x: number, yTop: number) => [
+  { cel: { x, y: yTop }, naam: 'LICHT', soort: 'licht' as const },
+  { cel: { x, y: yTop + 1 }, naam: 'WCD1', soort: 'wcd' as const },
+  { cel: { x, y: yTop + 2 }, naam: 'WCD2', soort: 'wcd' as const },
 ];
 
 /**
@@ -45,34 +63,48 @@ const TWEE_GROEPEN = (x: number, yTop: number) => [
  */
 const PLACEMENTS: Record<string, Placement> = {
   'woonkamer-tuinwand': {
-    groepen: TWEE_GROEPEN(0, 5),
+    groepen: TWEE_WCD(0, 5),
     devices: [stopcontact(14, 3, 10), stopcontact(7, 2, 6), stopcontact(11, 0, 4)],
     praatje: 'SAMEN 20A. EEN GROEP TREKT ER 16.',
   },
   'keuken-achterwand': {
-    groepen: TWEE_GROEPEN(6, 5),
+    groepen: TWEE_WCD(6, 5),
     devices: [stopcontact(11, 2, 8), stopcontact(8, 0, 8), stopcontact(11, 6, 6)],
     praatje: 'DE OVEN ALLEEN OP EEN GROEP.',
   },
-  'tvkamer-kopgevel': {
-    groepen: TWEE_GROEPEN(0, 5),
-    devices: [stopcontact(8, 1, 6), stopcontact(1, 2, 6), stopcontact(8, 3, 6)],
-    praatje: 'DRIE KEER ZES. DAT WORDT TWEE GROEPEN.',
-  },
   'woonkamer-binnenmuur': {
-    groepen: TWEE_GROEPEN(0, 5),
-    devices: [lamp(6, 0, 6), schakelaar(10, 3), stopcontact(11, 6, 12)],
-    praatje: 'DE LAMP GAAT EERST NAAR DE SCHAKELAAR.',
+    groepen: LICHT_EN_WCD(0, 4),
+    devices: [
+      lamp(6, 0, 6), schakelaar(10, 3),
+      stopcontact(11, 6, 10), stopcontact(2, 2, 8),
+    ],
+    praatje: 'LICHT OP DE LICHTGROEP. STOPCONTACTEN NIET.',
   },
   'keuken-zijwand': {
-    groepen: TWEE_GROEPEN(0, 5),
-    devices: [lamp(4, 0, 6), schakelaar(7, 3), stopcontact(7, 6, 12)],
-    praatje: 'SCHAKELAAR OP HANDHOOGTE, NAAST DE DEUR.',
+    groepen: LICHT_EN_WCD(0, 4),
+    devices: [
+      lamp(6, 0, 6), schakelaar(7, 2),
+      stopcontact(8, 5, 10), stopcontact(2, 1, 8),
+    ],
+    // The waterleiding was there first.
+    blokkade: [{ x: 4, y: 1 }, { x: 4, y: 2 }, { x: 4, y: 3 }],
+    praatje: 'DE WATERLEIDING ZAT ER AL. ERLANGS.',
   },
   'tvkamer-tuinwand': {
-    groepen: TWEE_GROEPEN(0, 5),
-    devices: [lamp(1, 0, 4), lamp(6, 0, 4), schakelaar(6, 2), stopcontact(12, 3, 10)],
-    praatje: 'TWEE LAMPEN, EEN SCHAKELAAR.',
+    groepen: LICHT_EN_WCD(0, 4),
+    devices: [
+      lamp(1, 0, 4), lamp(6, 0, 4), schakelaar(6, 2),
+      stopcontact(12, 3, 10), stopcontact(4, 4, 8),
+    ],
+    praatje: 'TWEE LAMPEN, EEN SCHAKELAAR, EEN LICHTGROEP.',
+  },
+  'tvkamer-kopgevel': {
+    groepen: LICHT_EN_WCD(0, 4),
+    devices: [
+      lamp(8, 0, 6), schakelaar(7, 2),
+      stopcontact(1, 2, 8), stopcontact(8, 4, 10),
+    ],
+    praatje: 'KOPGEVEL. DRIE GROEPEN, WEINIG MUUR.',
   },
 };
 
@@ -80,6 +112,12 @@ const UITLEG_BASIS = [
   'ELK STOPCONTACT WIL EEN DRAAD NAAR DE METERKAST. SLEEP HEM ERHEEN.',
   'HET GETAL EROP IS WAT HIJ TREKT, IN AMPERE. EEN GROEP HOUDT ER 16. SAMEN MEER? DAN MOETEN ZE OVER TWEE GROEPEN.',
   'DRADEN MOGEN NAAST ELKAAR LOPEN, MAAR NOOIT OVER ELKAAR HEEN.',
+];
+
+const UITLEG_GROEPEN = [
+  'NIEUW: LICHT EN STOPCONTACTEN MOGEN NIET OP DEZELFDE GROEP.',
+  'DE LAMPEN GAAN VIA DE SCHAKELAAR NAAR LICHT. DE STOPCONTACTEN NAAR WCD1 OF WCD2 — JIJ KIEST WELKE.',
+  'ELKE GROEP HOUDT 16A. EN DRADEN KRUISEN NOG STEEDS NIET.',
 ];
 
 const UITLEG_LAMPEN = [
@@ -100,6 +138,10 @@ export function boardFor(surface: Surface): Board {
     for (const ch of row) tiles.push(ch === '#' ? TILE.MUUR : TILE.GESLOTEN);
   }
 
+  for (const cel of placement.blokkade ?? []) {
+    tiles[cel.y * width + cel.x] = TILE.GESLOTEN;
+  }
+
   const board: Board = {
     width, height, tiles,
     groepen: placement.groepen.map((g) => ({ ...g, maxAmp: MAX_AMP })),
@@ -118,12 +160,14 @@ export function boardFor(surface: Surface): Board {
 export const ELEKTRA_LEVELS: readonly ElektraLevel[] = SURFACES.map((surface) => {
   const board = boardFor(surface);
   const heeftLampen = board.devices.some((d) => d.kind === 'lamp');
+  const heeftLichtgroep = board.groepen.some((g) => g.soort === 'licht');
   return {
     id: `elektra-${surface.id}`,
     ruimte: surface.ruimte,
     vlak: surface.naam,
     praatje: PLACEMENTS[surface.id]!.praatje,
-    uitleg: heeftLampen ? UITLEG_LAMPEN : UITLEG_BASIS,
+    blokkade: PLACEMENTS[surface.id]!.blokkade ?? [],
+    uitleg: heeftLichtgroep ? UITLEG_GROEPEN : heeftLampen ? UITLEG_LAMPEN : UITLEG_BASIS,
     board,
   };
 });

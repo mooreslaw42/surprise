@@ -8,8 +8,8 @@ import { ROOM_NAMES, SURFACES, type Surface } from '../data/house.ts';
 import { openingCells } from '../puzzles/sloop/generate.ts';
 import {
   type Point, type Route,
-  axisAt, axesCompatible, cableLength, faults, groepVoor, groupLoads, index, isSolved,
-  isTerminal, routable, samePoint, stars, targetsFor, tileAt,
+  axisAt, axesCompatible, cableLength, endpointsFor, faults, groepVoor, groupLoads, index,
+  isSolved, isTerminal, routable, samePoint, stars, tileAt,
 } from '../puzzles/elektra/model.ts';
 import { solve } from '../puzzles/elektra/solver.ts';
 import type { ElektraLevel } from '../puzzles/elektra/levels.ts';
@@ -111,7 +111,7 @@ export class ElektraScene implements Scene {
     if (!ctx.input.mouseDown && this.drawing !== null) {
       const route = this.routes[this.drawing]!;
       // Only a run that actually reaches the meterkast counts.
-      const ends = targetsFor(this.level.board, this.drawing);
+      const ends = endpointsFor(this.level.board, this.drawing);
       if (route.length < 2 || !ends.some((t) => samePoint(t, route[route.length - 1]!))) {
         this.routes[this.drawing] = [];
       }
@@ -140,7 +140,7 @@ export class ElektraScene implements Scene {
     }
     if (route.some((p) => samePoint(p, cell))) return;
     // A run may end on its own target, but never pass through another device.
-    const targets = targetsFor(this.level.board, which);
+    const targets = endpointsFor(this.level.board, which);
     const isTarget = targets.some((t) => samePoint(t, cell));
     const otherDevice = this.level.board.devices.some(
       (d, i) => i !== which && samePoint(d.cel, cell));
@@ -194,6 +194,7 @@ export class ElektraScene implements Scene {
     drawWallGround(screen, this.room, this.surface.afwerking);
     this.drawWall(screen);
     this.drawOpenings(screen);
+    this.drawBlokkade(screen);
     drawFloor(screen, this.room, 'ondervloer');
     drawProps(screen, this.room, this.surface.props,
       this.originX, this.originX + this.level.board.width * this.tile);
@@ -225,6 +226,23 @@ export class ElektraScene implements Scene {
     }
   }
 
+  /** Waterleiding already chased into the wall: cable has to go around it. */
+  private drawBlokkade(screen: Screen): void {
+    for (const cel of this.level.blokkade) {
+      const px = this.originX + cel.x * this.tile;
+      const py = this.originY + cel.y * this.tile;
+      const mid = Math.floor(this.tile / 2) - 2;
+      const vertical = this.level.blokkade.some((o) => o.x === cel.x && Math.abs(o.y - cel.y) === 1);
+      if (vertical) {
+        screen.fillRect(px + mid, py, 5, this.tile, C.ASGRIJS);
+        screen.fillRect(px + mid + 1, py, 1, this.tile, C.ZANDGRIJS);
+      } else {
+        screen.fillRect(px, py + mid, this.tile, 5, C.ASGRIJS);
+        screen.fillRect(px, py + mid + 1, this.tile, 1, C.ZANDGRIJS);
+      }
+    }
+  }
+
   private drawOpenings(screen: Screen): void {
     const band = {
       x: this.originX, y: this.originY,
@@ -249,13 +267,17 @@ export class ElektraScene implements Scene {
 
   private drawCables(screen: Screen): void {
     const bad = new Set<number>();
+    const wrongGroup = new Set<number>();
     for (const fault of faults(this.level.board, this.routes)) {
       if (fault.kind === 'kruising') bad.add(index(this.level.board, fault.at));
+      if (fault.kind === 'verkeerdegroep') wrongGroup.add(fault.which);
     }
     for (let i = 0; i < this.routes.length; i++) {
       const route = this.routes[i]!;
       const groep = groepVoor(this.level.board, this.routes, i);
-      const colour = groep >= 0 ? DRAAD[groep % DRAAD.length]! : C.ASGRIJS;
+      const misplaced = wrongGroup.has(i);
+      const colour = misplaced ? C.ROESTROOD
+        : groep >= 0 ? DRAAD[groep % DRAAD.length]! : C.ASGRIJS;
       for (let s = 1; s < route.length; s++) {
         const a = this.centre(route[s - 1]!);
         const b = this.centre(route[s]!);
@@ -288,7 +310,8 @@ export class ElektraScene implements Scene {
       // The breaker: up when it is carrying, red when it has had enough.
       screen.fillRect(c.x - 7, c.y - 4, 5, 9, over ? C.ROESTROOD : C.KALK);
       screen.fillRect(c.x - 7, over ? c.y + 1 : c.y - 4, 5, 4, over ? C.DONKERROOD : C.SALIE);
-      screen.text(groep.naam, c.x - 1, c.y - 3, over ? C.ROESTROOD : C.LICHTOKER);
+      const kort = groep.soort === 'licht' ? 'L' : groep.naam.slice(-1);
+      screen.text(kort, c.x - 1, c.y - 3, over ? C.ROESTROOD : C.LICHTOKER);
     }
 
     for (let i = 0; i < board.devices.length; i++) {
@@ -364,14 +387,17 @@ export class ElektraScene implements Scene {
     for (let g = 0; g < board.groepen.length; g++) {
       const groep = board.groepen[g]!;
       const over = loads[g]! > groep.maxAmp;
-      const label = `${groep.naam} ${loads[g]}/${groep.maxAmp}A`;
+      const label = `${groep.naam} ${loads[g]}/${groep.maxAmp}`;
       screen.text(label, x, y + 7, over ? C.ROESTROOD : DRAAD[g % DRAAD.length]!);
-      x += label.length * 6 + 10;
+      x += label.length * 6 + 8;
     }
     const done = this.routes.filter((r) => r.length > 1).length;
     screen.text(`${done}/${this.routes.length}`, x, y + 7, C.KALK);
-    screen.text('U = UITLEG   H = HINT', WIDTH - 6 - 21 * 6, y + 7, C.STEEN);
-    screen.text(this.level.praatje, 6, y + 20, C.ASGRIJS);
+    screen.text('U  H', WIDTH - 6 - 4 * 6, y + 7, C.STEEN);
+
+    const wrong = faults(board, this.routes).find((f) => f.kind === 'verkeerdegroep');
+    const message = wrong ? 'DAT IS DE VERKEERDE GROEP.' : this.level.praatje;
+    screen.text(message, 6, y + 20, wrong ? C.ROESTROOD : C.ASGRIJS);
     screen.text('R = OPNIEUW', WIDTH - 6 - 11 * 6, y + 20, C.STEEN);
   }
 

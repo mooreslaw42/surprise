@@ -216,6 +216,12 @@ meterkast, then a lamp that must reach a schakelaar first, then two lamps
 sharing one switch. A lamp's amps land on whichever groep its switch
 reached, so the chain decides the load as well as the route.
 
+Later levels add a lichtgroep. Lights and wandcontactdozen may not share a
+breaker, which is real practice, so lamps are forced onto LICHT and the
+remaining decision is which of two socket groups each stopcontact goes on —
+decided by the amps. Some walls also carry waterleiding that was already
+there and has to be routed around.
+
 ## 10. Open
 
 - Final title

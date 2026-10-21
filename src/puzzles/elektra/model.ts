@@ -47,12 +47,25 @@ export type Device = {
   readonly amp: number;
 };
 
+/**
+ * What a breaker is for. Lighting and wall sockets go on separate groups,
+ * which is how it is actually done: a blown socket should not take the lights
+ * out with it.
+ */
+export type GroepSoort = 'licht' | 'wcd';
+
 /** One breaker in the meterkast. Everything on it shares its 16A. */
 export type Groep = {
   readonly cel: Point;
   readonly naam: string;
+  readonly soort: GroepSoort;
   readonly maxAmp: number;
 };
+
+/** Which kind of breaker a device belongs on. */
+export function soortVoor(kind: DeviceKind): GroepSoort {
+  return kind === 'stopcontact' ? 'wcd' : 'licht';
+}
 
 export type Board = {
   readonly width: number;
@@ -87,8 +100,26 @@ export function isTerminal(board: Board, p: Point): boolean {
   return board.groepen.some((g) => samePoint(g.cel, p));
 }
 
-/** Where device i is allowed to end: a groep, or a schakelaar if it is a lamp. */
+/**
+ * Where device i may legally end: a schakelaar if it is a lamp, otherwise a
+ * breaker of the right kind.
+ */
 export function targetsFor(board: Board, i: number): Point[] {
+  const device = board.devices[i];
+  if (!device) return [];
+  if (device.kind === 'lamp') {
+    return board.devices.filter((d) => d.kind === 'schakelaar').map((d) => d.cel);
+  }
+  const soort = soortVoor(device.kind);
+  return board.groepen.filter((g) => g.soort === soort).map((g) => g.cel);
+}
+
+/**
+ * Where a run may be attached while playing. Wider than targetsFor on
+ * purpose: a cable dragged to the wrong breaker should land and be marked
+ * wrong, rather than silently refusing to connect.
+ */
+export function endpointsFor(board: Board, i: number): Point[] {
   const device = board.devices[i];
   if (!device) return [];
   if (device.kind === 'lamp') {
@@ -109,7 +140,8 @@ export type Fault =
   | { kind: 'kruising'; at: Point }
   | { kind: 'onderbroken'; which: number }
   | { kind: 'verboden'; which: number; at: Point }
-  | { kind: 'overbelast'; groep: number; amps: number };
+  | { kind: 'overbelast'; groep: number; amps: number }
+  | { kind: 'verkeerdegroep'; which: number; groep: number };
 
 /** How a route passes through one of its cells. */
 export type Axis = 'h' | 'v' | 'hoek';
@@ -181,10 +213,15 @@ export function faults(board: Board, routes: readonly Route[]): Fault[] {
       out.push({ kind: 'los', which: i });
       continue;
     }
-    const targets = targetsFor(board, i);
-    if (!samePoint(route[0]!, device.cel) ||
-        !targets.some((t) => samePoint(t, route[route.length - 1]!))) {
+    const end = route[route.length - 1]!;
+    const attached = endpointsFor(board, i).some((t) => samePoint(t, end));
+    if (!samePoint(route[0]!, device.cel) || !attached) {
       out.push({ kind: 'los', which: i });
+      continue;
+    }
+    // Attached, but to a breaker meant for the other kind of circuit.
+    if (!targetsFor(board, i).some((t) => samePoint(t, end))) {
+      out.push({ kind: 'verkeerdegroep', which: i, groep: groupOf(board, route) });
       continue;
     }
     let broken = false;
@@ -198,7 +235,6 @@ export function faults(board: Board, routes: readonly Route[]): Fault[] {
       }
     }
     if (broken) continue;
-    const end = route[route.length - 1]!;
     for (const p of route) {
       if (!routable(board, p)) {
         out.push({ kind: 'verboden', which: i, at: p });
