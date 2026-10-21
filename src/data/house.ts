@@ -42,6 +42,11 @@ export type Surface = {
   readonly width: number;
   readonly height: number;
   readonly openings: readonly Opening[];
+  /**
+   * Which stages this wall appears in. Interior walls that never had to come
+   * down still need wiring, so they show up in Elektra only.
+   */
+  readonly stages?: readonly ('sloop' | 'elektra')[];
   /** Which scanned wall this came from, so it can be checked. */
   readonly bron: string;
 };
@@ -124,6 +129,48 @@ export const SURFACES: readonly Surface[] = [
     ],
   },
   {
+    id: 'woonkamer-haardwand',
+    achtergrond: 'binnen',
+    afwerking: 'oker',
+    props: ['boekenkast', 'lamp'],
+    ruimte: 'woonkamer',
+    naam: 'HAARDWAND',
+    bron: 'scan2 wand 3, x 4.20-8.60',
+    stages: ['elektra'],
+    width: 4.40,
+    height: 2.61,
+    openings: [],
+  },
+  {
+    id: 'keuken-raamwand',
+    achtergrond: 'tuin',
+    afwerking: 'kalk',
+    props: ['aanrecht'],
+    ruimte: 'keuken',
+    naam: 'RAAMWAND',
+    bron: 'scan2 wand 2, x 0.00-5.00',
+    stages: ['elektra'],
+    width: 5.00,
+    height: 2.61,
+    openings: [
+      { kind: 'raam', x: 1.30, y: 0.45, w: 0.55, h: 1.85 },
+      { kind: 'raam', x: 2.10, y: 0.50, w: 1.25, h: 1.95 },
+    ],
+  },
+  {
+    id: 'tvkamer-zijwand',
+    achtergrond: 'binnen',
+    afwerking: 'behang',
+    props: ['tv', 'stofzuiger'],
+    ruimte: 'tvkamer',
+    naam: 'ZIJWAND',
+    bron: 'scan2 wand 5',
+    stages: ['elektra'],
+    width: 3.90,
+    height: 2.61,
+    openings: [],
+  },
+  {
     id: 'tvkamer-kopgevel',
     achtergrond: 'tuin',
     afwerking: 'behang',
@@ -138,6 +185,10 @@ export const SURFACES: readonly Surface[] = [
     ],
   },
 ];
+
+export function surfacesIn(stage: 'sloop' | 'elektra'): Surface[] {
+  return SURFACES.filter((s) => (s.stages ?? ['sloop', 'elektra']).includes(stage));
+}
 
 export function surfacesFor(room: RoomId): Surface[] {
   return SURFACES.filter((s) => s.ruimte === room);

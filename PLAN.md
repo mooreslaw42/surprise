@@ -216,6 +216,12 @@ meterkast, then a lamp that must reach a schakelaar first, then two lamps
 sharing one switch. A lamp's amps land on whichever groep its switch
 reached, so the chain decides the load as well as the route.
 
+Nine Elektra levels. The last three add a wisselschakelaar — one lamp
+switched from two places, so the run goes lamp to the near switch, that to
+the far one, and only the far one to the lichtgroep. Three walls appear in
+Elektra only: interior walls that never had to come down but still need
+wiring.
+
 Later levels add a lichtgroep. Lights and wandcontactdozen may not share a
 breaker, which is real practice, so lamps are forced onto LICHT and the
 remaining decision is which of two socket groups each stopcontact goes on —

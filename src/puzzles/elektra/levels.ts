@@ -1,4 +1,4 @@
-import { SURFACES, type RoomId, type Surface } from '../../data/house.ts';
+import { surfacesIn, type RoomId, type Surface } from '../../data/house.ts';
 import { surfaceToRows } from '../sloop/generate.ts';
 import {
   TILE, type Board, type Device, type GroepSoort, type Point, type TileValue, index,
@@ -38,6 +38,18 @@ const lamp = (x: number, y: number, amp: number): Device =>
   ({ kind: 'lamp', cel: { x, y }, amp });
 const schakelaar = (x: number, y: number): Device =>
   ({ kind: 'schakelaar', cel: { x, y }, amp: 0 });
+
+/**
+ * Half of a wisselschakelaar: a lamp switched from two places. The first
+ * switch runs to the second, and only the second reaches the lichtgroep, so
+ * the chain is three links long.
+ */
+const wissel = (x: number, y: number, naar?: number): Device =>
+  ({ kind: 'schakelaar', cel: { x, y }, amp: 0, naar });
+
+/** A lamp that must reach one particular switch. */
+const lampNaar = (x: number, y: number, amp: number, naar: number): Device =>
+  ({ kind: 'lamp', cel: { x, y }, amp, naar });
 
 /** Two socket groups, for the stages before the lights arrive. */
 const TWEE_WCD = (x: number, yTop: number) => [
@@ -98,6 +110,45 @@ const PLACEMENTS: Record<string, Placement> = {
     ],
     praatje: 'TWEE LAMPEN, EEN SCHAKELAAR, EEN LICHTGROEP.',
   },
+  // The three hardest walls. Each has a lamp switched from two places, so the
+  // run goes lamp -> schakelaar -> schakelaar -> lichtgroep, and only the far
+  // switch may touch the groep.
+  'woonkamer-haardwand': {
+    groepen: LICHT_EN_WCD(0, 4),
+    devices: [
+      lampNaar(6, 0, 6, 1),       // 0: lamp, to the near switch
+      wissel(3, 2, 2),            // 1: near switch, to the far one
+      wissel(10, 2),              // 2: far switch, to LICHT
+      stopcontact(12, 5, 10),     // 3
+      stopcontact(6, 6, 8),       // 4
+    ],
+    praatje: 'EEN LAMP, TWEE SCHAKELAARS. WISSELSCHAKELING.',
+  },
+  'keuken-raamwand': {
+    groepen: LICHT_EN_WCD(0, 4),
+    devices: [
+      lampNaar(1, 0, 4, 1),
+      wissel(5, 2, 2),
+      wissel(12, 2),
+      stopcontact(3, 4, 8),
+      stopcontact(13, 5, 10),
+      stopcontact(0, 2, 6),
+    ],
+    praatje: 'ALLES MOET LANGS DE RAMEN. ZES DRADEN.',
+  },
+  'tvkamer-zijwand': {
+    groepen: LICHT_EN_WCD(0, 4),
+    devices: [
+      lampNaar(3, 0, 4, 2),
+      lampNaar(8, 0, 4, 2),
+      wissel(5, 2, 3),
+      wissel(10, 4),
+      stopcontact(10, 6, 10),
+      stopcontact(1, 5, 8),
+    ],
+    blokkade: [{ x: 7, y: 4 }, { x: 7, y: 5 }, { x: 7, y: 6 }],
+    praatje: 'TWEE LAMPEN, EEN WISSELSCHAKELING, EEN LEIDING.',
+  },
   'tvkamer-kopgevel': {
     groepen: LICHT_EN_WCD(0, 4),
     devices: [
@@ -112,6 +163,12 @@ const UITLEG_BASIS = [
   'ELK STOPCONTACT WIL EEN DRAAD NAAR DE METERKAST. SLEEP HEM ERHEEN.',
   'HET GETAL EROP IS WAT HIJ TREKT, IN AMPERE. EEN GROEP HOUDT ER 16. SAMEN MEER? DAN MOETEN ZE OVER TWEE GROEPEN.',
   'DRADEN MOGEN NAAST ELKAAR LOPEN, MAAR NOOIT OVER ELKAAR HEEN.',
+];
+
+const UITLEG_WISSEL = [
+  'DEZE LAMP MOET VANAF TWEE PLEKKEN AAN KUNNEN. EEN WISSELSCHAKELING.',
+  'DUS: LAMP NAAR DE EERSTE SCHAKELAAR, DIE NAAR DE TWEEDE, EN PAS DIE NAAR DE LICHTGROEP.',
+  'DRIE DRADEN ACHTER ELKAAR. EN NOG STEEDS NIKS KRUISEN.',
 ];
 
 const UITLEG_GROEPEN = [
@@ -157,17 +214,20 @@ export function boardFor(surface: Surface): Board {
   return board;
 }
 
-export const ELEKTRA_LEVELS: readonly ElektraLevel[] = SURFACES.map((surface) => {
+export const ELEKTRA_LEVELS: readonly ElektraLevel[] = surfacesIn('elektra').map((surface) => {
   const board = boardFor(surface);
   const heeftLampen = board.devices.some((d) => d.kind === 'lamp');
   const heeftLichtgroep = board.groepen.some((g) => g.soort === 'licht');
+  const heeftWissel = board.devices.some((d) => d.kind === 'schakelaar' && d.naar !== undefined);
   return {
     id: `elektra-${surface.id}`,
     ruimte: surface.ruimte,
     vlak: surface.naam,
     praatje: PLACEMENTS[surface.id]!.praatje,
     blokkade: PLACEMENTS[surface.id]!.blokkade ?? [],
-    uitleg: heeftLichtgroep ? UITLEG_GROEPEN : heeftLampen ? UITLEG_LAMPEN : UITLEG_BASIS,
+    uitleg: heeftWissel ? UITLEG_WISSEL
+      : heeftLichtgroep ? UITLEG_GROEPEN
+        : heeftLampen ? UITLEG_LAMPEN : UITLEG_BASIS,
     board,
   };
 });

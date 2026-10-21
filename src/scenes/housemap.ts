@@ -11,10 +11,11 @@ import { LevelScene } from './level.ts';
 import { ElektraScene } from './elektra.ts';
 
 const CARD_W = 112;
-const CARD_H = 66;
-const CARD_Y = 36;
-const GAP = 8;
+const CARD_Y = 34;
+const GAP = 7;
 const PER_ROW = 3;
+const FOOTER = 26;
+const MAX_CARD_H = 66;
 
 /**
  * Pick a room. Free order within a stage; the stage itself is gated, which is
@@ -40,7 +41,16 @@ export class HouseMapScene implements Scene {
     return STAGES[stage]!.entries.every((e) => this.save.isDone(e.id));
   }
 
-  /** Laid out in rows of three, because six no longer fit across. */
+  /**
+   * Rows of three, with the cards shrinking to fit however many rows that
+   * takes. Nine walls no longer fit at a fixed height.
+   */
+  private cardHeight(): number {
+    const rows = Math.ceil(this.entries().length / PER_ROW);
+    const room = HEIGHT - CARD_Y - FOOTER - (rows - 1) * GAP;
+    return Math.min(MAX_CARD_H, Math.floor(room / rows));
+  }
+
   private cardPos(i: number): { x: number; y: number } {
     const n = this.entries().length;
     const row = Math.floor(i / PER_ROW);
@@ -48,7 +58,7 @@ export class HouseMapScene implements Scene {
     const total = inRow * CARD_W + (inRow - 1) * GAP;
     return {
       x: Math.round((WIDTH - total) / 2) + (i % PER_ROW) * (CARD_W + GAP),
-      y: CARD_Y + row * (CARD_H + GAP),
+      y: CARD_Y + row * (this.cardHeight() + GAP),
     };
   }
 
@@ -72,7 +82,7 @@ export class HouseMapScene implements Scene {
       const { x, y } = this.cardPos(i);
       const inside = ctx.input.mouseOver &&
         ctx.input.mouseX >= x && ctx.input.mouseX < x + CARD_W &&
-        ctx.input.mouseY >= y && ctx.input.mouseY < y + CARD_H;
+        ctx.input.mouseY >= y && ctx.input.mouseY < y + this.cardHeight();
       if (inside) {
         this.selected = i;
         if (ctx.input.mouseClicked) this.open(ctx, i);
@@ -123,39 +133,53 @@ export class HouseMapScene implements Scene {
   private drawCard(screen: Screen, i: number): void {
     const level = this.entries()[i]!;
     const { x, y } = this.cardPos(i);
+    const cardH = this.cardHeight();
     const active = i === this.selected;
     const record = this.save.get(level.id);
 
-    screen.fillRect(x, y, CARD_W, CARD_H, C.ZWART);
-    screen.strokeRect(x, y, CARD_W, CARD_H, active ? C.LICHTOKER : C.STEEN);
-    if (active) screen.strokeRect(x + 1, y + 1, CARD_W - 2, CARD_H - 2, C.DONKEROKER);
+    screen.fillRect(x, y, CARD_W, cardH, C.ZWART);
+    screen.strokeRect(x, y, CARD_W, cardH, active ? C.LICHTOKER : C.STEEN);
+    if (active) screen.strokeRect(x + 1, y + 1, CARD_W - 2, cardH - 2, C.DONKEROKER);
 
     screen.textCentered(ROOM_NAMES[level.ruimte], x + CARD_W / 2, y + 4, active ? C.WIT : C.KALK);
     screen.textCentered(level.vlak, x + CARD_W / 2, y + 13, C.ASGRIJS);
 
-    // A thumbnail of the wall, straight from the level data.
-    const rows = level.rows ?? SLOOP_LEVELS.find((l) => l.ruimte === level.ruimte)?.rows ?? [];
+    // A thumbnail of the wall when there is room for one, otherwise a line
+    // saying what the job is. At nine cards the art collapses to single
+    // pixels and tells you nothing.
+    const rows = level.rows ?? [];
     const cols = rows[0]?.length ?? 0;
-    const cell = Math.max(2, Math.min(3, Math.floor(76 / Math.max(1, cols))));
-    const gx = x + Math.round((CARD_W - cols * cell) / 2);
-    const gy = y + 24;
-    for (let ry = 0; ry < rows.length; ry++) {
-      for (let rx = 0; rx < cols; rx++) {
-        const ch = rows[ry]![rx]!;
-        const color = ch === '#' ? C.KALK : ch === 'B' ? C.HOUT
-          : ch === 'L' ? C.ASGRIJS : ch === 'K' ? C.LICHTOKER : C.ROET;
-        screen.fillRect(gx + rx * cell, gy + ry * cell, cell - 1, cell - 1, color);
+    const art = cardH - 34;
+    const cell = cols === 0 ? 0 : Math.min(3, Math.min(
+      Math.floor(76 / cols),
+      Math.floor(art / Math.max(1, rows.length)),
+    ));
+    if (cell >= 2) {
+      const gx = x + Math.round((CARD_W - cols * cell) / 2);
+      const gy = y + 22;
+      for (let ry = 0; ry < rows.length; ry++) {
+        for (let rx = 0; rx < cols; rx++) {
+          const ch = rows[ry]![rx]!;
+          const color = ch === '#' ? C.KALK : ch === 'B' ? C.HOUT
+            : ch === 'L' ? C.ASGRIJS : ch === 'K' ? C.LICHTOKER : C.ROET;
+          screen.fillRect(gx + rx * cell, gy + ry * cell, cell - 1, cell - 1, color);
+        }
       }
+    } else if (level.samenvatting) {
+      // Clamped so a long summary can never bleed into the next card.
+      const fits = Math.floor((CARD_W - 8) / 6);
+      screen.textCentered(level.samenvatting.slice(0, fits), x + CARD_W / 2, y + 24,
+        active ? C.SALIE : C.STEEN);
     }
 
     if (record) {
       const span = 3 * STAR_W + 2 * 4;
       for (let s = 0; s < 3; s++) {
         drawStar(screen, x + Math.round((CARD_W - span) / 2) + s * (STAR_W + 4),
-          y + CARD_H - 10, s < record.stars);
+          y + cardH - 10, s < record.stars);
       }
     } else if (active && Math.floor(this.time * 2) % 2 === 0) {
-      screen.textCentered('AAN DE SLAG', x + CARD_W / 2, y + CARD_H - 9, C.ROESTROOD);
+      screen.textCentered('AAN DE SLAG', x + CARD_W / 2, y + cardH - 9, C.ROESTROOD);
     }
   }
 }

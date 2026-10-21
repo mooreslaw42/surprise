@@ -14,7 +14,10 @@ export type StageEntry = {
   readonly id: string;
   readonly ruimte: RoomId;
   readonly vlak: string;
+  /** The wall, for a thumbnail, when the card is tall enough to show one. */
   readonly rows?: readonly string[];
+  /** What the job involves, for when it is not. */
+  readonly samenvatting?: string;
 };
 
 export type Stage = {
@@ -35,6 +38,17 @@ export const STAGES: readonly Stage[] = [
     kind: 'elektra',
     nummer: 2,
     naam: 'ELEKTRA',
-    entries: ELEKTRA_LEVELS.map((l) => ({ id: l.id, ruimte: l.ruimte, vlak: l.vlak })),
+    entries: ELEKTRA_LEVELS.map((l) => {
+      const wissel = l.board.devices.some((d) => d.kind === 'schakelaar' && d.naar !== undefined);
+      return {
+        id: l.id,
+        ruimte: l.ruimte,
+        vlak: l.vlak,
+        // Kept short enough for a card: 18 characters at six pixels each.
+        samenvatting: wissel
+          ? `${l.board.devices.length} DRADEN  WISSEL`
+          : `${l.board.devices.length} DRADEN  ${l.board.groepen.length} GR`,
+      };
+    }),
   },
 ];

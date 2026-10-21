@@ -45,6 +45,12 @@ export type Device = {
   readonly cel: Point;
   /** Amps drawn. A schakelaar draws nothing itself. */
   readonly amp: number;
+  /**
+   * Index of the device this one must reach, overriding the usual rule.
+   * Used for wisselschakelaars: a lamp switched from two places runs
+   * lamp -> first switch -> second switch -> lichtgroep.
+   */
+  readonly naar?: number;
 };
 
 /**
@@ -107,6 +113,10 @@ export function isTerminal(board: Board, p: Point): boolean {
 export function targetsFor(board: Board, i: number): Point[] {
   const device = board.devices[i];
   if (!device) return [];
+  if (device.naar !== undefined) {
+    const target = board.devices[device.naar];
+    return target ? [target.cel] : [];
+  }
   if (device.kind === 'lamp') {
     return board.devices.filter((d) => d.kind === 'schakelaar').map((d) => d.cel);
   }
@@ -122,10 +132,22 @@ export function targetsFor(board: Board, i: number): Point[] {
 export function endpointsFor(board: Board, i: number): Point[] {
   const device = board.devices[i];
   if (!device) return [];
+  if (device.naar !== undefined) {
+    const target = board.devices[device.naar];
+    return target ? [target.cel] : [];
+  }
   if (device.kind === 'lamp') {
     return board.devices.filter((d) => d.kind === 'schakelaar').map((d) => d.cel);
   }
   return board.groepen.map((g) => g.cel);
+}
+
+/** True when this switch is one half of a two-way pair. */
+export function isWissel(board: Board, i: number): boolean {
+  const device = board.devices[i];
+  if (!device || device.kind !== 'schakelaar') return false;
+  if (device.naar !== undefined) return true;
+  return board.devices.some((d, j) => j !== i && d.kind === 'schakelaar' && d.naar === i);
 }
 
 export const STEPS: readonly Point[] = [
@@ -182,14 +204,18 @@ export function groupOf(board: Board, route: Route): number {
  * The groep a device finally hangs on, following a lamp through its
  * schakelaar. -1 when the chain is not finished.
  */
-export function groepVoor(board: Board, routes: readonly Route[], i: number): number {
+export function groepVoor(board: Board, routes: readonly Route[], i: number, seen = new Set<number>()): number {
+  // A chain can be three links long with a wisselschakelaar, and bad data
+  // could make it circular, so the walk remembers where it has been.
+  if (seen.has(i)) return -1;
+  seen.add(i);
   const route = routes[i];
   if (!route || route.length < 2) return -1;
   const direct = groupOf(board, route);
   if (direct >= 0) return direct;
   const via = deviceAtEnd(board, route);
   if (via < 0 || board.devices[via]!.kind !== 'schakelaar') return -1;
-  return groepVoor(board, routes, via);
+  return groepVoor(board, routes, via, seen);
 }
 
 /** Amps on each breaker, with lamps counted through their switch. */

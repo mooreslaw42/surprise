@@ -1,4 +1,4 @@
-import { SURFACES, type Achtergrond, type RoomId } from '../../data/house.ts';
+import { surfacesIn, type Achtergrond, type RoomId } from '../../data/house.ts';
 import { surfaceToRows } from './generate.ts';
 import { parseGrid, type Grid } from './model.ts';
 
@@ -24,7 +24,7 @@ const PRAATJES: Record<string, string> = {
   'tvkamer-kopgevel': 'KOPGEVEL. EEN RAAM, EEN LATEI.',
 };
 
-export const SLOOP_LEVELS: readonly SloopLevel[] = SURFACES.map((surface) => ({
+export const SLOOP_LEVELS: readonly SloopLevel[] = surfacesIn('sloop').map((surface) => ({
   id: `sloop-${surface.id}`,
   ruimte: surface.ruimte,
   vlak: surface.naam,

@@ -9,7 +9,7 @@ import { openingCells } from '../puzzles/sloop/generate.ts';
 import {
   type Point, type Route,
   axisAt, axesCompatible, cableLength, endpointsFor, faults, groepVoor, groupLoads, index,
-  isSolved, isTerminal, routable, samePoint, stars, tileAt,
+  isSolved, isTerminal, isWissel, routable, samePoint, stars, tileAt,
 } from '../puzzles/elektra/model.ts';
 import { solve } from '../puzzles/elektra/solver.ts';
 import type { ElektraLevel } from '../puzzles/elektra/levels.ts';
@@ -321,7 +321,9 @@ export class ElektraScene implements Scene {
       const colour = groep >= 0 ? DRAAD[groep % DRAAD.length]! : C.ASGRIJS;
       switch (device.kind) {
         case 'lamp': this.drawLamp(screen, at, colour, groep >= 0); break;
-        case 'schakelaar': this.drawSchakelaar(screen, at, colour); break;
+        case 'schakelaar':
+          this.drawSchakelaar(screen, at, colour, isWissel(board, i));
+          break;
         default: this.drawStopcontact(screen, at, colour, device.amp);
       }
     }
@@ -350,13 +352,24 @@ export class ElektraScene implements Scene {
     }
   }
 
-  /** A rocker switch on the wall. */
-  private drawSchakelaar(screen: Screen, at: { x: number; y: number }, colour: number): void {
+  /** A rocker switch. A wisselschakelaar gets two rockers, so the pair reads. */
+  private drawSchakelaar(
+    screen: Screen, at: { x: number; y: number }, colour: number, wissel: boolean,
+  ): void {
     screen.fillRect(at.x - 6, at.y - 6, 13, 13, C.WIT);
     screen.strokeRect(at.x - 6, at.y - 6, 13, 13, colour);
-    screen.fillRect(at.x - 3, at.y - 4, 7, 9, C.KALK);
-    screen.fillRect(at.x - 3, at.y - 4, 7, 4, C.ZANDGRIJS);
-    screen.fillRect(at.x - 3, at.y, 7, 1, C.ROET);
+    if (wissel) {
+      screen.fillRect(at.x - 4, at.y - 4, 4, 9, C.KALK);
+      screen.fillRect(at.x - 4, at.y - 4, 4, 4, C.ZANDGRIJS);
+      screen.fillRect(at.x + 1, at.y - 4, 4, 9, C.KALK);
+      screen.fillRect(at.x + 1, at.y, 4, 5, C.ZANDGRIJS);
+      screen.fillRect(at.x - 4, at.y, 4, 1, C.ROET);
+      screen.fillRect(at.x + 1, at.y - 1, 4, 1, C.ROET);
+    } else {
+      screen.fillRect(at.x - 3, at.y - 4, 7, 9, C.KALK);
+      screen.fillRect(at.x - 3, at.y - 4, 7, 4, C.ZANDGRIJS);
+      screen.fillRect(at.x - 3, at.y, 7, 1, C.ROET);
+    }
   }
 
   private drawCursorCell(screen: Screen, ctx: SceneContext): void {

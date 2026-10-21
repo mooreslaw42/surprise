@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import {
   TILE, type Board, type Device, type Groep, type Route,
   axisAt, axesCompatible, cableLength, faults, groepVoor, groupLoads, groupOf, isSolved,
-  endpointsFor, isTerminal, routable, stars, targetsFor, tileAt,
+  endpointsFor, isTerminal, isWissel, routable, stars, targetsFor, tileAt,
 } from './model.ts';
 import { solve } from './solver.ts';
 import { ELEKTRA_LEVELS, boardFor } from './levels.ts';
 import { SURFACES } from '../../data/house.ts';
+import { SLOOP_LEVELS } from '../sloop/levels.ts';
 
 /** A 5x3 open wall with one groep bottom-left, unless more are asked for. */
 function openBoard(
@@ -247,4 +248,63 @@ test('the later levels ask more than the first', () => {
   assert.ok(Math.max(...counts) >= 5, 'at least one level should have five runs');
   assert.ok(ELEKTRA_LEVELS.some((l) => l.board.groepen.length === 3), 'and one should have three groepen');
   assert.ok(ELEKTRA_LEVELS.some((l) => l.blokkade.length > 0), 'and one should have a pipe in the way');
+});
+
+test('a wisselschakelaar is a three-link chain to the lichtgroep', () => {
+  const level = ELEKTRA_LEVELS.find((l) => l.id === 'elektra-woonkamer-haardwand')!;
+  const board = level.board;
+
+  const lamp = 0;
+  const near = 1;
+  const far = 2;
+  assert.equal(board.devices[lamp]!.kind, 'lamp');
+  assert.ok(isWissel(board, near) && isWissel(board, far), 'both halves are two-way switches');
+
+  // Each link has exactly one legal destination, and only the far switch
+  // may touch a groep.
+  assert.deepEqual(targetsFor(board, lamp), [board.devices[near]!.cel]);
+  assert.deepEqual(targetsFor(board, near), [board.devices[far]!.cel]);
+  assert.deepEqual(targetsFor(board, far),
+    board.groepen.filter((g) => g.soort === 'licht').map((g) => g.cel));
+});
+
+test('the lamp stays dark until the whole chain is finished', () => {
+  const level = ELEKTRA_LEVELS.find((l) => l.id === 'elektra-woonkamer-haardwand')!;
+  const { routes } = solve(level.board);
+  assert.ok(groepVoor(level.board, routes, 0) >= 0, 'solved: the lamp has a groep');
+
+  // Break the last link and the lamp loses its groep, two steps upstream.
+  const broken = routes.map((r, i) => (i === 2 ? [] : r));
+  assert.equal(groepVoor(level.board, broken, 2), -1);
+  assert.equal(groepVoor(level.board, broken, 1), -1);
+  assert.equal(groepVoor(level.board, broken, 0), -1, 'the lamp goes out too');
+});
+
+test('a chain that loops back on itself does not hang', () => {
+  const groepen: Groep[] = [{ cel: { x: 0, y: 2 }, naam: 'LICHT', soort: 'licht', maxAmp: 16 }];
+  const board = openBoard([], [], groepen, [
+    { kind: 'schakelaar', cel: { x: 2, y: 0 }, amp: 0, naar: 1 },
+    { kind: 'schakelaar', cel: { x: 4, y: 0 }, amp: 0, naar: 0 },
+  ]);
+  const a: Route = [{ x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 }];
+  const b: Route = [{ x: 4, y: 0 }, { x: 3, y: 0 }, { x: 2, y: 0 }];
+  assert.equal(groepVoor(board, [a, b], 0), -1);
+});
+
+test('the hardest walls are harder than the first ones', () => {
+  const byId = new Map(ELEKTRA_LEVELS.map((l) => [l.id, l]));
+  const easy = byId.get('elektra-woonkamer-tuinwand')!;
+  for (const id of ['elektra-woonkamer-haardwand', 'elektra-keuken-raamwand', 'elektra-tvkamer-zijwand']) {
+    const hard = byId.get(id)!;
+    assert.ok(hard.board.devices.length > easy.board.devices.length, `${id} has no more runs`);
+    assert.ok(hard.board.groepen.length > easy.board.groepen.length, `${id} has no more groepen`);
+    assert.ok(hard.board.devices.some((d) => d.naar !== undefined), `${id} has no wisselschakelaar`);
+  }
+});
+
+test('walls marked elektra-only stay out of Sloop', () => {
+  const sloopIds = new Set(SLOOP_LEVELS.map((l) => l.id.replace('sloop-', '')));
+  const elektraIds = new Set(ELEKTRA_LEVELS.map((l) => l.id.replace('elektra-', '')));
+  assert.ok(elektraIds.size > sloopIds.size, 'Elektra should cover more walls');
+  for (const id of sloopIds) assert.ok(elektraIds.has(id), `${id} is demolished but never wired`);
 });
