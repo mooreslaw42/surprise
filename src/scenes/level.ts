@@ -13,7 +13,7 @@ import { gridFor, type SloopLevel } from '../puzzles/sloop/levels.ts';
 import { openingCells } from '../puzzles/sloop/generate.ts';
 import { SURFACES, type Surface } from '../data/house.ts';
 import {
-  layout, drawCeiling, drawFloor, drawWallGround, drawWindow, drawOutsideSlice, drawProps,
+  layout, wallGeometry, drawCeiling, drawFloor, drawWallGround, drawWindow, drawOutsideSlice, drawProps,
   type RoomLayout,
 } from './room.ts';
 
@@ -59,12 +59,10 @@ export class LevelScene implements Scene {
     this.room = layout(TOP_H, BOTTOM_H, HEIGHT);
     // The wall fills the room exactly, so the puzzle is the wall rather than a
     // board floating in front of one.
-    this.tile = Math.max(6, Math.min(
-      Math.floor(this.room.wallH / this.grid.height),
-      Math.floor((WIDTH - 24) / this.grid.width),
-    ));
-    this.originX = Math.round((WIDTH - this.grid.width * this.tile) / 2);
-    this.originY = this.room.floorY - this.grid.height * this.tile;
+    const geometry = wallGeometry(this.grid.width, this.grid.height, WIDTH, HEIGHT);
+    this.tile = geometry.tile;
+    this.originX = geometry.originX;
+    this.originY = geometry.originY;
   }
 
   update(dt: number, ctx: SceneContext): void {

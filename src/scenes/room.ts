@@ -23,6 +23,38 @@ export type RoomLayout = {
   readonly floorH: number;
 };
 
+export const TOP_BAR = 16;
+export const BOTTOM_BAR = 30;
+
+export type Geometry = { tile: number; originX: number; originY: number };
+
+/**
+ * Where a grid of wall cells lands on screen. Shared by every stage so the
+ * puzzle, the windows and the mouse can never disagree about it.
+ */
+export function wallGeometry(cols: number, rows: number, screenW: number, screenH: number): Geometry {
+  const l = layout(TOP_BAR, BOTTOM_BAR, screenH);
+  const tile = Math.max(6, Math.min(
+    Math.floor(l.wallH / rows),
+    Math.floor((screenW - 24) / cols),
+  ));
+  return {
+    tile,
+    originX: Math.round((screenW - cols * tile) / 2),
+    originY: l.floorY - rows * tile,
+  };
+}
+
+/** Centre of a wall cell, in screen pixels. */
+export function cellCentre(cols: number, rows: number, screenW: number, screenH: number,
+                           p: { x: number; y: number }): { x: number; y: number } {
+  const g = wallGeometry(cols, rows, screenW, screenH);
+  return {
+    x: g.originX + p.x * g.tile + Math.floor(g.tile / 2),
+    y: g.originY + p.y * g.tile + Math.floor(g.tile / 2),
+  };
+}
+
 export function layout(topBar: number, bottomBar: number, screenH: number): RoomLayout {
   const ceilingY = topBar;
   const ceilingH = 26;

@@ -12,11 +12,12 @@ import {
 import { solve } from '../puzzles/elektra/solver.ts';
 import type { ElektraLevel } from '../puzzles/elektra/levels.ts';
 import {
-  layout, drawCeiling, drawFloor, drawWallGround, drawWindow, drawProps, type RoomLayout,
+  layout, wallGeometry, drawCeiling, drawFloor, drawWallGround, drawWindow, drawProps, type RoomLayout,
 } from './room.ts';
 
 const TOP_H = 16;
 const BOTTOM_H = 30;
+
 const DRAAD = [C.LICHTOKER, C.MAGENTA, C.SALIE, C.ROESTROOD] as const;
 
 export class ElektraScene implements Scene {
@@ -46,12 +47,10 @@ export class ElektraScene implements Scene {
     this.surface = surface;
 
     this.room = layout(TOP_H, BOTTOM_H, HEIGHT);
-    this.tile = Math.max(6, Math.min(
-      Math.floor(this.room.wallH / level.board.height),
-      Math.floor((WIDTH - 24) / level.board.width),
-    ));
-    this.originX = Math.round((WIDTH - level.board.width * this.tile) / 2);
-    this.originY = this.room.floorY - level.board.height * this.tile;
+    const geometry = wallGeometry(level.board.width, level.board.height, WIDTH, HEIGHT);
+    this.tile = geometry.tile;
+    this.originX = geometry.originX;
+    this.originY = geometry.originY;
   }
 
   private cellAt(ctx: SceneContext): Point | null {
@@ -99,8 +98,13 @@ export class ElektraScene implements Scene {
         this.routes[this.drawing] = [];
       }
       this.drawing = null;
-      this.check();
     }
+
+    // Checked once a frame rather than on any one path. A route that reached
+    // the meterkast used to clear `drawing` itself, which skipped the
+    // mouse-up branch below and with it the only call to check() — so a
+    // correctly wired wall never recorded as finished.
+    this.check();
   }
 
   /** Follow the mouse one cell at a time, and let it retrace to undo. */
