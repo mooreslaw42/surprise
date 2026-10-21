@@ -1,13 +1,20 @@
 import type { Bord } from './model.ts';
+import { PLATTEGROND } from '../../data/plattegrond.ts';
 
 /**
  * Kanaalplannen: the ventilation drawing, with the pieces turned wrong.
  *
- * Generated rather than drawn — a spanning tree of duct over the grid, then
+ * Generated rather than drawn — a spanning tree of duct over the rooms, then
  * a set number of pieces turned off true — so every board is solvable by
  * construction and its par is known. Baked in here so a plan never changes
  * under someone mid-game.
+ *
+ * Every board is the whole footprint, with duct only in the rooms that plan
+ * covers; the rest of the house is drawn around it. The shape is the real one
+ * from the scan, which is what makes it awkward: an L with a corner missing
+ * leaves far less room to route than a rectangle would.
  */
+const { width, height } = PLATTEGROND;
 
 export type KanaalLevel = {
   readonly id: string;
@@ -16,6 +23,8 @@ export type KanaalLevel = {
   readonly praatje: string;
   readonly levering: string;
   readonly baas: boolean;
+  /** Which rooms this plan covers, for the header. */
+  readonly dekking: string;
   readonly uitleg: readonly string[];
   readonly bord: Bord;
 };
@@ -42,33 +51,36 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     id: 'kanalen-1',
     nummer: 1,
     titel: 'KANAALPLAN 1',
-    praatje: 'DRAAI DE STUKKEN TOT HET KLOPT.',
+    praatje: 'ALLEEN DE KEUKEN. DRAAI DE STUKKEN TOT HET KLOPT.',
     levering: 'LEVERING VERWACHT: WEEK 14',
     baas: false,
+    dekking: 'KEUKEN',
     uitleg: UITLEG_EERSTE,
     bord: {
-      width: 5,
-      height: 4,
-      masks: [4, 12, 6, 5, 4, 2, 11, 15, 8, 4, 2, 11, 15, 5, 13, 2, 9, 3, 2, 1],
-      wtw: 8,
-      roosters: [0, 4, 5, 9, 10, 15, 18, 19],
+      width, height,
+      masks: [0, 0, 0, 0, 0, 1, 7, 5, 5, 6, 0, 0, 0, 0, 0, 8, 10, 1, 5, 13,
+        0, 0, 0, 0, 0, 3, 12, 4, 5, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      wtw: 5,
+      roosters: [15, 17, 27],
     },
   },
   {
     id: 'kanalen-2',
     nummer: 2,
     titel: 'KANAALPLAN 2',
-    praatje: 'MEER KOKERS. ZELFDE IDEE.',
+    praatje: 'NU DE WOONKAMER ERBIJ. ZELFDE IDEE, MEER STUKKEN.',
     levering: 'LEVERING VERWACHT: WEEK 23',
     baas: false,
+    dekking: 'WOONKAMER',
     uitleg: UITLEG_LATER,
     bord: {
-      width: 6,
-      height: 5,
-      masks: [12, 5, 12, 8, 14, 8, 1, 2, 15, 11, 15, 6, 2, 5, 13, 5, 5, 5,
-        1, 8, 13, 8, 5, 10, 3, 5, 12, 2, 9, 1],
-      wtw: 27,
-      roosters: [3, 5, 6, 7, 12, 18, 19, 21, 29],
+      width, height,
+      masks: [9, 6, 8, 3, 1, 0, 0, 0, 0, 0, 4, 10, 11, 6, 1, 0, 0, 0, 0, 0,
+        1, 11, 15, 7, 14, 0, 0, 0, 0, 0, 1, 5, 12, 8, 8, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      wtw: 2,
+      roosters: [4, 10, 14, 20, 30, 33, 34],
     },
   },
   {
@@ -78,15 +90,15 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     praatje: 'ALLES IN EEN KEER. HIJ WACHT AL TWEE JAAR.',
     levering: 'GELEVERD',
     baas: true,
+    dekking: 'HET HELE HUIS',
     uitleg: UITLEG_BAAS,
     bord: {
-      width: 8,
-      height: 6,
-      masks: [9, 11, 5, 7, 5, 5, 11, 3, 2, 11, 1, 5, 4, 1, 9, 8,
-        2, 15, 8, 9, 11, 13, 10, 8, 2, 15, 11, 4, 12, 13, 6, 8,
-        2, 13, 8, 1, 1, 3, 15, 1, 4, 11, 5, 13, 4, 2, 13, 8],
-      wtw: 34,
-      roosters: [8, 10, 12, 13, 15, 16, 18, 23, 24, 27, 31, 32, 35, 36, 39, 40, 44, 45, 47],
+      width, height,
+      masks: [4, 9, 1, 5, 3, 12, 5, 5, 1, 8, 8, 11, 9, 1, 11, 13, 3, 2, 3, 3,
+        4, 14, 11, 9, 2, 13, 14, 1, 10, 4, 1, 6, 4, 11, 5, 11, 10, 1, 7, 3,
+        0, 0, 0, 0, 0, 7, 15, 15, 15, 12, 0, 0, 0, 0, 0, 1, 2, 2, 1, 1],
+      wtw: 0,
+      roosters: [2, 8, 9, 10, 13, 17, 20, 24, 27, 29, 30, 32, 37, 55, 56, 57, 58, 59],
     },
   },
 ];

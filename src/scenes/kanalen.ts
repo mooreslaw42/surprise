@@ -10,6 +10,7 @@ import {
 } from '../puzzles/kanalen/model.ts';
 import { solve } from '../puzzles/kanalen/solver.ts';
 import type { KanaalLevel } from '../puzzles/kanalen/levels.ts';
+import { PLATTEGROND, binnenshuis } from '../data/plattegrond.ts';
 
 const TOP_H = 16;
 const BOTTOM_H = 30;
@@ -109,6 +110,7 @@ export class KanalenScene implements Scene {
     screen.clear(C.ZWART);
     this.drawPaper(screen);
     this.drawDuct(screen);
+    this.drawNamen(screen);
     if (!this.won && !this.uitleg) this.drawHover(screen, ctx);
     this.drawTopBar(screen);
     this.drawBottomBar(screen);
@@ -116,17 +118,62 @@ export class KanalenScene implements Scene {
     if (this.uitleg) this.uitleg.render(screen, this.time);
   }
 
+  /**
+   * Blueprint paper with the house drawn on it: the real footprint from the
+   * scan, walled, with the rooms named. The duct then sits on the plan rather
+   * than on an abstract grid, so a rooster is in a room rather than at a
+   * coordinate.
+   */
   private drawPaper(screen: Screen): void {
     const bord = this.level.bord;
     const w = bord.width * this.tile;
     const h = bord.height * this.tile;
-    screen.fillRect(this.originX - 5, this.originY - 5, w + 10, h + 10, C.DIEPBLAUW);
-    screen.strokeRect(this.originX - 5, this.originY - 5, w + 10, h + 10, C.LUCHTBLAUW);
-    for (let x = 0; x <= bord.width; x++) {
-      screen.fillRect(this.originX + x * this.tile, this.originY, 1, h, C.ASGRIJS);
+    screen.fillRect(this.originX - 6, this.originY - 6, w + 12, h + 12, C.DIEPBLAUW);
+    screen.strokeRect(this.originX - 6, this.originY - 6, w + 12, h + 12, C.LUCHTBLAUW);
+
+    // Faint squared paper, only inside the house.
+    for (let y = 0; y < bord.height; y++) {
+      for (let x = 0; x < bord.width; x++) {
+        if (!binnenshuis(x, y)) continue;
+        const px = this.originX + x * this.tile;
+        const py = this.originY + y * this.tile;
+        screen.fillRect(px, py, this.tile, this.tile, C.DIEPBLAUW);
+        screen.fillRect(px, py, this.tile, 1, C.ASGRIJS);
+        screen.fillRect(px, py, 1, this.tile, C.ASGRIJS);
+      }
     }
-    for (let y = 0; y <= bord.height; y++) {
-      screen.fillRect(this.originX, this.originY + y * this.tile, w, 1, C.ASGRIJS);
+
+    // The outside walls: wherever inside meets outside, or the paper's edge.
+    for (let y = 0; y < bord.height; y++) {
+      for (let x = 0; x < bord.width; x++) {
+        if (!binnenshuis(x, y)) continue;
+        const px = this.originX + x * this.tile;
+        const py = this.originY + y * this.tile;
+        if (!binnenshuis(x, y - 1)) screen.fillRect(px, py - 1, this.tile, 2, C.WIT);
+        if (!binnenshuis(x, y + 1)) screen.fillRect(px, py + this.tile - 1, this.tile, 2, C.WIT);
+        if (!binnenshuis(x - 1, y)) screen.fillRect(px - 1, py, 2, this.tile, C.WIT);
+        if (!binnenshuis(x + 1, y)) screen.fillRect(px + this.tile - 1, py, 2, this.tile, C.WIT);
+      }
+    }
+
+    // Room divisions. The names go on last, over the duct.
+    for (const ruimte of PLATTEGROND.ruimtes) {
+      screen.strokeRect(
+        this.originX + ruimte.x * this.tile, this.originY + ruimte.y * this.tile,
+        ruimte.w * this.tile, ruimte.h * this.tile, C.LUCHTBLAUW,
+      );
+    }
+  }
+
+  /** Room names, drawn over everything on a strip so they stay readable. */
+  private drawNamen(screen: Screen): void {
+    for (const ruimte of PLATTEGROND.ruimtes) {
+      const w = ruimte.naam.length * 6 + 3;
+      const x = this.originX + ruimte.x * this.tile + 2;
+      // Along the bottom of the room, where there is least duct.
+      const y = this.originY + (ruimte.y + ruimte.h) * this.tile - 10;
+      screen.fillRect(x - 1, y - 1, w, 9, C.ZWART);
+      screen.text(ruimte.naam, x, y, C.LUCHTBLAUW);
     }
   }
 
@@ -192,6 +239,10 @@ export class KanalenScene implements Scene {
     screen.fillRect(0, 0, WIDTH, TOP_H, C.ZWART);
     screen.fillRect(0, TOP_H - 1, WIDTH, 1, C.STEEN);
     screen.text(this.level.titel, 6, 5, this.level.baas ? C.MAGENTA : C.LICHTOKER);
+    // The boss's title already says it covers everything.
+    if (!this.level.baas) {
+      screen.text(this.level.dekking, 6 + (this.level.titel.length + 2) * 6, 5, C.ASGRIJS);
+    }
     const label = `DRAAIEN ${String(this.draaien).padStart(2, '0')}   PAR ${String(this.par).padStart(2, '0')}`;
     screen.text(label, WIDTH - 6 - label.length * 6, 5, this.draaien > this.par ? C.ROESTROOD : C.SALIE);
   }

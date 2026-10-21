@@ -232,8 +232,10 @@ Ventilatie is a rotation puzzle: the whole system as a blueprint with every
 piece turned the wrong way. Click to turn a quarter; it is right when every
 opening meets an opening, nothing vents into a wall, and the lot hangs
 together back to the WTW. Duct that is actually joined lights up, so the
-system fills in as it comes right. Two plans between phases, then the boss:
-the entire house at once, nineteen roosters, par 44. That one is the only
+system fills in as it comes right. The drawing sits on the house: the real
+footprint from the scan, walled, with the rooms named, so a rooster is in a
+room rather than at a coordinate. Two plans between phases, each covering
+one room, then the boss over the whole house — eighteen roosters, par 69. That one is the only
 one marked GELEVERD.
 
 The sliding puzzle it replaced was good but wrong for ventilation, so it

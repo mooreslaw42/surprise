@@ -7,6 +7,7 @@ import {
 } from './model.ts';
 import { solve } from './solver.ts';
 import { KANAAL_LEVELS } from './levels.ts';
+import { PLATTEGROND, binnenshuis, ruimteOp } from '../../data/plattegrond.ts';
 
 test('a quarter turn moves every opening one side round', () => {
   assert.equal(draai(NOORD), OOST);
@@ -119,4 +120,35 @@ test('stars are awarded against par', () => {
   assert.equal(stars(10, 10), 3);
   assert.equal(stars(13, 10), 2);
   assert.equal(stars(20, 10), 1);
+});
+
+test('duct is only ever drawn inside the house', () => {
+  for (const level of KANAAL_LEVELS) {
+    assert.equal(level.bord.width, PLATTEGROND.width, `${level.id} is not on the footprint`);
+    assert.equal(level.bord.height, PLATTEGROND.height, `${level.id} is not on the footprint`);
+    for (let i = 0; i < level.bord.masks.length; i++) {
+      if (level.bord.masks[i] === LEEG) continue;
+      const kolom: number = i % level.bord.width;
+      const rij: number = Math.floor(i / level.bord.width);
+      assert.ok(binnenshuis(kolom, rij), `${level.id}: duct at ${kolom},${rij} is outside the house`);
+    }
+  }
+});
+
+test('every rooster and unit sits in a named room', () => {
+  for (const level of KANAAL_LEVELS) {
+    for (const i of [...level.bord.roosters, level.bord.wtw]) {
+      const kolom: number = i % level.bord.width;
+      const rij: number = Math.floor(i / level.bord.width);
+      assert.ok(ruimteOp(kolom, rij), `${level.id}: cell ${kolom},${rij} is in no room`);
+    }
+  }
+});
+
+test('the plans widen from one room to the whole house', () => {
+  const telling = KANAAL_LEVELS.map((l) =>
+    l.bord.masks.filter((m) => m !== LEEG).length);
+  assert.deepEqual(telling, [...telling].sort((a, b) => a - b), `cells go ${telling.join(', ')}`);
+  const binnen = PLATTEGROND.rows.join('').split('').filter((c) => c === '#').length;
+  assert.equal(telling[telling.length - 1], binnen, 'the boss should cover every room');
 });
