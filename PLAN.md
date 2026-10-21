@@ -259,6 +259,18 @@ Water is dropped. Two attempts went in the bin: a manifold-balancing puzzle
 that was unreadable, and a drain-fall one that read well but was work he
 never did. If a stage needs inventing twice, the stage is the problem.
 
+Vloeren is the floor: one decision per course, how long its first plank is,
+with the off-cut carrying to the next course and the joint rule making the
+cheap start often the illegal one.
+
+Dichtzetten is deduction, which nothing else in the game is. Before the
+board goes on you have to know where the frame is, and the numbers along
+the top and side say how long the runs of timber are. A nonogram whose
+picture is the wall's own frame. Every shipped wall is checked to be
+reasonable square by square without guessing.
+
+No plumbing stage. He did not do any worth the name.
+
 ## 10. Waiting on the wall designs
 
 Deferred on purpose until the real wall drawings arrive, because they will
