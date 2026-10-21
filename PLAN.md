@@ -228,20 +228,17 @@ remaining decision is which of two socket groups each stopcontact goes on —
 decided by the amps. Some walls also carry waterleiding that was already
 there and has to be routed around.
 
-Ventilatie is built, and it slides. Duct comes in rigid prefab lengths
-lying in the roof space, and a length only moves along its own axis, so
-getting the hoofdkanaal across to the WTW means shuffling everything else
-out of its way first — Rush Hour, with spiro. One plan drops in between
-phases, a little harder each time, and each is approved and then not
-delivered.
+Ventilatie is a rotation puzzle: the whole system as a blueprint with every
+piece turned the wrong way. Click to turn a quarter; it is right when every
+opening meets an opening, nothing vents into a wall, and the lot hangs
+together back to the WTW. Duct that is actually joined lights up, so the
+system fills in as it comes right. Two plans between phases, then the boss:
+the entire house at once, nineteen roosters, par 44. That one is the only
+one marked GELEVERD.
 
-It was first built as route drawing with airflow capacity, which made it
-Elektra with a capacity rule bolted on. Sliding is a different kind of
-thinking and reads instantly.
-
-NOTE: Leeghalen in the stage table above was also going to be sliding
-blocks. It needs a different mechanic now — Sokoban, pushing kruiwagens of
-rubble to the container, which was in the original menu for Puin ruimen.
+The sliding puzzle it replaced was good but wrong for ventilation, so it
+moved to Leeghalen — stage 1, shoving the furniture out through the door,
+which is what the stage table always wanted it for.
 
 ## 10. Open
 

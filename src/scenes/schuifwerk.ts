@@ -7,20 +7,20 @@ import { Dialogue } from './dialogue.ts';
 import {
   type Stuk,
   cellsOf, isSolved, kanSchuiven, schuif, stars,
-} from '../puzzles/ventilatie/model.ts';
-import { solve } from '../puzzles/ventilatie/solver.ts';
-import type { VentilatieLevel } from '../puzzles/ventilatie/levels.ts';
+} from '../puzzles/schuifwerk/model.ts';
+import { solve } from '../puzzles/schuifwerk/solver.ts';
+import type { SchuifLevel } from '../puzzles/schuifwerk/levels.ts';
 
 const TOP_H = 16;
 const BOTTOM_H = 30;
 
 /**
- * The roof space, from above, with the prefab duct lying in it. Slide the
- * sections until the hoofdkanaal can reach the aansluiting. A drawing rather
- * than a job, which is why it never turns into one.
+ * The room from above, with everything still in it. Slide the furniture until
+ * the one marked piece can get out of the door. Nothing else can start until
+ * the room is empty.
  */
-export class VentilatieScene implements Scene {
-  private readonly level: VentilatieLevel;
+export class SchuifScene implements Scene {
+  private readonly level: SchuifLevel;
   private readonly save: Save;
   private readonly par: number;
   private readonly tile: number;
@@ -37,7 +37,7 @@ export class VentilatieScene implements Scene {
   /** What is being dragged, and where it stood when the drag began. */
   private sleept: { index: number; grepen: { x: number; y: number }; begon: Stuk } | null = null;
 
-  constructor(level: VentilatieLevel, save: Save) {
+  constructor(level: SchuifLevel, save: Save) {
     this.level = level;
     this.save = save;
     this.par = solve(level.plan).par;
@@ -146,7 +146,7 @@ export class VentilatieScene implements Scene {
     if (this.uitleg) this.uitleg.render(screen, this.time);
   }
 
-  /** Boarded roof space, with the hole through to the unit on the right. */
+  /** The floor, with the doorway on the right. */
   private drawRoof(screen: Screen): void {
     const plan = this.level.plan;
     const w = plan.width * this.tile;
@@ -178,10 +178,10 @@ export class VentilatieScene implements Scene {
     screen.fillEllipse(ax + 2 + Math.floor(this.tile / 2), ay + Math.floor(this.tile / 2), 4, 4, C.ZANDGRIJS);
     const spin = Math.floor(this.time * 6) % 2 === 0;
     screen.fillRect(ax + 2 + Math.floor(this.tile / 2) - 3, ay + Math.floor(this.tile / 2) - (spin ? 0 : 1), 7, 2, C.ROET);
-    screen.text('WTW', ax + 1, ay + this.tile + 2, C.LICHTOKER);
+    screen.text('DEUR', ax - 2, ay + this.tile + 2, C.LICHTOKER);
   }
 
-  /** Spiral duct, seen from above: the hoofdkanaal in yellow, the rest steel. */
+  /** Furniture from above: the piece that has to leave in yellow. */
   private drawPieces(screen: Screen): void {
     for (const stuk of this.stukken) {
       const px = this.originX + stuk.x * this.tile + 2;
@@ -234,7 +234,7 @@ export class VentilatieScene implements Scene {
     const y = HEIGHT - BOTTOM_H;
     screen.fillRect(0, y, WIDTH, BOTTOM_H, C.ZWART);
     screen.fillRect(0, y, WIDTH, 1, C.STEEN);
-    screen.text('SLEEP EEN STUK IN ZIJN EIGEN RICHTING', 6, y + 7, C.KALK);
+    screen.text('SLEEP EEN MEUBEL IN ZIJN EIGEN RICHTING', 6, y + 7, C.KALK);
     screen.text('U  H', WIDTH - 6 - 4 * 6, y + 7, C.STEEN);
     screen.text(this.level.praatje, 6, y + 20, C.ASGRIJS);
     screen.text('R = OPNIEUW', WIDTH - 6 - 11 * 6, y + 20, C.STEEN);
@@ -244,21 +244,19 @@ export class VentilatieScene implements Scene {
   private drawWon(screen: Screen): void {
     const got = stars(this.zetten, this.par);
     const w = 240;
-    const h = 86;
+    const h = 76;
     const x = Math.round((WIDTH - w) / 2);
     const y = Math.round((HEIGHT - h) / 2);
     screen.fillRect(x, y, w, h, C.ZWART);
     screen.strokeRect(x, y, w, h, C.MAGENTA);
-    screen.textCentered('PLAN GOEDGEKEURD', WIDTH / 2, y + 9, C.LICHTOKER);
+    screen.textCentered('KAMER LEEG', WIDTH / 2, y + 9, C.LICHTOKER);
     const span = 3 * STAR_W * 2 + 2 * 8;
     for (let i = 0; i < 3; i++) {
       drawStar(screen, Math.round((WIDTH - span) / 2) + i * (STAR_W * 2 + 8), y + 22, i < got, 2);
     }
     screen.textCentered(`${this.zetten} ZETTEN   PAR ${this.par}`, WIDTH / 2, y + 44, C.KALK);
-    screen.fillRect(x + 8, y + 54, w - 16, 11, C.DONKERROOD);
-    screen.textCentered(this.level.levering, WIDTH / 2, y + 56, C.WIT);
     if (Math.floor(this.time * 2) % 2 === 0) {
-      screen.textCentered('ENTER', WIDTH / 2, y + 70, C.SALIE);
+      screen.textCentered('ENTER', WIDTH / 2, y + 62, C.SALIE);
     }
   }
 }

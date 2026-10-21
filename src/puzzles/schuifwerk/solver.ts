@@ -1,7 +1,7 @@
 import { type Plan, type Stuk, type Zet, isSolved, kanSchuiven, schuif, sleutel } from './model.ts';
 
 /**
- * Fewest slides that get the hoofdkanaal to the aansluiting.
+ * Fewest slides that get the main piece out of the door.
  *
  * Breadth-first over positions, so the first time the puzzle comes out is by
  * definition the shortest way — par is a proven minimum here, not a best
@@ -24,7 +24,7 @@ export function solve(plan: Plan): SolveResult {
   let frontier = [sleutel(start)];
 
   while (frontier.length > 0) {
-    if (seen.size > STATE_BUDGET) throw new Error('ventilatie solver gave up');
+    if (seen.size > STATE_BUDGET) throw new Error('leeghalen solver gave up');
     const next: string[] = [];
 
     for (const key of frontier) {

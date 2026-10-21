@@ -9,8 +9,10 @@ import { ELEKTRA_LEVELS } from '../puzzles/elektra/levels.ts';
 import { STAGES } from '../data/stages.ts';
 import { LevelScene } from './level.ts';
 import { ElektraScene } from './elektra.ts';
-import { VentilatieScene } from './ventilatie.ts';
-import { VENTILATIE_LEVELS } from '../puzzles/ventilatie/levels.ts';
+import { SchuifScene } from './schuifwerk.ts';
+import { SCHUIF_LEVELS } from '../puzzles/schuifwerk/levels.ts';
+import { KanalenScene } from './kanalen.ts';
+import { KANAAL_LEVELS } from '../puzzles/kanalen/levels.ts';
 
 const CARD_W = 112;
 const CARD_Y = 34;
@@ -100,9 +102,12 @@ export class HouseMapScene implements Scene {
     if (kind === 'sloop') {
       const level = SLOOP_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new LevelScene(level, this.save));
-    } else if (kind === 'ventilatie') {
-      const level = VENTILATIE_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new VentilatieScene(level, this.save));
+    } else if (kind === 'leeghalen') {
+      const level = SCHUIF_LEVELS.find((l) => l.id === entry.id);
+      if (level) ctx.push(new SchuifScene(level, this.save));
+    } else if (kind === 'kanalen') {
+      const level = KANAAL_LEVELS.find((l) => l.id === entry.id);
+      if (level) ctx.push(new KanalenScene(level, this.save));
     } else {
       const level = ELEKTRA_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new ElektraScene(level, this.save));

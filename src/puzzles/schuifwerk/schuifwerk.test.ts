@@ -5,7 +5,7 @@ import {
   bezetting, cellsOf, hoofdIndex, isSolved, kanSchuiven, parsePlan, schuif, sleutel, stars,
 } from './model.ts';
 import { solve } from './solver.ts';
-import { VENTILATIE_LEVELS } from './levels.ts';
+import { SCHUIF_LEVELS } from './levels.ts';
 
 const simpel = () => parsePlan([
   '......',
@@ -90,7 +90,7 @@ test('solved only once the hoofdkanaal reaches the far edge', () => {
 });
 
 test('every shipped plan is solvable, and par is the shortest way', () => {
-  for (const level of VENTILATIE_LEVELS) {
+  for (const level of SCHUIF_LEVELS) {
     const { par, zetten } = solve(level.plan);
     assert.equal(zetten.length, par, `${level.id} par disagrees with its own line`);
     assert.ok(par > 0, `${level.id} starts solved`);
@@ -110,7 +110,7 @@ test('every shipped plan is solvable, and par is the shortest way', () => {
 test('no plan can be solved in fewer moves than par', () => {
   // Breadth-first, so the first solution found is the shortest by definition;
   // this guards the claim rather than re-deriving it.
-  for (const level of VENTILATIE_LEVELS) {
+  for (const level of SCHUIF_LEVELS) {
     const { par } = solve(level.plan);
     let stukken = level.plan.stukken.map((s) => ({ ...s }));
     let moves = 0;
@@ -124,16 +124,10 @@ test('no plan can be solved in fewer moves than par', () => {
   }
 });
 
-test('the plans get harder as they go', () => {
-  const pars = VENTILATIE_LEVELS.map((l) => solve(l.plan).par);
+test('the rooms get harder as they go', () => {
+  const pars = SCHUIF_LEVELS.map((l) => solve(l.plan).par);
   assert.deepEqual(pars, [...pars].sort((a, b) => a - b), `pars go ${pars.join(', ')}`);
   assert.ok(pars[0]! >= 4, 'even the first should take some thought');
-});
-
-test('every plan promises a delivery it does not keep', () => {
-  for (const level of VENTILATIE_LEVELS) {
-    assert.match(level.levering, /LEVERING/, `${level.id} has no delivery notice`);
-  }
 });
 
 test('stars are awarded against par', () => {

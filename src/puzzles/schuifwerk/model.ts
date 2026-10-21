@@ -1,17 +1,12 @@
 /**
- * Ventilatie: shove the prefab duct sections into line.
+ * Leeghalen: get the furniture out before anything else can start.
  *
- * Not a drawing puzzle. Duct comes in rigid lengths, already up in the roof
- * space, and a length of spiro only slides along its own axis — a horizontal
- * run left and right, a vertical run up and down, never sideways and never
- * turning. Sections block each other, so getting the hoofdkanaal across to
- * the WTW aansluiting means shuffling everything else out of its way first.
+ * A bank slides along its own length and not sideways, a kast the same, and
+ * everything is in everything else's way. Shifting the one piece that has to
+ * reach the door means working out what has to move first.
  *
- * (It began as another route-drawing puzzle, which made it Elektra with a
- * capacity rule bolted on. Sliding is a different kind of thinking: spatial
- * and ordered, with no drawing at all.)
- *
- * It is still never delivered.
+ * Built first for the ventilation stage, where it was good but wrong: that
+ * one wanted a drawing, not a shoving match. It belongs here.
  */
 
 export type Orientatie = 'horizontaal' | 'verticaal';
@@ -23,7 +18,7 @@ export type Stuk = {
   readonly y: number;
   readonly lengte: number;
   readonly orientatie: Orientatie;
-  /** The hoofdkanaal: the one that has to reach the unit. */
+  /** The one piece that has to get out of the door. */
   readonly hoofd: boolean;
 };
 

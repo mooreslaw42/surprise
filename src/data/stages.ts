@@ -1,6 +1,7 @@
 import { SLOOP_LEVELS } from '../puzzles/sloop/levels.ts';
 import { ELEKTRA_LEVELS } from '../puzzles/elektra/levels.ts';
-import { VENTILATIE_LEVELS } from '../puzzles/ventilatie/levels.ts';
+import { SCHUIF_LEVELS } from '../puzzles/schuifwerk/levels.ts';
+import { KANAAL_LEVELS } from '../puzzles/kanalen/levels.ts';
 import type { RoomId } from './house.ts';
 
 /**
@@ -9,7 +10,7 @@ import type { RoomId } from './house.ts';
  *
  * Only the two built so far are listed; the rest of the ladder is in PLAN.md.
  */
-export type StageKind = 'sloop' | 'elektra' | 'ventilatie';
+export type StageKind = 'leeghalen' | 'sloop' | 'elektra' | 'kanalen';
 
 export type StageEntry = {
   readonly id: string;
@@ -30,34 +31,40 @@ export type Stage = {
   readonly entries: readonly StageEntry[];
 };
 
-/** One ventilation plan, slotted between two phases of actual work. */
-function ventilatieStap(n: number): Stage {
-  const level = VENTILATIE_LEVELS[n - 1]!;
+/** One ventilation drawing, slotted between two phases of actual work. */
+function kanaalStap(n: number): Stage {
+  const level = KANAAL_LEVELS[n - 1]!;
   return {
-    kind: 'ventilatie',
+    kind: 'kanalen',
     nummer: n,
-    naam: 'VENTILATIEPLAN',
+    naam: 'KANAALPLAN',
     tussendoor: true,
     entries: [{
       id: level.id,
       ruimte: 'woonkamer',
       vlak: `PLAN ${n}`,
-      samenvatting: `${level.plan.stukken.length} STUKKEN`,
+      samenvatting: `${level.bord.roosters.length} ROOSTERS`,
     }],
   };
 }
 
 export const STAGES: readonly Stage[] = [
   {
-    kind: 'sloop',
+    kind: 'leeghalen',
     nummer: 1,
+    naam: 'LEEGHALEN',
+    entries: SCHUIF_LEVELS.map((l) => ({ id: l.id, ruimte: 'woonkamer' as RoomId, vlak: l.ruimte })),
+  },
+  {
+    kind: 'sloop',
+    nummer: 2,
     naam: 'SLOOP',
     entries: SLOOP_LEVELS.map((l) => ({ id: l.id, ruimte: l.ruimte, vlak: l.vlak, rows: l.rows })),
   },
-  ventilatieStap(1),
+  kanaalStap(1),
   {
     kind: 'elektra',
-    nummer: 2,
+    nummer: 3,
     naam: 'ELEKTRA',
     entries: ELEKTRA_LEVELS.map((l) => {
       const wissel = l.board.devices.some((d) => d.kind === 'schakelaar' && d.naar !== undefined);
@@ -72,5 +79,16 @@ export const STAGES: readonly Stage[] = [
       };
     }),
   },
-  ventilatieStap(2),
+  kanaalStap(2),
+  {
+    kind: 'kanalen',
+    nummer: 4,
+    naam: 'OPLEVERING',
+    entries: [{
+      id: KANAAL_LEVELS[2]!.id,
+      ruimte: 'woonkamer',
+      vlak: 'HET HELE SYSTEEM',
+      samenvatting: `${KANAAL_LEVELS[2]!.bord.roosters.length} ROOSTERS`,
+    }],
+  },
 ];
