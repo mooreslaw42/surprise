@@ -1,4 +1,4 @@
-import { C } from '../engine/palette.ts';
+import { C, luma } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
 import type { Save } from '../engine/save.ts';
@@ -8,7 +8,7 @@ import { ROOM_NAMES, SURFACES, type Surface } from '../data/house.ts';
 import { openingCells } from '../puzzles/sloop/generate.ts';
 import {
   type Point, type Route,
-  axisAt, axesCompatible, cableLength, endpointsFor, faults, groepVoor, groupLoads, index,
+  axisAt, axesCompatible, cableLength, endpointsFor, faults, groepVoor, groupLoads, groupOf, index,
   isSolved, isTerminal, isWissel, routable, samePoint, stars, tileAt,
 } from '../puzzles/elektra/model.ts';
 import { solve } from '../puzzles/elektra/solver.ts';
@@ -199,8 +199,12 @@ export class ElektraScene implements Scene {
     drawProps(screen, this.room, this.surface.props,
       this.originX, this.originX + this.level.board.width * this.tile);
 
+    // The meterkast backplate goes behind the cables and the breakers in
+    // front, so a run stays visible all the way into the breaker it lands on.
+    this.drawMeterkastBody(screen);
     this.drawCables(screen);
-    this.drawTerminals(screen);
+    this.drawBreakers(screen);
+    this.drawDevices(screen);
     if (!this.won) this.drawCursorCell(screen, ctx);
     this.drawTopBar(screen);
     this.drawBottomBar(screen);
@@ -288,12 +292,9 @@ export class ElektraScene implements Scene {
     }
   }
 
-  private drawTerminals(screen: Screen): void {
-    const board = this.level.board;
-    const loads = groupLoads(board, this.routes);
-
-    // One cabinet covering every groep cell, with a labelled terminal each.
-    const cells = board.groepen.map((g) => this.centre(g.cel));
+  /** The cabinet itself, drawn behind the wiring. */
+  private drawMeterkastBody(screen: Screen): void {
+    const cells = this.level.board.groepen.map((g) => this.centre(g.cel));
     const left = Math.min(...cells.map((c) => c.x)) - 10;
     const right = Math.max(...cells.map((c) => c.x)) + 10;
     const top = Math.min(...cells.map((c) => c.y)) - 10;
@@ -301,19 +302,54 @@ export class ElektraScene implements Scene {
     screen.fillRect(left, top, right - left, bottom - top, C.ASGRIJS);
     screen.fillRect(left + 1, top + 1, right - left - 2, bottom - top - 2, C.ZANDGRIJS);
     screen.strokeRect(left, top, right - left, bottom - top, C.ROET);
+  }
+
+  /**
+   * The breakers, drawn over the wiring but narrow enough that a cable is
+   * still visible entering from any side. Each takes the colour of its own
+   * group once it is carrying, with a pip per run landed on it — which is
+   * how you tell at a glance that a wire went to the right one.
+   */
+  private drawBreakers(screen: Screen): void {
+    const board = this.level.board;
+    const loads = groupLoads(board, this.routes);
 
     for (let g = 0; g < board.groepen.length; g++) {
       const groep = board.groepen[g]!;
-      const c = cells[g]!;
+      const c = this.centre(groep.cel);
+      const landed = this.routes.filter((r) => groupOf(board, r) === g).length;
       const over = loads[g]! > groep.maxAmp;
-      screen.fillRect(c.x - 8, c.y - 5, 17, 11, C.ROET);
-      // The breaker: up when it is carrying, red when it has had enough.
-      screen.fillRect(c.x - 7, c.y - 4, 5, 9, over ? C.ROESTROOD : C.KALK);
-      screen.fillRect(c.x - 7, over ? c.y + 1 : c.y - 4, 5, 4, over ? C.DONKERROOD : C.SALIE);
+      const fill = over ? C.ROESTROOD : landed > 0 ? DRAAD[g % DRAAD.length]! : C.ZANDGRIJS;
+
+      screen.fillRect(c.x - 5, c.y - 7, 11, 15, C.ROET);
+      screen.fillRect(c.x - 4, c.y - 6, 9, 13, fill);
+      const ink = luma(fill) > 128 ? C.ZWART : C.WIT;
       const kort = groep.soort === 'licht' ? 'L' : groep.naam.slice(-1);
-      screen.text(kort, c.x - 1, c.y - 3, over ? C.ROESTROOD : C.LICHTOKER);
+      screen.text(kort, c.x - 2, c.y - 3, ink);
     }
 
+    // A stub on the face, pointing the way the cable came in. Without this a
+    // run passing behind the cabinet to a lower breaker looks like it ends at
+    // the upper one.
+    for (let i = 0; i < this.routes.length; i++) {
+      const route = this.routes[i]!;
+      const g = groupOf(board, route);
+      if (g < 0 || route.length < 2) continue;
+      const c = this.centre(board.groepen[g]!.cel);
+      const from = route[route.length - 2]!;
+      const to = route[route.length - 1]!;
+      const dx = Math.sign(from.x - to.x);
+      const dy = Math.sign(from.y - to.y);
+      const colour = DRAAD[g % DRAAD.length]!;
+      const ink = luma(colour) > 128 ? C.ZWART : C.WIT;
+      // Drawn at the edge the cable came from, clear of the letter.
+      if (dx !== 0) screen.fillRect(dx < 0 ? c.x - 4 : c.x + 2, c.y - 1, 3, 2, ink);
+      else if (dy !== 0) screen.fillRect(c.x - 1, dy < 0 ? c.y - 6 : c.y + 4, 2, 3, ink);
+    }
+  }
+
+  private drawDevices(screen: Screen): void {
+    const board = this.level.board;
     for (let i = 0; i < board.devices.length; i++) {
       const device = board.devices[i]!;
       const at = this.centre(device.cel);
