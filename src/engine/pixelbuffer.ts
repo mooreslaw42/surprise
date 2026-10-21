@@ -69,6 +69,38 @@ export class PixelBuffer {
     }
   }
 
+  /** Filled axis-aligned ellipse, inclusive of the radii. */
+  fillEllipse(cx: number, cy: number, rx: number, ry: number, color: Color): void {
+    if (rx <= 0 || ry <= 0) return;
+    for (let dy = -ry; dy <= ry; dy++) {
+      // Half-width of the ellipse at this row.
+      const t = 1 - (dy * dy) / (ry * ry);
+      if (t < 0) continue;
+      const half = Math.round(rx * Math.sqrt(t));
+      this.fillRect(cx - half, cy + dy, half * 2 + 1, 1, color);
+    }
+  }
+
+  /** One-pixel ellipse outline. */
+  strokeEllipse(cx: number, cy: number, rx: number, ry: number, color: Color): void {
+    if (rx <= 0 || ry <= 0) return;
+    let previous = -1;
+    for (let dy = -ry; dy <= ry; dy++) {
+      const t = 1 - (dy * dy) / (ry * ry);
+      const half = t < 0 ? -1 : Math.round(rx * Math.sqrt(t));
+      if (half < 0) continue;
+      if (previous < 0 || dy === ry) {
+        this.fillRect(cx - half, cy + dy, half * 2 + 1, 1, color);
+      } else {
+        // Close any horizontal gap left by the row-to-row jump.
+        const span = Math.max(1, half - previous + 1);
+        this.fillRect(cx - half, cy + dy, span, 1, color);
+        this.fillRect(cx + previous, cy + dy, span, 1, color);
+      }
+      previous = half;
+    }
+  }
+
   line(x0: number, y0: number, x1: number, y1: number, color: Color): void {
     let x = Math.trunc(x0);
     let y = Math.trunc(y0);

@@ -3,6 +3,7 @@ import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
 import type { Save } from '../engine/save.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
+import { Dialogue } from './dialogue.ts';
 import { ROOM_NAMES, SURFACES, type Surface } from '../data/house.ts';
 import { openingCells } from '../puzzles/sloop/generate.ts';
 import {
@@ -36,8 +37,12 @@ export class ElektraScene implements Scene {
   private time = 0;
   private won = false;
   private wonAt = 0;
-  /** The rules panel, open until it has been read once. */
-  private uitleg = true;
+  /** Pim explains the stage, once, before you start. */
+  private uitleg: Dialogue | null = new Dialogue([
+      'ELK STOPCONTACT WIL EEN DRAAD NAAR DE METERKAST. SLEEP HEM ERHEEN.',
+      'HET GETAL EROP IS WAT HIJ TREKT, IN AMPERE. EEN GROEP HOUDT ER 16. SAMEN MEER? DAN MOETEN ZE OVER TWEE GROEPEN.',
+      'DRADEN MOGEN NAAST ELKAAR LOPEN, MAAR NOOIT OVER ELKAAR HEEN.',
+    ]);
 
   constructor(level: ElektraLevel, save: Save) {
     this.level = level;
@@ -71,12 +76,17 @@ export class ElektraScene implements Scene {
       return;
     }
     if (this.uitleg) {
-      if (ctx.input.confirmed() || ctx.input.mouseClicked || ctx.input.justPressed('KeyU')) {
-        this.uitleg = false;
-      }
+      if (this.uitleg.update(dt, ctx)) this.uitleg = null;
       return;
     }
-    if (ctx.input.justPressed('KeyU')) { this.uitleg = true; return; }
+    if (ctx.input.justPressed('KeyU')) {
+      this.uitleg = new Dialogue([
+      'ELK STOPCONTACT WIL EEN DRAAD NAAR DE METERKAST. SLEEP HEM ERHEEN.',
+      'HET GETAL EROP IS WAT HIJ TREKT, IN AMPERE. EEN GROEP HOUDT ER 16. SAMEN MEER? DAN MOETEN ZE OVER TWEE GROEPEN.',
+      'DRADEN MOGEN NAAST ELKAAR LOPEN, MAAR NOOIT OVER ELKAAR HEEN.',
+    ]);
+      return;
+    }
     if (ctx.input.justPressed('Escape')) ctx.pop();
     if (ctx.input.justPressed('KeyH')) {
       this.routes = solve(this.level.board).routes;
@@ -188,37 +198,9 @@ export class ElektraScene implements Scene {
     this.drawTopBar(screen);
     this.drawBottomBar(screen);
     if (this.won) this.drawWon(screen);
-    if (this.uitleg) this.drawUitleg(screen);
+    if (this.uitleg) this.uitleg.render(screen, this.time);
   }
 
-  private drawUitleg(screen: Screen): void {
-    const w = 290;
-    const h = 108;
-    const x = Math.round((WIDTH - w) / 2);
-    const y = Math.round((HEIGHT - h) / 2);
-    screen.fillRect(x, y, w, h, C.ZWART);
-    screen.strokeRect(x, y, w, h, C.LICHTOKER);
-    screen.strokeRect(x + 2, y + 2, w - 4, h - 4, C.DONKEROKER);
-    screen.textCentered('ZO WERKT HET', WIDTH / 2, y + 8, C.LICHTOKER);
-
-    const lines: [string, number][] = [
-      ['ELK STOPCONTACT WIL EEN DRAAD NAAR', C.KALK],
-      ['DE METERKAST. SLEEP HEM ERHEEN.', C.KALK],
-      ['', C.KALK],
-      ['HET GETAL IS WAT HIJ TREKT, IN AMPERE.', C.BOTERGEEL],
-      ['EEN GROEP HOUDT ER 16. SAMEN MEER?', C.BOTERGEEL],
-      ['DAN MOETEN ZE OVER TWEE GROEPEN.', C.BOTERGEEL],
-      ['', C.KALK],
-      ['DRADEN MOGEN NAAST ELKAAR LOPEN,', C.SALIE],
-      ['MAAR NOOIT OVER ELKAAR HEEN.', C.SALIE],
-    ];
-    lines.forEach(([text, colour], i) => {
-      if (text) screen.text(text, x + 10, y + 22 + i * 9, colour);
-    });
-    if (Math.floor(this.time * 2) % 2 === 0) {
-      screen.textCentered('ENTER', WIDTH / 2, y + h - 11, C.SALIE);
-    }
-  }
 
   /** The wall at this stage is stripped back to studs and wool. */
   private drawWall(screen: Screen): void {

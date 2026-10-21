@@ -97,3 +97,33 @@ test('text stays inside the buffer when drawn off-edge', () => {
   buf.text('WOUTER', 15, 8, 5);
   assert.ok(count(buf, 5) > 0);
 });
+
+test('fillEllipse stays inside its bounding box and is symmetric', () => {
+  const buf = new PixelBuffer(21, 21);
+  buf.fillEllipse(10, 10, 6, 4, 3);
+  assert.equal(buf.get(10, 10), 3, 'centre filled');
+  assert.equal(buf.get(10, 6), 3, 'top of the minor axis filled');
+  assert.equal(buf.get(10, 5), 0, 'nothing above it');
+  assert.equal(buf.get(4, 10), 3, 'left of the major axis filled');
+  assert.equal(buf.get(3, 10), 0, 'nothing beyond it');
+  for (let dy = -4; dy <= 4; dy++) {
+    for (let dx = 1; dx <= 6; dx++) {
+      assert.equal(buf.get(10 - dx, 10 + dy), buf.get(10 + dx, 10 + dy), `asymmetric at ${dx},${dy}`);
+    }
+  }
+});
+
+test('strokeEllipse is hollow', () => {
+  const buf = new PixelBuffer(21, 21);
+  buf.strokeEllipse(10, 10, 7, 5, 4);
+  assert.equal(buf.get(10, 10), 0, 'middle should be empty');
+  assert.equal(buf.get(10, 5), 4, 'top edge drawn');
+  assert.equal(buf.get(3, 10), 4, 'left edge drawn');
+});
+
+test('ellipses clip at the edge without wrapping', () => {
+  const buf = new PixelBuffer(10, 10);
+  buf.fillEllipse(0, 0, 6, 6, 5);
+  assert.equal(buf.get(9, 9), 0, 'must not wrap to the far corner');
+  assert.doesNotThrow(() => buf.fillEllipse(-20, -20, 3, 3, 5));
+});

@@ -42,9 +42,14 @@ function context(mouse: Mouse, keys: Set<string> = new Set()): SceneContext {
   };
 }
 
-/** The rules panel opens over a fresh level and swallows input until read. */
+/**
+ * Pim's explanation opens over a fresh level and swallows input until read.
+ * The first press finishes the typing, the second closes it.
+ */
 function dismissUitleg(scene: ElektraScene): void {
-  scene.update(1 / 60, context({ x: 0, y: 0, down: false, clicked: false }, new Set(['Enter'])));
+  const enter = new Set(['Enter']);
+  scene.update(1 / 60, context({ x: 0, y: 0, down: false, clicked: false }, enter));
+  scene.update(1 / 60, context({ x: 0, y: 0, down: false, clicked: false }, enter));
 }
 
 /** Lay one route by dragging from the socket to the meterkast. */
@@ -91,6 +96,19 @@ test('an abandoned drag leaves no half cable behind', () => {
   // Let go in the middle of the wall.
   scene.update(1 / 60, context({ x: next.x, y: next.y, down: false, clicked: false }));
 
+  assert.equal(save.isDone(level.id), false);
+});
+
+test('one press only finishes the typing, it does not also close it', () => {
+  const level = ELEKTRA_LEVELS[0]!;
+  const save = new Save(null);
+  const scene = new ElektraScene(level, save);
+  const enter = new Set(['Enter']);
+  scene.update(1 / 60, context({ x: 0, y: 0, down: false, clicked: false }, enter));
+
+  // Still open, so dragging does nothing yet.
+  const { routes } = solve(level.board);
+  for (const route of routes) drag(scene, level.board.width, level.board.height, route);
   assert.equal(save.isDone(level.id), false);
 });
 
