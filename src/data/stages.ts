@@ -2,6 +2,7 @@ import { SLOOP_LEVELS } from '../puzzles/sloop/levels.ts';
 import { ELEKTRA_LEVELS } from '../puzzles/elektra/levels.ts';
 import { SCHUIF_LEVELS } from '../puzzles/schuifwerk/levels.ts';
 import { KANAAL_LEVELS } from '../puzzles/kanalen/levels.ts';
+import { ISOLATIE_LEVELS } from '../puzzles/isolatie/levels.ts';
 import type { RoomId } from './house.ts';
 
 /**
@@ -10,7 +11,7 @@ import type { RoomId } from './house.ts';
  *
  * Only the two built so far are listed; the rest of the ladder is in PLAN.md.
  */
-export type StageKind = 'leeghalen' | 'sloop' | 'elektra' | 'kanalen';
+export type StageKind = 'leeghalen' | 'sloop' | 'isolatie' | 'elektra' | 'kanalen';
 
 export type StageEntry = {
   readonly id: string;
@@ -63,8 +64,19 @@ export const STAGES: readonly Stage[] = [
   },
   kanaalStap(1),
   {
-    kind: 'elektra',
+    kind: 'isolatie',
     nummer: 3,
+    naam: 'ISOLATIE',
+    entries: ISOLATIE_LEVELS.map((l) => ({
+      id: l.id,
+      ruimte: 'woonkamer' as RoomId,
+      vlak: l.ruimte,
+      samenvatting: `${l.muur.dekens.length} DEKENS`,
+    })),
+  },
+  {
+    kind: 'elektra',
+    nummer: 4,
     naam: 'ELEKTRA',
     entries: ELEKTRA_LEVELS.map((l) => {
       const wissel = l.board.devices.some((d) => d.kind === 'schakelaar' && d.naar !== undefined);
@@ -82,7 +94,7 @@ export const STAGES: readonly Stage[] = [
   kanaalStap(2),
   {
     kind: 'kanalen',
-    nummer: 4,
+    nummer: 5,
     naam: 'OPLEVERING',
     entries: [{
       id: KANAAL_LEVELS[2]!.id,

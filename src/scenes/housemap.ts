@@ -12,6 +12,8 @@ import { ElektraScene } from './elektra.ts';
 import { SchuifScene } from './schuifwerk.ts';
 import { SCHUIF_LEVELS } from '../puzzles/schuifwerk/levels.ts';
 import { KanalenScene } from './kanalen.ts';
+import { IsolatieScene } from './isolatie.ts';
+import { ISOLATIE_LEVELS } from '../puzzles/isolatie/levels.ts';
 import { KANAAL_LEVELS } from '../puzzles/kanalen/levels.ts';
 
 const CARD_W = 112;
@@ -105,6 +107,9 @@ export class HouseMapScene implements Scene {
     } else if (kind === 'leeghalen') {
       const level = SCHUIF_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new SchuifScene(level, this.save));
+    } else if (kind === 'isolatie') {
+      const level = ISOLATIE_LEVELS.find((l) => l.id === entry.id);
+      if (level) ctx.push(new IsolatieScene(level, this.save));
     } else if (kind === 'kanalen') {
       const level = KANAAL_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new KanalenScene(level, this.save));

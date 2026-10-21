@@ -242,6 +242,12 @@ The sliding puzzle it replaced was good but wrong for ventilation, so it
 moved to Leeghalen — stage 1, shoving the furniture out through the door,
 which is what the stage table always wanted it for.
 
+Isolatie is built: pack the stud cavity full of wool with no gap and no
+overlap, because every gap is a koudebrug. There is more wool in the stack
+than the cavity needs and the awkward shapes carry the most Rc, so which
+batts get the space is the decision — the number on a batt changes the
+outcome rather than decorating it.
+
 ## 10. Open
 
 - Final title
