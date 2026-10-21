@@ -248,16 +248,16 @@ than the cavity needs and the awkward shapes carry the most Rc, so which
 batts get the space is the decision — the number on a batt changes the
 outcome rather than decorating it.
 
-Water is the afvoer, drawn in section straight through the room with the
-appliances along the top and the standleiding at the end. Two rules and
-nothing else: water runs right and down, never up, and it may not run flat
-for more than two cells or it stops. The water is drawn running as far as
-it actually gets, so the rules demonstrate themselves. Runs may join, and a
-shared length is only paid for once.
+Schilderen is the roller: cover the whole wall in one run, keeping the wet
+edge, and every square you go over twice shows as a lap mark. The wall is a
+measured one, drawn in its room, and it turns from the old finish to fresh
+oker behind the roller — so how far you have got, and which corner you have
+left bare, is something you look at. Par is the number of squares, which a
+perfect run covers exactly once.
 
-It replaced a manifold-balancing puzzle that was mechanically neat and
-completely opaque. If the rule needs explaining twice it is the wrong rule.
-That one is in git history at 25736df if it is ever wanted.
+Water is dropped. Two attempts went in the bin: a manifold-balancing puzzle
+that was unreadable, and a drain-fall one that read well but was work he
+never did. If a stage needs inventing twice, the stage is the problem.
 
 ## 10. Waiting on the wall designs
 
