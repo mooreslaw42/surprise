@@ -228,12 +228,20 @@ remaining decision is which of two socket groups each stopcontact goes on —
 decided by the amps. Some walls also carry waterleiding that was already
 there and has to be routed around.
 
-Ventilatie is built. Seen from above rather than from the wall, because it
-is a drawing and not a job. Duct runs from every rooster back to the WTW,
-trunks may be shared, and a shared segment carries both rooms' air — so the
-answer is a tree rather than a set of paths, and a trunk over capacity is
-the thing you plan around. One plan drops in between phases, a little
-bigger each time. Each is approved, costed, and not delivered.
+Ventilatie is built, and it slides. Duct comes in rigid prefab lengths
+lying in the roof space, and a length only moves along its own axis, so
+getting the hoofdkanaal across to the WTW means shuffling everything else
+out of its way first — Rush Hour, with spiro. One plan drops in between
+phases, a little harder each time, and each is approved and then not
+delivered.
+
+It was first built as route drawing with airflow capacity, which made it
+Elektra with a capacity rule bolted on. Sliding is a different kind of
+thinking and reads instantly.
+
+NOTE: Leeghalen in the stage table above was also going to be sliding
+blocks. It needs a different mechanic now — Sokoban, pushing kruiwagens of
+rubble to the container, which was in the original menu for Puin ruimen.
 
 ## 10. Open
 

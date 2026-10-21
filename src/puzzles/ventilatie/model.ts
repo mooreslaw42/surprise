@@ -1,203 +1,170 @@
 /**
- * Ventilatie: plan the ductwork from the WTW unit to every rooster.
+ * Ventilatie: shove the prefab duct sections into line.
  *
- * Seen from above, not from the wall, because this stage is a drawing rather
- * than a job. Ducts share trunks — two rooms down one run and splitting later
- * is the whole craft — so unlike cable, flow *accumulates* on a shared
- * segment. A trunk carrying more than the duct can take is the thing you are
- * planning around.
+ * Not a drawing puzzle. Duct comes in rigid lengths, already up in the roof
+ * space, and a length of spiro only slides along its own axis — a horizontal
+ * run left and right, a vertical run up and down, never sideways and never
+ * turning. Sections block each other, so getting the hoofdkanaal across to
+ * the WTW aansluiting means shuffling everything else out of its way first.
  *
- * Scored on how much duct it takes, counting a shared segment once. Planning
- * two separate runs where one trunk would do is exactly the mistake.
+ * (It began as another route-drawing puzzle, which made it Elektra with a
+ * capacity rule bolted on. Sliding is a different kind of thinking: spatial
+ * and ordered, with no drawing at all.)
  *
- * It is never delivered.
+ * It is still never delivered.
  */
 
-export const CEL = {
-  VLOER: 0,
-  MUUR: 1,
-  WTW: 2,
-  ROOSTER: 3,
-} as const;
+export type Orientatie = 'horizontaal' | 'verticaal';
 
-export type CelValue = (typeof CEL)[keyof typeof CEL];
-
-export type Point = { readonly x: number; readonly y: number };
-
-export type Rooster = {
-  readonly cel: Point;
-  /** Airflow this grille has to deliver, in m3/h. */
-  readonly debiet: number;
-  readonly ruimte: string;
+export type Stuk = {
+  readonly id: string;
+  /** Left-most, or top-most, cell. */
+  readonly x: number;
+  readonly y: number;
+  readonly lengte: number;
+  readonly orientatie: Orientatie;
+  /** The hoofdkanaal: the one that has to reach the unit. */
+  readonly hoofd: boolean;
 };
 
 export type Plan = {
   readonly width: number;
   readonly height: number;
-  readonly cells: CelValue[];
-  readonly wtw: Point;
-  readonly roosters: readonly Rooster[];
-  /** What one duct can carry, in m3/h, before it whistles. */
-  readonly capaciteit: number;
-  /** How far the fan will push, in cells. */
-  readonly maxLengte: number;
+  /** Immovable: a beam, the chimney, the unit itself. */
+  readonly vast: readonly { x: number; y: number }[];
+  readonly stukken: readonly Stuk[];
+  /** Where the hoofdkanaal has to arrive, just outside the right-hand edge. */
+  readonly aansluiting: { x: number; y: number };
 };
 
-export type Route = Point[];
+export type Zet = { readonly id: string; readonly stap: number };
 
-export function index(plan: Plan, p: Point): number {
-  return p.y * plan.width + p.x;
-}
-
-export function inside(plan: Plan, p: Point): boolean {
-  return p.x >= 0 && p.y >= 0 && p.x < plan.width && p.y < plan.height;
-}
-
-export function celAt(plan: Plan, p: Point): CelValue | undefined {
-  return inside(plan, p) ? plan.cells[index(plan, p)] : undefined;
-}
-
-export function samePoint(a: Point, b: Point): boolean {
-  return a.x === b.x && a.y === b.y;
-}
-
-/** Duct may run anywhere but through a wall. */
-export function begaanbaar(plan: Plan, p: Point): boolean {
-  const cel = celAt(plan, p);
-  return cel !== undefined && cel !== CEL.MUUR;
-}
-
-export const STEPS: readonly Point[] = [
-  { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
-];
-
-export type Fault =
-  | { kind: 'los'; which: number }
-  | { kind: 'onderbroken'; which: number }
-  | { kind: 'doormuur'; which: number; at: Point }
-  | { kind: 'overbelast'; at: Point; debiet: number }
-  | { kind: 'telang'; which: number; lengte: number };
-
-/**
- * Airflow through every cell. A segment carrying two rooms carries both their
- * volumes, which is what makes a trunk a decision rather than a shortcut.
- */
-export function debietPerCel(plan: Plan, routes: readonly Route[]): Map<number, number> {
-  const flow = new Map<number, number>();
-  for (let i = 0; i < routes.length; i++) {
-    const debiet = plan.roosters[i]?.debiet ?? 0;
-    const seen = new Set<number>();
-    for (const p of routes[i] ?? []) {
-      if (samePoint(p, plan.wtw)) continue;
-      const key = index(plan, p);
-      if (seen.has(key)) continue;        // a route doubling back pays once
-      seen.add(key);
-      flow.set(key, (flow.get(key) ?? 0) + debiet);
-    }
+export function cellsOf(stuk: Stuk): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = [];
+  for (let i = 0; i < stuk.lengte; i++) {
+    out.push(stuk.orientatie === 'horizontaal'
+      ? { x: stuk.x + i, y: stuk.y }
+      : { x: stuk.x, y: stuk.y + i });
   }
-  return flow;
-}
-
-/** Duct cells used, counting a shared trunk once. */
-export function kanaalLengte(plan: Plan, routes: readonly Route[]): number {
-  const used = new Set<number>();
-  for (const route of routes) {
-    for (const p of route) {
-      if (samePoint(p, plan.wtw)) continue;
-      used.add(index(plan, p));
-    }
-  }
-  return used.size;
-}
-
-export function faults(plan: Plan, routes: readonly Route[]): Fault[] {
-  const out: Fault[] = [];
-
-  for (let i = 0; i < plan.roosters.length; i++) {
-    const route = routes[i];
-    const rooster = plan.roosters[i]!;
-    if (!route || route.length < 2) {
-      out.push({ kind: 'los', which: i });
-      continue;
-    }
-    if (!samePoint(route[0]!, rooster.cel) || !samePoint(route[route.length - 1]!, plan.wtw)) {
-      out.push({ kind: 'los', which: i });
-      continue;
-    }
-    let broken = false;
-    for (let s = 1; s < route.length; s++) {
-      const a = route[s - 1]!;
-      const b = route[s]!;
-      if (Math.abs(a.x - b.x) + Math.abs(a.y - b.y) !== 1) {
-        out.push({ kind: 'onderbroken', which: i });
-        broken = true;
-        break;
-      }
-    }
-    if (broken) continue;
-    const wall = route.find((p) => !begaanbaar(plan, p));
-    if (wall) {
-      out.push({ kind: 'doormuur', which: i, at: wall });
-      continue;
-    }
-    if (route.length - 1 > plan.maxLengte) {
-      out.push({ kind: 'telang', which: i, lengte: route.length - 1 });
-    }
-  }
-
-  for (const [key, debiet] of debietPerCel(plan, routes)) {
-    if (debiet > plan.capaciteit) {
-      out.push({
-        kind: 'overbelast',
-        at: { x: key % plan.width, y: Math.floor(key / plan.width) },
-        debiet,
-      });
-    }
-  }
-
   return out;
 }
 
-export function isSolved(plan: Plan, routes: readonly Route[]): boolean {
-  return faults(plan, routes).length === 0;
+/** Which piece occupies each cell, by index; -1 for empty, -2 for fixed. */
+export function bezetting(plan: Plan, stukken: readonly Stuk[]): Int8Array {
+  const grid = new Int8Array(plan.width * plan.height).fill(-1);
+  for (const v of plan.vast) grid[v.y * plan.width + v.x] = -2;
+  stukken.forEach((stuk, i) => {
+    for (const c of cellsOf(stuk)) grid[c.y * plan.width + c.x] = i;
+  });
+  return grid;
 }
 
-export function stars(lengte: number, par: number): number {
-  if (lengte <= par) return 3;
-  if (lengte <= par + 4) return 2;
+function binnen(plan: Plan, x: number, y: number): boolean {
+  return x >= 0 && y >= 0 && x < plan.width && y < plan.height;
+}
+
+/** Can this piece shift by `stap` cells along its own axis? */
+export function kanSchuiven(plan: Plan, stukken: readonly Stuk[], i: number, stap: number): boolean {
+  const stuk = stukken[i];
+  if (!stuk || stap === 0) return false;
+  const grid = bezetting(plan, stukken);
+  const dx = stuk.orientatie === 'horizontaal' ? Math.sign(stap) : 0;
+  const dy = stuk.orientatie === 'verticaal' ? Math.sign(stap) : 0;
+
+  for (let n = 0; n < Math.abs(stap); n++) {
+    // The leading cell, one step further along each time.
+    const lead = stuk.orientatie === 'horizontaal'
+      ? { x: dx > 0 ? stuk.x + stuk.lengte + n : stuk.x - 1 - n, y: stuk.y }
+      : { x: stuk.x, y: dy > 0 ? stuk.y + stuk.lengte + n : stuk.y - 1 - n };
+    if (!binnen(plan, lead.x, lead.y)) return false;
+    const bezet = grid[lead.y * plan.width + lead.x]!;
+    if (bezet !== -1) return false;
+  }
+  return true;
+}
+
+export function schuif(plan: Plan, stukken: readonly Stuk[], i: number, stap: number): Stuk[] {
+  if (!kanSchuiven(plan, stukken, i, stap)) return [...stukken];
+  return stukken.map((stuk, j) => {
+    if (j !== i) return stuk;
+    return stuk.orientatie === 'horizontaal'
+      ? { ...stuk, x: stuk.x + stap }
+      : { ...stuk, y: stuk.y + stap };
+  });
+}
+
+export function hoofdIndex(stukken: readonly Stuk[]): number {
+  return stukken.findIndex((s) => s.hoofd);
+}
+
+/** Done when the hoofdkanaal has slid clear of the right-hand edge. */
+export function isSolved(plan: Plan, stukken: readonly Stuk[]): boolean {
+  const i = hoofdIndex(stukken);
+  if (i < 0) return false;
+  const hoofd = stukken[i]!;
+  return hoofd.orientatie === 'horizontaal'
+    && hoofd.y === plan.aansluiting.y
+    && hoofd.x + hoofd.lengte - 1 >= plan.width - 1;
+}
+
+/** A compact key for a position, so the solver can recognise one it has seen. */
+export function sleutel(stukken: readonly Stuk[]): string {
+  return stukken.map((s) => `${s.x},${s.y}`).join(';');
+}
+
+export function stars(zetten: number, par: number): number {
+  if (zetten <= par) return 3;
+  if (zetten <= par + 4) return 2;
   return 1;
 }
 
-const CHARS: Record<string, CelValue> = {
-  '.': CEL.MUUR,
-  '#': CEL.VLOER,
-  W: CEL.WTW,
-  R: CEL.ROOSTER,
-};
-
-/** Plans are authored as ASCII art, like the walls. */
-export function parsePlan(
-  rows: readonly string[],
-  roosters: readonly { x: number; y: number; debiet: number; ruimte: string }[],
-  capaciteit: number,
-  maxLengte: number,
-): Plan {
+/**
+ * Plans are authored as ASCII art. '.' empty, '#' fixed, 'T' the hoofdkanaal,
+ * any other letter a duct section; repeated letters that sit next to each
+ * other form one piece.
+ */
+export function parsePlan(rows: readonly string[], aansluitingRij?: number): Plan {
+  const height = rows.length;
   const width = rows[0]?.length ?? 0;
-  const cells: CelValue[] = [];
-  let wtw: Point | null = null;
+  const vast: { x: number; y: number }[] = [];
+  const cellsByLetter = new Map<string, { x: number; y: number }[]>();
+
   rows.forEach((row, y) => {
     if (row.length !== width) throw new Error(`ragged plan row ${y}`);
     [...row].forEach((ch, x) => {
-      const cel = CHARS[ch];
-      if (cel === undefined) throw new Error(`unknown plan cell "${ch}"`);
-      if (cel === CEL.WTW) wtw = { x, y };
-      cells.push(cel);
+      if (ch === '.') return;
+      if (ch === '#') { vast.push({ x, y }); return; }
+      if (!/[A-Z]/.test(ch)) throw new Error(`unknown plan cell "${ch}"`);
+      const list = cellsByLetter.get(ch) ?? [];
+      list.push({ x, y });
+      cellsByLetter.set(ch, list);
     });
   });
-  if (!wtw) throw new Error('plan has no WTW unit');
+
+  const stukken: Stuk[] = [];
+  for (const [letter, cells] of cellsByLetter) {
+    const xs = new Set(cells.map((c) => c.x));
+    const ys = new Set(cells.map((c) => c.y));
+    if (cells.length < 2) throw new Error(`piece ${letter} is only one cell`);
+    if (xs.size !== 1 && ys.size !== 1) throw new Error(`piece ${letter} is not a straight run`);
+    const orientatie: Orientatie = ys.size === 1 ? 'horizontaal' : 'verticaal';
+    const x = Math.min(...cells.map((c) => c.x));
+    const y = Math.min(...cells.map((c) => c.y));
+    // A run with a gap in it would quietly behave as something longer.
+    const span = orientatie === 'horizontaal'
+      ? Math.max(...cells.map((c) => c.x)) - x + 1
+      : Math.max(...cells.map((c) => c.y)) - y + 1;
+    if (span !== cells.length) throw new Error(`piece ${letter} is broken in two`);
+    stukken.push({ id: letter, x, y, lengte: cells.length, orientatie, hoofd: letter === 'T' });
+  }
+  stukken.sort((a, b) => a.id.localeCompare(b.id));
+
+  const hoofd = stukken.find((s) => s.hoofd);
+  if (!hoofd) throw new Error('plan has no hoofdkanaal');
+  if (hoofd.orientatie !== 'horizontaal') throw new Error('the hoofdkanaal must lie horizontally');
+
   return {
-    width, height: rows.length, cells, wtw,
-    roosters: roosters.map((r) => ({ cel: { x: r.x, y: r.y }, debiet: r.debiet, ruimte: r.ruimte })),
-    capaciteit, maxLengte,
+    width, height, vast, stukken,
+    aansluiting: { x: width, y: aansluitingRij ?? hoofd.y },
   };
 }

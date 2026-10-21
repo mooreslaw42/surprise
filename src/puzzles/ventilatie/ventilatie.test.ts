@@ -1,118 +1,133 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CEL, type Route,
-  begaanbaar, celAt, debietPerCel, faults, isSolved, kanaalLengte, parsePlan, stars,
+  type Stuk,
+  bezetting, cellsOf, hoofdIndex, isSolved, kanSchuiven, parsePlan, schuif, sleutel, stars,
 } from './model.ts';
 import { solve } from './solver.ts';
 import { VENTILATIE_LEVELS } from './levels.ts';
 
-/** A plain corridor with the unit at one end and two grilles at the other. */
-function corridor(capaciteit = 100, maxLengte = 20) {
-  return parsePlan(
-    [
-      '.......',
-      '.#####.',
-      '.W###R.',
-      '.#####.',
-      '.####R.',
-      '.......',
-    ],
-    [
-      { x: 5, y: 2, debiet: 60, ruimte: 'EEN' },
-      { x: 5, y: 4, debiet: 60, ruimte: 'TWEE' },
-    ],
-    capaciteit,
-    maxLengte,
-  );
-}
+const simpel = () => parsePlan([
+  '......',
+  '..A...',
+  'TTA...',
+  '..A...',
+  '......',
+  '......',
+]);
 
-test('parsePlan reads the drawing', () => {
-  const plan = corridor();
-  assert.equal(celAt(plan, { x: 0, y: 0 }), CEL.MUUR);
-  assert.equal(celAt(plan, { x: 2, y: 1 }), CEL.VLOER);
-  assert.deepEqual(plan.wtw, { x: 1, y: 2 });
-  assert.equal(begaanbaar(plan, { x: 0, y: 0 }), false);
+test('parsePlan reads runs of a letter as one piece', () => {
+  const plan = simpel();
+  const a = plan.stukken.find((s) => s.id === 'A')!;
+  assert.equal(a.orientatie, 'verticaal');
+  assert.equal(a.lengte, 3);
+  assert.deepEqual(cellsOf(a), [{ x: 2, y: 1 }, { x: 2, y: 2 }, { x: 2, y: 3 }]);
+  const t = plan.stukken.find((s) => s.hoofd)!;
+  assert.equal(t.orientatie, 'horizontaal');
+  assert.equal(plan.aansluiting.y, t.y, 'the outlet lines up with the hoofdkanaal');
 });
 
-test('parsePlan rejects ragged or unknown drawings', () => {
-  assert.throws(() => parsePlan(['##', '#'], [], 100, 10), /ragged/);
-  assert.throws(() => parsePlan(['#Q'], [], 100, 10), /unknown plan cell/);
-  assert.throws(() => parsePlan(['##'], [], 100, 10), /no WTW/);
+test('parsePlan rejects drawings it cannot make sense of', () => {
+  assert.throws(() => parsePlan(['TTA', 'TT']), /ragged/);
+  assert.throws(() => parsePlan(['TT.A.A']), /broken in two/);
+  assert.throws(() => parsePlan(['TT.A..', '...A..', '..AA..']), /not a straight run/);
+  assert.throws(() => parsePlan(['AA....']), /no hoofdkanaal/);
+  assert.throws(() => parsePlan(['TT...A']), /only one cell/);
+  assert.throws(() => parsePlan(['T.....', 'T.....', 'AA....']), /must lie horizontally/);
 });
 
-test('air adds up on a shared trunk', () => {
-  const plan = corridor();
-  // Both grilles come back along row 2, so that run carries both volumes.
-  const a: Route = [{ x: 5, y: 2 }, { x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }];
-  const b: Route = [{ x: 5, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 3 }, { x: 4, y: 2 },
-    { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }];
-  const flow = debietPerCel(plan, [a, b]);
-  assert.equal(flow.get(2 * plan.width + 3), 120, 'the shared cell carries both');
-  assert.equal(flow.get(2 * plan.width + 5), 60, 'the spur carries one');
+test('a piece only slides along its own axis', () => {
+  const plan = simpel();
+  const a = plan.stukken.findIndex((s) => s.id === 'A');
+  // A is vertical: it can go up and down, and the slide changes only y.
+  assert.ok(kanSchuiven(plan, plan.stukken, a, 1));
+  const moved = schuif(plan, plan.stukken, a, 1);
+  assert.equal(moved[a]!.y, plan.stukken[a]!.y + 1);
+  assert.equal(moved[a]!.x, plan.stukken[a]!.x);
 });
 
-test('a trunk over capacity is reported, and splitting fixes it', () => {
-  const tight = corridor(100);
-  const a: Route = [{ x: 5, y: 2 }, { x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }];
-  const b: Route = [{ x: 5, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 3 }, { x: 4, y: 2 },
-    { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }];
-  assert.ok(faults(tight, [a, b]).some((f) => f.kind === 'overbelast'), '120 through a 100 duct');
-
-  const roomy = corridor(200);
-  assert.deepEqual(faults(roomy, [a, b]).filter((f) => f.kind === 'overbelast'), []);
+test('a piece stops against another piece and against the edge', () => {
+  const plan = simpel();
+  const t = hoofdIndex(plan.stukken);
+  assert.equal(kanSchuiven(plan, plan.stukken, t, 1), false, 'A is in the way');
+  assert.equal(kanSchuiven(plan, plan.stukken, t, -1), false, 'the wall is in the way');
 });
 
-test('a shared trunk costs less duct than two separate runs', () => {
-  const plan = corridor(200);
-  const shared: Route[] = [
-    [{ x: 5, y: 2 }, { x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }],
-    [{ x: 5, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 3 }, { x: 4, y: 2 },
-      { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }],
-  ];
-  const apart: Route[] = [
-    [{ x: 5, y: 2 }, { x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }],
-    [{ x: 5, y: 4 }, { x: 4, y: 4 }, { x: 3, y: 4 }, { x: 2, y: 4 },
-      { x: 2, y: 3 }, { x: 2, y: 2 }, { x: 1, y: 2 }],
-  ];
-  assert.ok(kanaalLengte(plan, shared) < kanaalLengte(plan, apart),
-    'running together should be the cheaper plan');
+test('a fixed obstacle blocks just as a piece does', () => {
+  const plan = parsePlan([
+    '......',
+    '......',
+    'TT.#..',
+    '......',
+    '......',
+    '......',
+  ]);
+  const t = hoofdIndex(plan.stukken);
+  assert.ok(kanSchuiven(plan, plan.stukken, t, 1));
+  assert.equal(kanSchuiven(plan, plan.stukken, t, 2), false, 'the chimney is in the way');
 });
 
-test('a run longer than the fan will push is reported', () => {
-  const plan = corridor(200, 3);
-  const long: Route = [{ x: 5, y: 2 }, { x: 4, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 1, y: 2 }];
-  assert.ok(faults(plan, [long, []]).some((f) => f.kind === 'telang'));
+test('an illegal slide leaves the board exactly as it was', () => {
+  const plan = simpel();
+  const t = hoofdIndex(plan.stukken);
+  const before = sleutel(plan.stukken);
+  assert.equal(sleutel(schuif(plan, plan.stukken, t, 1)), before);
 });
 
-test('duct cannot be drawn through a wall', () => {
-  const plan = corridor();
-  const through: Route = [{ x: 5, y: 2 }, { x: 5, y: 1 }, { x: 5, y: 0 }, { x: 1, y: 2 }];
-  assert.ok(faults(plan, [through, []]).some((f) => f.kind === 'doormuur' || f.kind === 'onderbroken'));
+test('bezetting marks pieces, fixed cells and empty space apart', () => {
+  const plan = parsePlan(['......', '......', 'TT.#..', '......', '......', '......']);
+  const grid = bezetting(plan, plan.stukken);
+  assert.equal(grid[2 * plan.width + 0], hoofdIndex(plan.stukken));
+  assert.equal(grid[2 * plan.width + 3], -2, 'fixed');
+  assert.equal(grid[2 * plan.width + 4], -1, 'empty');
 });
 
-test('every plan can be ducted, and par is what its own answer costs', () => {
+test('solved only once the hoofdkanaal reaches the far edge', () => {
+  const plan = simpel();
+  assert.equal(isSolved(plan, plan.stukken), false);
+  const out: Stuk[] = plan.stukken.map((s) => (s.hoofd ? { ...s, x: 4 } : s));
+  assert.ok(isSolved(plan, out));
+});
+
+test('every shipped plan is solvable, and par is the shortest way', () => {
   for (const level of VENTILATIE_LEVELS) {
-    const { par, routes } = solve(level.plan);
-    assert.equal(routes.length, level.plan.roosters.length, `${level.id} left a rooster out`);
-    assert.deepEqual(faults(level.plan, routes), [], `${level.id}: the solver's own plan is not legal`);
-    assert.ok(isSolved(level.plan, routes), `${level.id} is not solved by par`);
-    assert.equal(kanaalLengte(level.plan, routes), par, `${level.id} par disagrees with its routes`);
+    const { par, zetten } = solve(level.plan);
+    assert.equal(zetten.length, par, `${level.id} par disagrees with its own line`);
+    assert.ok(par > 0, `${level.id} starts solved`);
+
+    // Replay it and check the plan actually comes out.
+    let stukken = level.plan.stukken.map((s) => ({ ...s }));
+    for (const zet of zetten) {
+      const i = stukken.findIndex((s) => s.id === zet.id);
+      assert.ok(i >= 0, `${level.id}: no piece ${zet.id}`);
+      assert.ok(kanSchuiven(level.plan, stukken, i, zet.stap), `${level.id}: illegal slide of ${zet.id}`);
+      stukken = schuif(level.plan, stukken, i, zet.stap);
+    }
+    assert.ok(isSolved(level.plan, stukken), `${level.id} is not solved by its own par line`);
   }
 });
 
-test('par is at least enough duct to touch every rooster', () => {
+test('no plan can be solved in fewer moves than par', () => {
+  // Breadth-first, so the first solution found is the shortest by definition;
+  // this guards the claim rather than re-deriving it.
   for (const level of VENTILATIE_LEVELS) {
     const { par } = solve(level.plan);
-    assert.ok(par >= level.plan.roosters.length,
-      `${level.id}: par ${par} is less than one cell per rooster`);
+    let stukken = level.plan.stukken.map((s) => ({ ...s }));
+    let moves = 0;
+    while (!isSolved(level.plan, stukken) && moves < par) {
+      const next = solve({ ...level.plan, stukken }).zetten[0]!;
+      const i = stukken.findIndex((s) => s.id === next.id);
+      stukken = schuif(level.plan, stukken, i, next.stap);
+      moves++;
+    }
+    assert.equal(moves, par, `${level.id} solved in ${moves} following the solver one move at a time`);
   }
 });
 
-test('the plans get bigger as they go', () => {
-  const counts = VENTILATIE_LEVELS.map((l) => l.plan.roosters.length);
-  assert.deepEqual(counts, [...counts].sort((a, b) => a - b), `roosters go ${counts.join(', ')}`);
-  assert.ok(counts[counts.length - 1]! > counts[0]!, 'the last plan should be the biggest');
+test('the plans get harder as they go', () => {
+  const pars = VENTILATIE_LEVELS.map((l) => solve(l.plan).par);
+  assert.deepEqual(pars, [...pars].sort((a, b) => a - b), `pars go ${pars.join(', ')}`);
+  assert.ok(pars[0]! >= 4, 'even the first should take some thought');
 });
 
 test('every plan promises a delivery it does not keep', () => {
@@ -122,7 +137,7 @@ test('every plan promises a delivery it does not keep', () => {
 });
 
 test('stars are awarded against par', () => {
-  assert.equal(stars(14, 14), 3);
-  assert.equal(stars(18, 14), 2);
-  assert.equal(stars(19, 14), 1);
+  assert.equal(stars(6, 6), 3);
+  assert.equal(stars(10, 6), 2);
+  assert.equal(stars(11, 6), 1);
 });

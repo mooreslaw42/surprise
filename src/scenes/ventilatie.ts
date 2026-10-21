@@ -5,8 +5,8 @@ import type { Save } from '../engine/save.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import { Dialogue } from './dialogue.ts';
 import {
-  CEL, type Point, type Route,
-  begaanbaar, celAt, debietPerCel, faults, isSolved, kanaalLengte, samePoint, stars,
+  type Stuk,
+  cellsOf, isSolved, kanSchuiven, schuif, stars,
 } from '../puzzles/ventilatie/model.ts';
 import { solve } from '../puzzles/ventilatie/solver.ts';
 import type { VentilatieLevel } from '../puzzles/ventilatie/levels.ts';
@@ -15,8 +15,9 @@ const TOP_H = 16;
 const BOTTOM_H = 30;
 
 /**
- * The ventilation plan, seen from above. A drawing rather than a job, which
- * is the point: it gets approved and then it does not arrive.
+ * The roof space, from above, with the prefab duct lying in it. Slide the
+ * sections until the hoofdkanaal can reach the aansluiting. A drawing rather
+ * than a job, which is why it never turns into one.
  */
 export class VentilatieScene implements Scene {
   private readonly level: VentilatieLevel;
@@ -26,36 +27,41 @@ export class VentilatieScene implements Scene {
   private readonly originX: number;
   private readonly originY: number;
 
-  private routes: Route[];
-  private drawing: number | null = null;
+  private stukken: Stuk[];
+  private zetten = 0;
   private time = 0;
   private won = false;
   private wonAt = 0;
   private uitleg: Dialogue | null;
 
+  /** What is being dragged, and where it stood when the drag began. */
+  private sleept: { index: number; grepen: { x: number; y: number }; begon: Stuk } | null = null;
+
   constructor(level: VentilatieLevel, save: Save) {
     this.level = level;
     this.save = save;
     this.par = solve(level.plan).par;
-    this.routes = level.plan.roosters.map(() => []);
+    this.stukken = level.plan.stukken.map((s) => ({ ...s }));
     this.uitleg = new Dialogue(level.uitleg);
 
     const plan = level.plan;
-    this.tile = Math.max(6, Math.min(
-      Math.floor((HEIGHT - TOP_H - BOTTOM_H - 8) / plan.height),
-      Math.floor((WIDTH - 24) / plan.width),
+    this.tile = Math.max(8, Math.min(
+      Math.floor((HEIGHT - TOP_H - BOTTOM_H - 10) / plan.height),
+      Math.floor((WIDTH - 60) / (plan.width + 1)),
     ));
-    this.originX = Math.round((WIDTH - plan.width * this.tile) / 2);
+    this.originX = Math.round((WIDTH - (plan.width + 1) * this.tile) / 2);
     this.originY = TOP_H + Math.round((HEIGHT - TOP_H - BOTTOM_H - plan.height * this.tile) / 2);
   }
 
-  private cellAt(ctx: SceneContext): Point | null {
-    const p = {
+  private cellAt(ctx: SceneContext): { x: number; y: number } {
+    return {
       x: Math.floor((ctx.input.mouseX - this.originX) / this.tile),
       y: Math.floor((ctx.input.mouseY - this.originY) / this.tile),
     };
-    if (!ctx.input.mouseOver || celAt(this.level.plan, p) === undefined) return null;
-    return p;
+  }
+
+  private stukOp(cell: { x: number; y: number }): number {
+    return this.stukken.findIndex((s) => cellsOf(s).some((c) => c.x === cell.x && c.y === cell.y));
   }
 
   update(dt: number, ctx: SceneContext): void {
@@ -70,174 +76,173 @@ export class VentilatieScene implements Scene {
     }
     if (ctx.input.justPressed('Escape')) ctx.pop();
     if (ctx.input.justPressed('KeyU')) { this.uitleg = new Dialogue(this.level.uitleg); return; }
-    if (ctx.input.justPressed('KeyR')) this.routes = this.routes.map(() => []);
-    if (ctx.input.justPressed('KeyH')) this.routes = solve(this.level.plan).routes;
-
-    const cell = this.cellAt(ctx);
-    if (ctx.input.mouseClicked && cell) {
-      const rooster = this.level.plan.roosters.findIndex((r) => samePoint(r.cel, cell));
-      if (rooster >= 0) {
-        this.drawing = rooster;
-        this.routes[rooster] = [cell];
-      } else {
-        const owner = this.routes.findIndex((r) => r.some((p) => samePoint(p, cell)));
-        if (owner >= 0) this.routes[owner] = [];
-      }
-    }
-    if (this.drawing !== null && cell) this.extend(this.drawing, cell);
-    if (!ctx.input.mouseDown && this.drawing !== null) {
-      const route = this.routes[this.drawing]!;
-      if (route.length < 2 || !samePoint(route[route.length - 1]!, this.level.plan.wtw)) {
-        this.routes[this.drawing] = [];
-      }
-      this.drawing = null;
-    }
-    this.check();
-  }
-
-  private extend(which: number, cell: Point): void {
-    const route = this.routes[which]!;
-    const head = route[route.length - 1];
-    if (!head || samePoint(head, cell)) return;
-    if (Math.abs(head.x - cell.x) + Math.abs(head.y - cell.y) !== 1) return;
-    if (!begaanbaar(this.level.plan, cell)) return;
-    if (route.length >= 2 && samePoint(route[route.length - 2]!, cell)) {
-      route.pop();
+    if (ctx.input.justPressed('KeyR')) {
+      this.stukken = this.level.plan.stukken.map((s) => ({ ...s }));
+      this.zetten = 0;
       return;
     }
-    if (route.some((p) => samePoint(p, cell))) return;
-    // Another room's grille is a terminal, not a junction.
-    if (this.level.plan.roosters.some((r, i) => i !== which && samePoint(r.cel, cell))) return;
-    route.push(cell);
+    if (ctx.input.justPressed('KeyH')) {
+      const next = solve({ ...this.level.plan, stukken: this.stukken }).zetten[0];
+      if (next) {
+        const i = this.stukken.findIndex((s) => s.id === next.id);
+        if (i >= 0) {
+          this.stukken = schuif(this.level.plan, this.stukken, i, next.stap);
+          this.zetten++;
+        }
+      }
+      this.check();
+      return;
+    }
+
+    const cell = this.cellAt(ctx);
+    if (ctx.input.mouseClicked && ctx.input.mouseOver) {
+      const i = this.stukOp(cell);
+      if (i >= 0) this.sleept = { index: i, grepen: cell, begon: { ...this.stukken[i]! } };
+    }
+
+    if (this.sleept && ctx.input.mouseDown) {
+      const { index, grepen, begon } = this.sleept;
+      const stuk = this.stukken[index]!;
+      // How far the mouse has travelled along the piece's own axis.
+      const wens = stuk.orientatie === 'horizontaal'
+        ? cell.x - grepen.x - (stuk.x - begon.x)
+        : cell.y - grepen.y - (stuk.y - begon.y);
+      if (wens !== 0) {
+        const stap = Math.sign(wens);
+        // One cell at a time, so the piece stops against whatever is in the way.
+        for (let n = 0; n < Math.abs(wens); n++) {
+          if (!kanSchuiven(this.level.plan, this.stukken, index, stap)) break;
+          this.stukken = schuif(this.level.plan, this.stukken, index, stap);
+        }
+      }
+    }
+
+    if (this.sleept && !ctx.input.mouseDown) {
+      // A drag of any distance is one move, as it is on the table.
+      const now = this.stukken[this.sleept.index]!;
+      if (now.x !== this.sleept.begon.x || now.y !== this.sleept.begon.y) this.zetten++;
+      this.sleept = null;
+      this.check();
+    }
   }
 
   private check(): void {
     if (this.won) return;
-    if (isSolved(this.level.plan, this.routes)) {
+    if (isSolved(this.level.plan, this.stukken)) {
       this.won = true;
       this.wonAt = this.time;
-      const lengte = kanaalLengte(this.level.plan, this.routes);
-      this.save.record(this.level.id, lengte, stars(lengte, this.par));
+      this.save.record(this.level.id, this.zetten, stars(this.zetten, this.par));
     }
   }
 
   render(screen: Screen, ctx: SceneContext): void {
     screen.clear(C.ROET);
-    this.drawPlan(screen);
-    this.drawDucts(screen);
-    this.drawFixtures(screen);
-    if (!this.won && !this.uitleg) this.drawCursor(screen, ctx);
+    this.drawRoof(screen);
+    this.drawPieces(screen);
+    if (!this.won && !this.uitleg) this.drawHover(screen, ctx);
     this.drawTopBar(screen);
     this.drawBottomBar(screen);
     if (this.won) this.drawWon(screen);
     if (this.uitleg) this.uitleg.render(screen, this.time);
   }
 
-  /** Graph paper: floor light, walls dark, as a drawing would be. */
-  private drawPlan(screen: Screen): void {
+  /** Boarded roof space, with the hole through to the unit on the right. */
+  private drawRoof(screen: Screen): void {
     const plan = this.level.plan;
-    screen.fillRect(this.originX - 4, this.originY - 4,
-      plan.width * this.tile + 8, plan.height * this.tile + 8, C.DIEPBLAUW);
+    const w = plan.width * this.tile;
+    const h = plan.height * this.tile;
+    screen.fillRect(this.originX - 3, this.originY - 3, w + 6, h + 6, C.STEEN);
+    screen.strokeRect(this.originX - 3, this.originY - 3, w + 6, h + 6, C.ROET);
+
     for (let y = 0; y < plan.height; y++) {
       for (let x = 0; x < plan.width; x++) {
         const px = this.originX + x * this.tile;
         const py = this.originY + y * this.tile;
-        if (celAt(plan, { x, y }) === CEL.MUUR) {
-          screen.fillRect(px, py, this.tile, this.tile, C.DIEPBLAUW);
-        } else {
-          screen.fillRect(px, py, this.tile, this.tile, C.KALK);
-          screen.fillRect(px, py, this.tile, 1, C.ZANDGRIJS);
-          screen.fillRect(px, py, 1, this.tile, C.ZANDGRIJS);
-        }
+        screen.fillRect(px, py, this.tile, this.tile, (x + y) % 2 === 0 ? C.HOUT : C.DONKEROKER);
+        screen.fillRect(px, py, this.tile, 1, C.STEEN);
+        screen.fillRect(px, py, 1, this.tile, C.STEEN);
+      }
+    }
+    for (const v of plan.vast) {
+      const px = this.originX + v.x * this.tile;
+      const py = this.originY + v.y * this.tile;
+      screen.fillRect(px, py, this.tile, this.tile, C.ROET);
+      screen.ditherRect(px + 2, py + 2, this.tile - 4, this.tile - 4, C.STEEN, C.ROET);
+    }
+
+    // The aansluiting: a slot in the right-hand wall with the unit beyond it.
+    const ax = this.originX + plan.width * this.tile;
+    const ay = this.originY + plan.aansluiting.y * this.tile;
+    screen.fillRect(ax - 2, ay, this.tile + 6, this.tile, C.ZWART);
+    screen.fillRect(ax + 2, ay + 2, this.tile, this.tile - 4, C.ASGRIJS);
+    screen.fillEllipse(ax + 2 + Math.floor(this.tile / 2), ay + Math.floor(this.tile / 2), 4, 4, C.ZANDGRIJS);
+    const spin = Math.floor(this.time * 6) % 2 === 0;
+    screen.fillRect(ax + 2 + Math.floor(this.tile / 2) - 3, ay + Math.floor(this.tile / 2) - (spin ? 0 : 1), 7, 2, C.ROET);
+    screen.text('WTW', ax + 1, ay + this.tile + 2, C.LICHTOKER);
+  }
+
+  /** Spiral duct, seen from above: the hoofdkanaal in yellow, the rest steel. */
+  private drawPieces(screen: Screen): void {
+    for (const stuk of this.stukken) {
+      const px = this.originX + stuk.x * this.tile + 2;
+      const py = this.originY + stuk.y * this.tile + 2;
+      const w = (stuk.orientatie === 'horizontaal' ? stuk.lengte : 1) * this.tile - 4;
+      const h = (stuk.orientatie === 'verticaal' ? stuk.lengte : 1) * this.tile - 4;
+      const body = stuk.hoofd ? C.BOTERGEEL : C.ZANDGRIJS;
+      const edge = stuk.hoofd ? C.OKER : C.ASGRIJS;
+
+      screen.fillRect(px, py, w, h, edge);
+      screen.fillRect(px + 1, py + 1, w - 2, h - 2, body);
+      // Ribs along the length, the way spiro duct is made.
+      if (stuk.orientatie === 'horizontaal') {
+        for (let x = px + 4; x < px + w - 2; x += 5) screen.fillRect(x, py + 1, 1, h - 2, edge);
+        screen.fillRect(px + 1, py + 1, w - 2, 1, C.WIT);
+      } else {
+        for (let y = py + 4; y < py + h - 2; y += 5) screen.fillRect(px + 1, y, w - 2, 1, edge);
+        screen.fillRect(px + 1, py + 1, 1, h - 2, C.WIT);
+      }
+      if (stuk.hoofd) {
+        screen.text('H', px + Math.floor(w / 2) - 2, py + Math.floor(h / 2) - 3, C.ROET);
       }
     }
   }
 
-  /** Duct, drawn thicker the more air it carries. */
-  private drawDucts(screen: Screen): void {
-    const plan = this.level.plan;
-    const flow = debietPerCel(plan, this.routes);
-    for (const [key, debiet] of flow) {
-      const x = key % plan.width;
-      const y = Math.floor(key / plan.width);
-      const px = this.originX + x * this.tile;
-      const py = this.originY + y * this.tile;
-      const share = Math.min(1, debiet / plan.capaciteit);
-      const thick = Math.max(3, Math.round(this.tile * (0.3 + 0.45 * share)));
-      const off = Math.floor((this.tile - thick) / 2);
-      const over = debiet > plan.capaciteit;
-      screen.fillRect(px, py + off, this.tile, thick, over ? C.ROESTROOD : C.SALIE);
-      screen.fillRect(px + off, py, thick, this.tile, over ? C.ROESTROOD : C.SALIE);
-      screen.fillRect(px, py + off, this.tile, 1, over ? C.DONKERROOD : C.DONKERSALIE);
-      screen.fillRect(px + off, py, 1, this.tile, over ? C.DONKERROOD : C.DONKERSALIE);
-    }
-  }
-
-  private centre(p: Point): { x: number; y: number } {
-    return {
-      x: this.originX + p.x * this.tile + Math.floor(this.tile / 2),
-      y: this.originY + p.y * this.tile + Math.floor(this.tile / 2),
-    };
-  }
-
-  private drawFixtures(screen: Screen): void {
-    const plan = this.level.plan;
-    const w = this.centre(plan.wtw);
-    screen.fillRect(w.x - 8, w.y - 7, 17, 15, C.ROET);
-    screen.fillRect(w.x - 7, w.y - 6, 15, 13, C.ASGRIJS);
-    screen.fillEllipse(w.x, w.y, 5, 5, C.ZANDGRIJS);
-    // The fan, turning, which is the only part that ever worked.
-    const spin = Math.floor(this.time * 6) % 2 === 0;
-    screen.fillRect(w.x - 4, w.y - (spin ? 0 : 1), 9, 2, C.ROET);
-    screen.fillRect(w.x - (spin ? 1 : 0), w.y - 4, 2, 9, C.ROET);
-    screen.text('WTW', w.x - 8, w.y + 9, C.LICHTOKER);
-
-    for (let i = 0; i < plan.roosters.length; i++) {
-      const rooster = plan.roosters[i]!;
-      const at = this.centre(rooster.cel);
-      const done = this.routes[i]!.length > 1;
-      screen.fillRect(at.x - 7, at.y - 6, 15, 13, C.ROET);
-      screen.fillRect(at.x - 6, at.y - 5, 13, 11, done ? C.SALIE : C.ZANDGRIJS);
-      for (let g = -3; g <= 3; g += 2) screen.fillRect(at.x - 5, at.y + g, 11, 1, C.ROET);
-      screen.textCentered(`${rooster.debiet}`, at.x + 1, at.y + 8, C.WIT);
-    }
-  }
-
-  private drawCursor(screen: Screen, ctx: SceneContext): void {
-    const cell = this.cellAt(ctx);
-    if (!cell) return;
-    screen.strokeRect(this.originX + cell.x * this.tile, this.originY + cell.y * this.tile,
-      this.tile, this.tile, begaanbaar(this.level.plan, cell) ? C.WIT : C.ROESTROOD);
+  private drawHover(screen: Screen, ctx: SceneContext): void {
+    if (!ctx.input.mouseOver) return;
+    const i = this.sleept ? this.sleept.index : this.stukOp(this.cellAt(ctx));
+    if (i < 0) return;
+    const stuk = this.stukken[i]!;
+    const px = this.originX + stuk.x * this.tile;
+    const py = this.originY + stuk.y * this.tile;
+    const w = (stuk.orientatie === 'horizontaal' ? stuk.lengte : 1) * this.tile;
+    const h = (stuk.orientatie === 'verticaal' ? stuk.lengte : 1) * this.tile;
+    screen.strokeRect(px, py, w, h, C.WIT);
+    // Which way it can go.
+    const pijl = stuk.orientatie === 'horizontaal' ? '< >' : 'V';
+    screen.text(pijl, px + Math.floor(w / 2) - 8, py - 9, C.WIT);
   }
 
   private drawTopBar(screen: Screen): void {
     screen.fillRect(0, 0, WIDTH, TOP_H, C.ZWART);
     screen.fillRect(0, TOP_H - 1, WIDTH, 1, C.STEEN);
     screen.text(this.level.titel, 6, 5, C.LICHTOKER);
-    const used = kanaalLengte(this.level.plan, this.routes);
-    const label = `KANAAL ${String(used).padStart(3)}   PAR ${String(this.par).padStart(3)}`;
-    screen.text(label, WIDTH - 6 - label.length * 6, 5, used > this.par ? C.ROESTROOD : C.SALIE);
+    const label = `ZETTEN ${String(this.zetten).padStart(2, '0')}   PAR ${String(this.par).padStart(2, '0')}`;
+    screen.text(label, WIDTH - 6 - label.length * 6, 5, this.zetten > this.par ? C.ROESTROOD : C.SALIE);
   }
 
   private drawBottomBar(screen: Screen): void {
     const y = HEIGHT - BOTTOM_H;
-    const plan = this.level.plan;
     screen.fillRect(0, y, WIDTH, BOTTOM_H, C.ZWART);
     screen.fillRect(0, y, WIDTH, 1, C.STEEN);
-    const done = this.routes.filter((r) => r.length > 1).length;
-    screen.text(`KANAAL MAX ${plan.capaciteit}   ${done}/${plan.roosters.length}`, 6, y + 7, C.KALK);
+    screen.text('SLEEP EEN STUK IN ZIJN EIGEN RICHTING', 6, y + 7, C.KALK);
     screen.text('U  H', WIDTH - 6 - 4 * 6, y + 7, C.STEEN);
-
-    const burst = faults(plan, this.routes).find((f) => f.kind === 'overbelast');
-    const message = burst ? `TE VEEL LUCHT DOOR EEN KANAAL: ${burst.debiet}` : this.level.praatje;
-    screen.text(message, 6, y + 20, burst ? C.ROESTROOD : C.ASGRIJS);
+    screen.text(this.level.praatje, 6, y + 20, C.ASGRIJS);
     screen.text('R = OPNIEUW', WIDTH - 6 - 11 * 6, y + 20, C.STEEN);
   }
 
   /** Approved, costed, and not delivered. */
   private drawWon(screen: Screen): void {
-    const lengte = kanaalLengte(this.level.plan, this.routes);
-    const got = stars(lengte, this.par);
+    const got = stars(this.zetten, this.par);
     const w = 240;
     const h = 86;
     const x = Math.round((WIDTH - w) / 2);
@@ -249,7 +254,7 @@ export class VentilatieScene implements Scene {
     for (let i = 0; i < 3; i++) {
       drawStar(screen, Math.round((WIDTH - span) / 2) + i * (STAR_W * 2 + 8), y + 22, i < got, 2);
     }
-    screen.textCentered(`${lengte} METER KANAAL   PAR ${this.par}`, WIDTH / 2, y + 44, C.KALK);
+    screen.textCentered(`${this.zetten} ZETTEN   PAR ${this.par}`, WIDTH / 2, y + 44, C.KALK);
     screen.fillRect(x + 8, y + 54, w - 16, 11, C.DONKERROOD);
     screen.textCentered(this.level.levering, WIDTH / 2, y + 56, C.WIT);
     if (Math.floor(this.time * 2) % 2 === 0) {

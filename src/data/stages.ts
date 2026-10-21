@@ -42,7 +42,7 @@ function ventilatieStap(n: number): Stage {
       id: level.id,
       ruimte: 'woonkamer',
       vlak: `PLAN ${n}`,
-      samenvatting: `${level.plan.roosters.length} ROOSTERS`,
+      samenvatting: `${level.plan.stukken.length} STUKKEN`,
     }],
   };
 }
