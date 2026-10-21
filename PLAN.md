@@ -39,7 +39,7 @@ Pim is the pixel-art host in the text box at the bottom.
 | 2 | Isolatie | polyomino packing | fit odd-shaped wool between the studs — target Rc, zero koudebruggen |
 | 3 | Elektra | non-crossing routing (Flow) | sockets and lights to the meterkast, nothing crosses, groups stay under 16A |
 | 4 | Water & afvoer | pipe rotation + gravity | warm, koud, afvoer — and the afvoer must run downhill |
-| 5 | Dichtzetten | cut-list optimisation | gipsplaat: cover it, minimise waste, never align four corners |
+| 5 | Dichtzetten | deduction (tents-and-trees) | find the klossen behind the board before you drill |
 | 6 | Vloeren | plank laying | wooden floors, staggered joints, reuse your cut-offs |
 | 7 | Schilderen | Eulerian path | roller every tile without lifting the roller or walking through wet paint |
 | 8 | Oplevering | boss | see below |
@@ -263,11 +263,23 @@ Vloeren is the floor: one decision per course, how long its first plank is,
 with the off-cut carrying to the next course and the joint rule making the
 cheap start often the illegal one.
 
-Dichtzetten is deduction, which nothing else in the game is. Before the
-board goes on you have to know where the frame is, and the numbers along
-the top and side say how long the runs of timber are. A nonogram whose
-picture is the wall's own frame. Every shipped wall is checked to be
-reasonable square by square without guessing.
+Dichtzetten is deduction, which nothing else in the game is. The first go
+at it was a nonogram of the frame and it did not work: a dense grid of
+runs, abstract to look at, tedious to fill in. Replaced with klossen,
+which is tents-and-trees with a stud finder.
+
+Everything that hangs on the wall is pencilled on it where it really goes
+— kastjes, a tv-beugel, a radiator — and each one needs its own klos, a
+block of timber behind the board, in one of the four squares against it.
+Two klossen never touch, not even at the corner, and the numbers on the
+masking tape along the edges are what the detector beeps per row and per
+column. One click rules a square out, the next one drills, and a hole in
+the wrong place stays a hole.
+
+Walls are generated and filtered, never drawn: the rules-only solver has
+to reach the end on its own, and the exact counter has to find exactly one
+answer. There is a test that the rules never deduce a square the answer
+disagrees with, because a rule that oversteps would hand the player a hole.
 
 No plumbing stage. He did not do any worth the name.
 

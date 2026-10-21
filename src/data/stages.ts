@@ -5,7 +5,7 @@ import { KANAAL_LEVELS } from '../puzzles/kanalen/levels.ts';
 import { ISOLATIE_LEVELS } from '../puzzles/isolatie/levels.ts';
 import { SCHILDER_LEVELS } from '../puzzles/schilderen/levels.ts';
 import { VLOER_LEVELS } from '../puzzles/vloeren/levels.ts';
-import { DICHT_LEVELS } from '../puzzles/dichtzetten/levels.ts';
+import { KLOS_LEVELS } from '../puzzles/klossen/levels.ts';
 import type { RoomId } from './house.ts';
 
 /**
@@ -14,7 +14,7 @@ import type { RoomId } from './house.ts';
  *
  * Only the two built so far are listed; the rest of the ladder is in PLAN.md.
  */
-export type StageKind = 'leeghalen' | 'sloop' | 'isolatie' | 'elektra' | 'dichtzetten' | 'vloeren' | 'schilderen' | 'kanalen';
+export type StageKind = 'leeghalen' | 'sloop' | 'isolatie' | 'elektra' | 'klossen' | 'vloeren' | 'schilderen' | 'kanalen';
 
 export type StageEntry = {
   readonly id: string;
@@ -95,14 +95,15 @@ export const STAGES: readonly Stage[] = [
     }),
   },
   {
-    kind: 'dichtzetten',
+    // The phase is dichtzetten; the puzzle in it is finding the klossen.
+    kind: 'klossen',
     nummer: 5,
     naam: 'DICHTZETTEN',
-    entries: DICHT_LEVELS.map((l) => ({
+    entries: KLOS_LEVELS.map((l) => ({
       id: l.id,
-      ruimte: 'woonkamer' as RoomId,
-      vlak: l.ruimte,
-      samenvatting: `${l.wand.width}x${l.wand.height}`,
+      ruimte: l.surface.ruimte,
+      vlak: l.vlak,
+      samenvatting: `${l.wand.klossen.length} KLOSSEN`,
     })),
   },
   {

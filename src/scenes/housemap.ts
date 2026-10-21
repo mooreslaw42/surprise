@@ -14,8 +14,8 @@ import { SCHUIF_LEVELS } from '../puzzles/schuifwerk/levels.ts';
 import { KanalenScene } from './kanalen.ts';
 import { IsolatieScene } from './isolatie.ts';
 import { ISOLATIE_LEVELS } from '../puzzles/isolatie/levels.ts';
-import { DichtScene } from './dichtzetten.ts';
-import { DICHT_LEVELS } from '../puzzles/dichtzetten/levels.ts';
+import { KlosScene } from './klossen.ts';
+import { KLOS_LEVELS } from '../puzzles/klossen/levels.ts';
 import { VloerScene } from './vloeren.ts';
 import { VLOER_LEVELS } from '../puzzles/vloeren/levels.ts';
 import { SchilderScene } from './schilderen.ts';
@@ -116,9 +116,9 @@ export class HouseMapScene implements Scene {
     } else if (kind === 'isolatie') {
       const level = ISOLATIE_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new IsolatieScene(level, this.save));
-    } else if (kind === 'dichtzetten') {
-      const level = DICHT_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new DichtScene(level, this.save));
+    } else if (kind === 'klossen') {
+      const level = KLOS_LEVELS.find((l) => l.id === entry.id);
+      if (level) ctx.push(new KlosScene(level, this.save));
     } else if (kind === 'vloeren') {
       const level = VLOER_LEVELS.find((l) => l.id === entry.id);
       if (level) ctx.push(new VloerScene(level, this.save));
