@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { KlosScene } from './klossen.ts';
 import { KLOS_LEVELS } from '../puzzles/klossen/levels.ts';
-import { MERK, isKlos, watMist, xy } from '../puzzles/klossen/model.ts';
+import {
+  MERK, aanwijzen, buren8, index, isKlos, scheveLijnen, watMist, xy,
+} from '../puzzles/klossen/model.ts';
 import { WIDTH, HEIGHT } from '../engine/screen.ts';
 import { Save } from '../engine/save.ts';
 import type { Input } from '../engine/input.ts';
@@ -125,4 +127,56 @@ test('a wall that looks done but is not says so', () => {
 
   merken[w.klossen[0]!] = MERK.ONBEKEND;
   assert.match(watMist(w, merken)!, /1 KLOS TE WEINIG/);
+});
+
+test('a complaint always points at squares you can see', () => {
+  const w = KLOS_LEVELS[0]!.wand;
+  const merken = new Array(w.width * w.height).fill(MERK.ONBEKEND);
+
+  // Two klossen corner to corner: wrong straight away, and named as such.
+  // Picked off the board rather than by arithmetic, so no edge wraps round.
+  let a = -1;
+  let schuin = -1;
+  for (const i of w.klossen) {
+    const p = xy(w, i);
+    const hoek = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+      .map(([dx, dy]) => ({ x: p.x + dx!, y: p.y + dy! }))
+      .find((q) => q.x >= 0 && q.y >= 0 && q.x < w.width && q.y < w.height);
+    if (hoek) { a = i; schuin = index(w, hoek.x, hoek.y); break; }
+  }
+  assert.ok(a >= 0 && schuin >= 0);
+  merken[a] = MERK.KLOS;
+  merken[schuin] = MERK.KLOS;
+  assert.match(watMist(w, merken)!, /SCHUIN TELT OOK/);
+  assert.deepEqual(aanwijzen(w, merken).sort((x, y) => x - y), [a, schuin].sort((x, y) => x - y));
+
+  // The answer has nothing to point at.
+  const goed = new Array(w.width * w.height).fill(MERK.ONBEKEND);
+  for (const i of w.klossen) goed[i] = MERK.KLOS;
+  assert.deepEqual(aanwijzen(w, goed), []);
+  assert.deepEqual(scheveLijnen(w, goed), { kolommen: [], rijen: [] });
+});
+
+test('no shipped answer has two klossen touching', () => {
+  for (const level of KLOS_LEVELS) {
+    const w = level.wand;
+    for (const i of w.klossen) {
+      assert.ok(!buren8(w, i).some((j) => w.klossen.includes(j)),
+        `${level.id}: the answer itself breaks the touching rule at ${i}`);
+    }
+  }
+});
+
+test('a line that does not add up is named once the wall is full', () => {
+  const w = KLOS_LEVELS[0]!.wand;
+  const merken = new Array(w.width * w.height).fill(MERK.ONBEKEND);
+  for (const i of w.klossen) merken[i] = MERK.KLOS;
+  // Move one klos along its row: same count of klossen, two columns now wrong.
+  const weg = w.klossen[0]!;
+  const p = xy(w, weg);
+  merken[weg] = MERK.ONBEKEND;
+  merken[index(w, p.x + 2, p.y)] = MERK.KLOS;
+  const scheef = scheveLijnen(w, merken);
+  assert.ok(scheef.kolommen.length > 0, 'the columns it moved between must be flagged');
+  assert.ok(scheef.kolommen.includes(p.x));
 });

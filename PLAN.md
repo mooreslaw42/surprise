@@ -319,7 +319,11 @@ keeps a mark where it was, but it can be patched: holes used to be
 permanent, which meant one slip left the counts wrong for good and the
 level could never be finished. A wall that looks done and is not now says
 what is wrong, because that is the moment someone decides the game is
-broken.
+broken — and it points: the squares a complaint is about are ringed in
+red, and a row or column the detector disagrees with goes red on the
+tape. Saying two klossen touch without saying which two sends the player
+back over the whole wall, and on a grid a corner-to-corner pair does not
+look like it is touching at all, so the message names the rule as well.
 
 Walls are generated and filtered, never drawn: the rules-only solver has
 to reach the end on its own, and the exact counter has to find exactly one

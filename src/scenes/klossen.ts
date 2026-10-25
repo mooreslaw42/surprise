@@ -6,7 +6,8 @@ import { drawStar, STAR_W } from '../engine/ui.ts';
 import { Dialogue } from './dialogue.ts';
 import {
   MERK, type MerkWaarde, type DingSoort,
-  DING_NAMEN, dingOp, geplaatst, index, isKlos, isSolved, stars, watMist, xy,
+  DING_NAMEN, aanwijzen, dingOp, geplaatst, index, isKlos, isSolved,
+  scheveLijnen, stars, watMist, xy,
 } from '../puzzles/klossen/model.ts';
 import { volgende } from '../puzzles/klossen/solver.ts';
 import type { KlosLevel } from '../puzzles/klossen/levels.ts';
@@ -196,6 +197,7 @@ export class KlosScene implements Scene {
   private drawMerken(screen: Screen, over: number): void {
     const w = this.level.wand;
     const t = this.tile;
+    const fout = new Set(this.won ? [] : aanwijzen(w, this.merken));
     for (let i = 0; i < this.merken.length; i++) {
       const { x, y } = xy(w, i);
       const px = this.originX + x * t;
@@ -232,6 +234,12 @@ export class KlosScene implements Scene {
         screen.set(cx, cy, C.STEEN);
       }
       if (i === over && !this.won) screen.strokeRect(px, py, t, t, C.WIT);
+      // The squares the bar is complaining about, ringed so that "these two
+      // are touching" means these two and not somewhere on this wall.
+      if (!this.won && fout.has(i) && Math.floor(this.time * 3) % 2 === 0) {
+        screen.strokeRect(px - 1, py - 1, t + 2, t + 2, C.ROESTROOD);
+        screen.strokeRect(px, py, t, t, C.ROESTROOD);
+      }
     }
   }
 
@@ -246,10 +254,13 @@ export class KlosScene implements Scene {
     screen.fillRect(this.originX - TAPE_W, tapeY, w.width * this.tile + TAPE_W + 1, TAPE_H - 1, C.BOTERGEEL);
     screen.fillRect(this.originX - TAPE_W, tapeY, w.width * this.tile + TAPE_W + 1, 1, C.LICHTOKER);
     screen.text('II', this.originX - TAPE_W + 2, tapeY + 1, C.ASGRIJS);
+    const scheef = this.won
+      ? { kolommen: [], rijen: [] }
+      : scheveLijnen(w, this.merken);
     w.kolomTel.forEach((n, x) => {
       const klaar = this.telling((i) => i % w.width === x) === n;
       screen.text(String(n), this.originX + x * this.tile + Math.floor((this.tile - 5) / 2), tapeY + 1,
-        x === hx ? C.ROESTROOD : klaar ? C.DONKERSALIE : C.ROET);
+        x === hx || scheef.kolommen.includes(x) ? C.ROESTROOD : klaar ? C.DONKERSALIE : C.ROET);
     });
 
     screen.fillRect(this.originX - TAPE_W, this.originY - 1, TAPE_W - 1, w.height * this.tile + 2, C.BOTERGEEL);
@@ -257,7 +268,7 @@ export class KlosScene implements Scene {
     w.rijTel.forEach((n, y) => {
       const klaar = this.telling((i) => Math.floor(i / w.width) === y) === n;
       screen.text(String(n), this.originX - TAPE_W + 4, this.originY + y * this.tile + Math.floor((this.tile - 5) / 2),
-        y === hy ? C.ROESTROOD : klaar ? C.DONKERSALIE : C.ROET);
+        y === hy || scheef.rijen.includes(y) ? C.ROESTROOD : klaar ? C.DONKERSALIE : C.ROET);
     });
   }
 
@@ -287,7 +298,10 @@ export class KlosScene implements Scene {
     // and that is the moment someone thinks the game is broken.
     const staan = geplaatst(this.merken).length;
     const mist = this.won || staan === 0 ? null : watMist(this.level.wand, this.merken);
-    const klagend = mist !== null && staan >= this.level.wand.dingen.length;
+    // Two klossen touching is broken now, not broken at the end.
+    const klagend = mist !== null
+      && (staan >= this.level.wand.dingen.length
+        || aanwijzen(this.level.wand, this.merken).length > 0);
     const slip = this.time - this.geweigerd < 1.4 ? 'DAAR ZIT NIKS TE BOREN' : null;
     screen.text(
       slip ?? (ding ? DING_NAMEN[ding.soort] : mist ?? this.level.praatje), 6, y + 7,

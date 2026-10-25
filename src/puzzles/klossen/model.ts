@@ -212,7 +212,9 @@ function meervoud(n: number, een: string, meer: string): string {
 export function watMist(w: Wand, merken: readonly MerkWaarde[]): string | null {
   const fouten = faults(w, merken);
   if (fouten.length === 0) return null;
-  if (fouten.some((f) => f.kind === 'tegen')) return 'TWEE KLOSSEN RAKEN ELKAAR';
+  // Named with the rule restated: on a grid a diagonal pair does not look
+  // like it is touching, which is exactly when this one gets argued with.
+  if (fouten.some((f) => f.kind === 'tegen')) return 'DEZE TWEE RAKEN ELKAAR - SCHUIN TELT OOK';
   if (fouten.some((f) => f.kind === 'raak')) return 'DAAR KAN GEEN KLOS ZITTEN';
 
   const staan = geplaatst(merken).length;
@@ -224,6 +226,38 @@ export function watMist(w: Wand, merken: readonly MerkWaarde[]): string | null {
   if (lijnen > 0) return `${meervoud(lijnen, 'RIJ OF KOLOM KLOPT', 'RIJEN OF KOLOMMEN KLOPPEN')} NIET`;
   const los = fouten.filter((f) => f.kind === 'zonder').length;
   return `${meervoud(los, 'DING HANGT', 'DINGEN HANGEN')} NOG NERGENS AAN`;
+}
+
+/**
+ * The squares a complaint is about, so the board can point at them.
+ *
+ * A message that says something is wrong without saying where is worse
+ * than no message: it sends the player back over the whole wall.
+ */
+export function aanwijzen(w: Wand, merken: readonly MerkWaarde[]): number[] {
+  const fouten = faults(w, merken);
+  const tegen = fouten.filter((f) => f.kind === 'tegen').map((f) => f.at);
+  if (tegen.length > 0) return tegen;
+  const raak = fouten.filter((f) => f.kind === 'raak').map((f) => f.at);
+  if (raak.length > 0) return raak;
+  // Only worth pointing at a thing with no klos once the wall is full: up
+  // to then, every thing without one is simply not done yet.
+  if (geplaatst(merken).length < w.dingen.length) return [];
+  return fouten
+    .filter((f) => f.kind === 'zonder' && f.ding >= 0)
+    .map((f) => w.dingen[(f as { ding: number }).ding]!.at);
+}
+
+/** Which rows and columns the detector disagrees with, once the wall is full. */
+export function scheveLijnen(w: Wand, merken: readonly MerkWaarde[]): {
+  kolommen: number[]; rijen: number[];
+} {
+  if (geplaatst(merken).length < w.dingen.length) return { kolommen: [], rijen: [] };
+  const fouten = faults(w, merken);
+  return {
+    kolommen: fouten.filter((f) => f.kind === 'kolom').map((f) => (f as { lijn: number }).lijn),
+    rijen: fouten.filter((f) => f.kind === 'rij').map((f) => (f as { lijn: number }).lijn),
+  };
 }
 
 export function stars(gaten: number): number {
