@@ -35,6 +35,10 @@ test('playing the optimal line by hand completes the level', () => {
     const scene = new LevelScene(level, save);
     const grid = gridFor(level);
     const { moves } = solve(grid);
+    // Pim explains the stage before it will take a swing.
+    const enter = new Set(['Enter']);
+    scene.update(1 / 60, context(0, 0, false, enter));
+    scene.update(1 / 60, context(0, 0, false, enter));
 
     for (const move of moves) {
       // Pick the tool, then swing where the solver says.
@@ -43,6 +47,8 @@ test('playing the optimal line by hand completes the level', () => {
       const at = cellCentre(grid.width, grid.height, WIDTH, HEIGHT, { x: move.x, y: move.y });
       scene.update(1 / 60, context(at.x, at.y, true));
       scene.update(1 / 60, context(at.x, at.y, false));
+      // Courses let go one after another, so give the wall time to finish.
+      for (let n = 0; n < 60; n++) scene.update(1 / 60, context(0, 0, false));
     }
 
     assert.ok(save.isDone(level.id), `${level.id}: wall is down but it never recorded as finished`);
@@ -63,6 +69,9 @@ test('a swing that would hit a hazard changes nothing', () => {
       if (level.rows[y]![x] === 'B') target = { x, y };
     }
   }
+  const enter = new Set(['Enter']);
+  scene.update(1 / 60, context(0, 0, false, enter));
+  scene.update(1 / 60, context(0, 0, false, enter));
   const at = cellCentre(grid.width, grid.height, WIDTH, HEIGHT, target!);
   scene.update(1 / 60, context(at.x, at.y, true));
   scene.update(1 / 60, context(at.x, at.y, false));

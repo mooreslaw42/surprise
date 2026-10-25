@@ -55,3 +55,47 @@ export function surfaceToRows(surface: Surface, cell = CELL_M): string[] {
   }
   return grid.map((row) => row.join(''));
 }
+
+/**
+ * What runs through the wall and is not coming out with it.
+ *
+ * These are the reason the stage is not just "hit the bottom and stand
+ * back": anything protected holds up the brick above it for good, so a
+ * gasleiding is an umbrella with a column of wall standing dry underneath
+ * it, and that column has to be taken down a bit at a time, by hand, with
+ * the hammer you cannot swing near a gasleiding.
+ */
+export type Leidingen = {
+  /** Gas, rising out of the floor: column, and how many courses up. */
+  readonly gas?: { readonly kolom: number; readonly hoogte: number };
+  /** The one cable, run horizontally at socket height. */
+  readonly kabel?: { readonly rij: number; readonly van: number; readonly tot: number };
+  /** A drop from the ceiling down to a switch. */
+  readonly val?: { readonly kolom: number; readonly tot: number };
+};
+
+/** Lay the services into a wall. They only ever go into brick, never a hole. */
+export function metLeidingen(rows: readonly string[], leidingen: Leidingen): string[] {
+  const grid = rows.map((r) => [...r]);
+  const hoogte = grid.length;
+  const breedte = grid[0]?.length ?? 0;
+  const zet = (x: number, y: number, ch: string) => {
+    if (x < 0 || y < 0 || x >= breedte || y >= hoogte) return;
+    if (grid[y]![x] !== '#') return;
+    grid[y]![x] = ch;
+  };
+
+  if (leidingen.gas) {
+    const { kolom, hoogte: h } = leidingen.gas;
+    for (let y = hoogte - 1; y >= hoogte - h; y--) zet(kolom, y, 'L');
+  }
+  if (leidingen.kabel) {
+    const { rij, van, tot } = leidingen.kabel;
+    for (let x = van; x <= tot; x++) zet(x, rij, 'K');
+  }
+  if (leidingen.val) {
+    const { kolom, tot } = leidingen.val;
+    for (let y = 0; y <= tot; y++) zet(kolom, y, 'K');
+  }
+  return grid.map((r) => r.join(''));
+}

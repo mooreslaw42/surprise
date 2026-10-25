@@ -41,7 +41,7 @@ Pim is the pixel-art host in the text box at the bottom.
 | # | Stage | Mechanic | What you do |
 |---|---|---|---|
 | 0 | Leeghalen | Rush Hour sliding blocks | shove bank, kast, koelkast out through the door opening |
-| 1 | Sloop | sledgehammer / Minesweeper | smash every tile except the dragende balk, de gasleiding, en die ene kabel |
+| 1 | Sloop | collapse / load paths | bring the wall down on itself, around de dragende balk, de gasleiding, en die ene kabel |
 | 2 | Isolatie | polyomino packing | fit odd-shaped wool between the studs — target Rc, zero koudebruggen |
 | 3 | Elektra | non-crossing routing (Flow) | sockets and lights to the meterkast, nothing crosses, groups stay under 16A |
 | 4 | Water & afvoer | pipe rotation + gravity | warm, koud, afvoer — and the afvoer must run downhill |
@@ -196,11 +196,35 @@ floor plan drops in later without touching puzzle code.
 
 Week 1 done: engine, palette, save, house map, and **Sloop playable end to end**.
 
-The Sloop mechanic is minimum set cover with forbidden cells. Hazards are
-visible, so nothing is guesswork: the puzzle is working out where the
-voorhamer still fits and where you have to reach for the beitel. Par is
-computed by an exact solver rather than written down by hand, so it can never
-drift from the level, and the same solver powers the hint.
+The Sloop mechanic was minimum set cover with forbidden cells, and it was
+too easy: with a 3x3 voorhamer and nothing much in the way, hitting whatever
+was in front of you was as good as thinking. There was nothing to work out.
+
+It is now a collapse. The wall is masonry, and a brick stands as long as
+there is something solid under it or under one of its two shoulders. Take
+out three and the brick above follows; take out a whole course and the wall
+has nothing left to stand on. A hole closes up into a triangle as it rises,
+so a wide bite low down is worth far more than a deep one, and two swings
+side by side are worth far more than two swings apart.
+
+That turns the question from "how many hammer-widths of wall is there" into
+"where do you have to hit before the wall does the rest" — and the answer is
+not greedy. Every shipped wall is checked against the two obvious
+approaches, always take the biggest bite and just work along the bottom, and
+both have to lose by a clear margin, which is a test rather than a hope.
+
+The services are what give it teeth. A gasleiding or a cable is an umbrella:
+what rests on it never falls on its own, so there is a column of wall
+standing dry underneath that has to come apart by hand, with the beitel,
+because the voorhamer is not allowed near it. Where they run was chosen by
+sweeping every position and keeping the layout that punished greed hardest.
+tools/sloop-kies.ts does the sweep.
+
+Par is computed by an exact solver rather than written down by hand, so it
+can never drift from the level, and the same solver powers the hint. The
+solver leans on one fact: swings and collapse both only ever take bricks
+away, so playing a set of swings in any order leaves the same wall standing.
+What is searched is a set, not a sequence.
 
 Levels are no longer drawn by hand. tools/walls.py finds the wall planes in
 the lidar scan, projects each one into an elevation, and detects the openings

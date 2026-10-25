@@ -1,136 +1,132 @@
-import { CELL, TOOLS, type Grid, type Tool, isLegal, footprint } from './model.ts';
+import {
+  CELL, TOOLS, type Grid, type Tool,
+  cloneGrid, footprint, instorten, isLegal, onwrikbaar, steenCount,
+} from './model.ts';
 
 /**
- * Exact minimum-swing solver, used to compute par and to verify every shipped
- * level. Branch and bound over set cover: always expand the rubble cell with
- * the fewest covering swings, and prune on the obvious bound of how much one
- * swing can clear.
+ * Exact minimum-swing solver, used to set par and to prove every shipped
+ * wall can be brought down at all.
  *
- * A level that ships unsolvable, or with a par nobody can reach, would be a
- * disaster on 5 December, so this runs over the whole manifest in the tests.
+ * The thing that makes this tractable is that order does not matter. A swing
+ * only ever takes cells away, and collapse only ever takes cells away, so
+ * playing a set of swings in any order leaves the same wall standing. What
+ * is being searched is therefore a set, not a sequence.
+ *
+ * And the set has a handle on it: at any moment some bricks are sitting on
+ * the ground or on something protected, and those can never fall by
+ * themselves. Every one of them has to be hit. Branching on the most awkward
+ * of those — the one with the fewest swings that reach it — is both complete
+ * and tight, because any solution must contain one of them.
  */
 
 export type Swing = { readonly tool: Tool; readonly x: number; readonly y: number };
+export type SolveResult = { par: number; moves: Swing[] };
 
-type Candidate = {
-  readonly swing: Swing;
-  /** Indices into the rubble list that this swing clears. */
-  readonly covers: number[];
-};
+const NODE_BUDGET = 400_000;
 
-function candidates(grid: Grid): { rubble: number[]; list: Candidate[] } {
-  const rubble: number[] = [];
-  const bitOf = new Map<number, number>();
-  for (let i = 0; i < grid.cells.length; i++) {
-    if (grid.cells[i] === CELL.PUIN) {
-      bitOf.set(i, rubble.length);
-      rubble.push(i);
-    }
-  }
-
-  const seen = new Map<string, Candidate>();
+/** Every legal swing, with the bricks it takes out itself. */
+function alleKlappen(grid: Grid): { swing: Swing; raakt: number[] }[] {
+  const out: { swing: Swing; raakt: number[] }[] = [];
   for (const tool of TOOLS) {
     for (let y = 0; y < grid.height; y++) {
       for (let x = 0; x < grid.width; x++) {
         if (!isLegal(grid, tool, x, y)) continue;
-        const covers: number[] = [];
-        for (const i of footprint(grid, tool, x, y)) {
-          const bit = bitOf.get(i);
-          if (bit !== undefined) covers.push(bit);
-        }
-        if (covers.length === 0) continue;
-        covers.sort((a, b) => a - b);
-        const key = covers.join(',');
-        // Identical coverage from a different tool or position is the same move.
-        if (!seen.has(key)) seen.set(key, { swing: { tool, x, y }, covers });
+        out.push({ swing: { tool, x, y }, raakt: footprint(grid, tool, x, y) });
       }
     }
   }
-
-  // Drop any swing whose coverage is a subset of another's: never worth playing.
-  const all = [...seen.values()].sort((a, b) => b.covers.length - a.covers.length);
-  const list: Candidate[] = [];
-  const sets: Set<number>[] = [];
-  for (const c of all) {
-    // Sorted by size, so anything dominating c is already in the list.
-    if (sets.some((other) => c.covers.every((bit) => other.has(bit)))) continue;
-    list.push(c);
-    sets.push(new Set(c.covers));
-  }
-  return { rubble, list };
+  return out;
 }
 
-export type SolveResult = { par: number; moves: Swing[] };
-
-/** Minimum number of swings, with one optimal sequence. */
-export function solve(grid: Grid, limit = 40): SolveResult {
-  const { rubble, list } = candidates(grid);
-  const n = rubble.length;
-  if (n === 0) return { par: 0, moves: [] };
-
-  const coveredBy: number[][] = Array.from({ length: n }, () => []);
-  for (let c = 0; c < list.length; c++) {
-    for (const bit of list[c]!.covers) coveredBy[bit]!.push(c);
+/**
+ * How many swings this wall needs at the very least: every brick that cannot
+ * fall on its own has to be hit, and one swing covers at most three columns
+ * and three rows, so bricks further apart than that need separate swings.
+ */
+function ondergrens(grid: Grid): number {
+  const vast = onwrikbaar(grid);
+  if (vast.length === 0) return steenCount(grid) > 0 ? 1 : 0;
+  const punten = vast.map((i) => ({ x: i % grid.width, y: Math.floor(i / grid.width) }))
+    .sort((a, b) => a.x - b.x || a.y - b.y);
+  const gekozen: { x: number; y: number }[] = [];
+  for (const p of punten) {
+    if (gekozen.some((q) => Math.abs(q.x - p.x) <= 2 && Math.abs(q.y - p.y) <= 2)) continue;
+    gekozen.push(p);
   }
-  // Every rubble cell is reachable with a chisel, so this should never trip.
-  for (let bit = 0; bit < n; bit++) {
-    if (coveredBy[bit]!.length === 0) throw new Error(`rubble cell ${rubble[bit]} cannot be cleared`);
-  }
+  return gekozen.length;
+}
 
-  const maxCover = Math.max(...list.map((c) => c.covers.length));
-  const open = new Uint8Array(n).fill(1);
-  let remaining = n;
-  const chosen: number[] = [];
-  let best: number[] | null = null;
+export function solve(grid: Grid, limit = 30): SolveResult {
+  const start = cloneGrid(grid);
+  // A wall that was authored unstable would make par meaningless.
+  instorten(start);
+  if (steenCount(start) === 0) return { par: 0, moves: [] };
 
-  const search = (depthLimit: number): boolean => {
-    if (remaining === 0) {
-      best = [...chosen];
+  const klappen = alleKlappen(start);
+  let nodes = 0;
+  let best: Swing[] | null = null;
+
+  const zoek = (staat: Grid, gedaan: Swing[], diepte: number): boolean => {
+    if (steenCount(staat) === 0) {
+      best = [...gedaan];
       return true;
     }
-    if (chosen.length + Math.ceil(remaining / maxCover) > depthLimit) return false;
+    if (++nodes > NODE_BUDGET) return false;
+    if (gedaan.length + ondergrens(staat) > diepte) return false;
 
-    // Most constrained rubble cell first: fewest ways to clear it.
-    let target = -1;
-    let fewest = Infinity;
-    for (let bit = 0; bit < n; bit++) {
-      if (!open[bit]) continue;
-      let ways = 0;
-      for (const c of coveredBy[bit]!) {
-        if (list[c]!.covers.some((b) => open[b])) ways++;
-      }
-      if (ways < fewest) {
-        fewest = ways;
-        target = bit;
-        if (ways <= 1) break;
+    // The brick that has to be hit and is hardest to reach: fewest swings
+    // land on it, so it splits the search into the fewest branches.
+    let doel = -1;
+    let keuzes: typeof klappen = [];
+    for (const i of onwrikbaar(staat)) {
+      const raken = klappen.filter((k) => k.raakt.includes(i));
+      if (doel < 0 || raken.length < keuzes.length) {
+        doel = i;
+        keuzes = raken;
+        if (raken.length <= 1) break;
       }
     }
-    if (target === -1) return false;
+    if (doel < 0 || keuzes.length === 0) return false;
 
-    for (const c of coveredBy[target]!) {
-      const flipped: number[] = [];
-      for (const bit of list[c]!.covers) {
-        if (open[bit]) {
-          open[bit] = 0;
-          flipped.push(bit);
-        }
+    // Two swings that take out the same bricks are the same move.
+    const gezien = new Set<string>();
+    const beurten = keuzes.map((k) => {
+      const na = cloneGrid(staat);
+      const weg: number[] = [];
+      for (const i of k.raakt) {
+        if (na.cells[i] === CELL.STEEN) { na.cells[i] = CELL.LEEG; weg.push(i); }
       }
-      if (flipped.length > 0) {
-        remaining -= flipped.length;
-        chosen.push(c);
-        if (search(depthLimit)) return true;
-        chosen.pop();
-        remaining += flipped.length;
-      }
-      for (const bit of flipped) open[bit] = 1;
+      instorten(na);
+      return { k, na, over: steenCount(na), sleutel: weg.join(',') };
+    }).filter((b) => {
+      if (gezien.has(b.sleutel)) return false;
+      gezien.add(b.sleutel);
+      return true;
+    // Most wall brought down first: the answer is usually near the front.
+    }).sort((a, b) => a.over - b.over);
+
+    for (const beurt of beurten) {
+      gedaan.push(beurt.k.swing);
+      if (zoek(beurt.na, gedaan, diepte)) return true;
+      gedaan.pop();
+      if (nodes > NODE_BUDGET) return false;
     }
     return false;
   };
 
-  for (let depth = Math.ceil(n / maxCover); depth <= limit; depth++) {
-    if (search(depth)) {
-      return { par: depth, moves: best!.map((c) => list[c]!.swing) };
-    }
+  for (let diepte = ondergrens(start); diepte <= limit; diepte++) {
+    nodes = 0;
+    if (zoek(start, [], diepte)) return { par: diepte, moves: best! };
+    if (nodes > NODE_BUDGET) throw new Error(`sloop solver gave up at depth ${diepte}`);
   }
-  throw new Error(`no solution within ${limit} swings`);
+  throw new Error(`no way to bring this wall down within ${limit} swings`);
+}
+
+/**
+ * The next swing of an optimal line from where the player is now. Recomputed
+ * rather than replayed, so a hint stays optimal after the player has gone
+ * off down their own path.
+ */
+export function volgende(grid: Grid): Swing | null {
+  return solve(grid).moves[0] ?? null;
 }

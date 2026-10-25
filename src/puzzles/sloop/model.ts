@@ -1,15 +1,25 @@
 /**
- * Sloop: clear every bit of rubble without a swing ever touching something
- * that has to survive.
+ * Sloop: bring the wall down without a swing ever touching something that
+ * has to survive.
  *
- * Formally this is minimum set cover with forbidden cells. The hazards are
- * visible — you can see a beam — so nothing here is guesswork; the puzzle is
- * working out where the big hammer still fits and where you have to chisel.
+ * The wall is masonry and masonry falls over. A brick stands as long as
+ * there is something solid under it or under one of its shoulders — that is
+ * half-bond, and it is why a hole in a wall closes up into a triangle as it
+ * rises instead of running to the ceiling. Take out three and one brick
+ * follows; take out the whole course and the wall has nothing left to stand
+ * on and comes down in one go.
+ *
+ * So the swing count is not the number of bricks over the size of the
+ * hammer. It is the number of places you have to hit before the wall does
+ * the rest of the work, and those places are not where you would guess: a
+ * wide bite low down is worth far more than a deep one, two swings side by
+ * side far more than two swings apart, and a gasleiding is an umbrella with
+ * a column of wall standing dry underneath it.
  */
 
 export const CELL = {
   LEEG: 0,
-  PUIN: 1,
+  STEEN: 1,
   BALK: 2,
   LEIDING: 3,
   KABEL: 4,
@@ -52,13 +62,13 @@ export type Grid = {
 
 const CHARS: Record<string, CellValue> = {
   '.': CELL.LEEG,
-  '#': CELL.PUIN,
+  '#': CELL.STEEN,
   B: CELL.BALK,
   L: CELL.LEIDING,
   K: CELL.KABEL,
 };
 
-/** Levels are authored as ASCII art; '#' is rubble, 'B'/'L'/'K' must survive. */
+/** Levels are authored as ASCII art; '#' is brick, 'B'/'L'/'K' must survive. */
 export function parseGrid(rows: readonly string[]): Grid {
   if (rows.length === 0) throw new Error('empty level');
   const width = rows[0]!.length;
@@ -101,27 +111,98 @@ export function isLegal(grid: Grid, tool: Tool, x: number, y: number): boolean {
   return footprint(grid, tool, x, y).every((i) => !isProtected(grid.cells[i]!));
 }
 
-/** Returns how much rubble the swing removed, or -1 if it was not legal. */
-export function swing(grid: Grid, tool: Tool, x: number, y: number): number {
-  if (!isLegal(grid, tool, x, y)) return -1;
-  let cleared = 0;
-  for (const i of footprint(grid, tool, x, y)) {
-    if (grid.cells[i] === CELL.PUIN) {
-      grid.cells[i] = CELL.LEEG;
-      cleared++;
-    }
-  }
-  return cleared;
+/**
+ * Something a brick can rest on. The ground under the wall counts; the air
+ * past either end does not, so a wall is not held up by its neighbours.
+ */
+export function vast(grid: Grid, x: number, y: number): boolean {
+  if (y >= grid.height) return true;
+  if (x < 0 || x >= grid.width || y < 0) return false;
+  return grid.cells[y * grid.width + x] !== CELL.LEEG;
 }
 
-export function rubbleCount(grid: Grid): number {
+/** Half-bond: a brick sits on two, so either shoulder will hold it. */
+export function stabiel(grid: Grid, x: number, y: number): boolean {
+  return vast(grid, x - 1, y + 1) || vast(grid, x, y + 1) || vast(grid, x + 1, y + 1);
+}
+
+/**
+ * Let go of everything that is no longer holding on, over and over until the
+ * wall stops moving. Returns what came down, newest course last, so the
+ * scene can drop it in waves rather than all at once.
+ */
+export function instorten(grid: Grid): number[][] {
+  const golven: number[][] = [];
+  for (;;) {
+    const los: number[] = [];
+    for (let y = 0; y < grid.height; y++) {
+      for (let x = 0; x < grid.width; x++) {
+        const i = y * grid.width + x;
+        if (grid.cells[i] !== CELL.STEEN) continue;
+        if (!stabiel(grid, x, y)) los.push(i);
+      }
+    }
+    if (los.length === 0) return golven;
+    for (const i of los) grid.cells[i] = CELL.LEEG;
+    golven.push(los);
+  }
+}
+
+export type Klap = {
+  /** Bricks the hammer itself took out. */
+  readonly geraakt: number[];
+  /** What then came down by itself, in waves. */
+  readonly gevallen: number[][];
+};
+
+/** Swing, then stand back. Null when the swing was not allowed. */
+export function swing(grid: Grid, tool: Tool, x: number, y: number): Klap | null {
+  if (!isLegal(grid, tool, x, y)) return null;
+  const geraakt: number[] = [];
+  for (const i of footprint(grid, tool, x, y)) {
+    if (grid.cells[i] === CELL.STEEN) {
+      grid.cells[i] = CELL.LEEG;
+      geraakt.push(i);
+    }
+  }
+  if (geraakt.length === 0) return null;
+  return { geraakt, gevallen: instorten(grid) };
+}
+
+export function steenCount(grid: Grid): number {
   let n = 0;
-  for (const cell of grid.cells) if (cell === CELL.PUIN) n++;
+  for (const cell of grid.cells) if (cell === CELL.STEEN) n++;
   return n;
 }
 
+/**
+ * Bricks that can never come down on their own, because what is under them
+ * is the ground or something that is staying. Every one of these has to be
+ * hit, which is what the solver counts from and what the hint points at.
+ */
+export function onwrikbaar(grid: Grid): number[] {
+  const out: number[] = [];
+  for (let y = 0; y < grid.height; y++) {
+    for (let x = 0; x < grid.width; x++) {
+      const i = y * grid.width + x;
+      if (grid.cells[i] !== CELL.STEEN) continue;
+      for (const dx of [-1, 0, 1]) {
+        if (blijvend(grid, x + dx, y + 1)) { out.push(i); break; }
+      }
+    }
+  }
+  return out;
+}
+
+/** Ground, or something protected: support that no swing can ever take away. */
+function blijvend(grid: Grid, x: number, y: number): boolean {
+  if (y >= grid.height) return true;
+  if (x < 0 || x >= grid.width || y < 0) return false;
+  return isProtected(grid.cells[y * grid.width + x]!);
+}
+
 export function isSolved(grid: Grid): boolean {
-  return rubbleCount(grid) === 0;
+  return steenCount(grid) === 0;
 }
 
 /** Three stars at par, two within two swings of it, one for finishing at all. */

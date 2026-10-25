@@ -6,10 +6,11 @@ import type { Save } from '../engine/save.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import {
   CELL, TOOLS, type CellValue, type Grid, type Tool,
-  at, cloneGrid, isLegal, isSolved, rubbleCount, stars, swing, footprint,
+  at, cloneGrid, isLegal, isSolved, steenCount, stars, swing, footprint,
 } from '../puzzles/sloop/model.ts';
-import { solve, type Swing } from '../puzzles/sloop/solver.ts';
-import { gridFor, type SloopLevel } from '../puzzles/sloop/levels.ts';
+import { volgende, solve, type Swing } from '../puzzles/sloop/solver.ts';
+import { gridFor, UITLEG_EERSTE, UITLEG_LEIDING, type SloopLevel } from '../puzzles/sloop/levels.ts';
+import { Dialogue } from './dialogue.ts';
 import { openingCells } from '../puzzles/sloop/generate.ts';
 import { SURFACES, type Surface } from '../data/house.ts';
 import {
@@ -36,6 +37,13 @@ export class LevelScene implements Scene {
   private time = 0;
   private hint: Swing | null = null;
   private refused = 0;
+  /**
+   * Bricks the model has already taken away but the screen has not: each one
+   * holds its place until its moment comes, so a collapse ripples up the
+   * wall instead of the whole thing blinking out at once.
+   */
+  private vallend = new Map<number, number>();
+  private uitleg: Dialogue | null;
 
   private readonly surface: Surface;
   private readonly room: RoomLayout;
@@ -51,6 +59,8 @@ export class LevelScene implements Scene {
     this.grid = gridFor(level);
     this.original = cloneGrid(this.grid);
     this.par = solve(cloneGrid(this.grid)).par;
+    this.uitleg = new Dialogue(
+      level.id.endsWith('kopgevel') ? UITLEG_EERSTE : UITLEG_LEIDING);
 
     const surface = SURFACES.find((s) => `sloop-${s.id}` === level.id);
     if (!surface) throw new Error(`no surface behind ${level.id}`);
@@ -67,6 +77,11 @@ export class LevelScene implements Scene {
 
   update(dt: number, ctx: SceneContext): void {
     this.time += dt;
+    if (this.uitleg) {
+      if (this.uitleg.update(dt, ctx)) this.uitleg = null;
+      return;
+    }
+    this.dropFallen();
     this.shake = Math.max(0, this.shake - dt * 6);
     this.refused = Math.max(0, this.refused - dt * 3);
     for (const d of this.dust) {
@@ -83,6 +98,11 @@ export class LevelScene implements Scene {
     }
 
     if (ctx.input.justPressed('Escape')) ctx.pop();
+    if (ctx.input.justPressed('KeyU')) {
+      this.uitleg = new Dialogue(
+        this.level.id.endsWith('kopgevel') ? UITLEG_EERSTE : UITLEG_LEIDING);
+      return;
+    }
     for (let i = 0; i < TOOLS.length; i++) {
       if (ctx.input.justPressed(`Digit${i + 1}`)) {
         this.tool = TOOLS[i]!;
@@ -91,7 +111,7 @@ export class LevelScene implements Scene {
     }
     if (ctx.input.justPressed('KeyH')) {
       // The solver already knows the best line; lending one move is cheap.
-      this.hint = solve(cloneGrid(this.grid)).moves[0] ?? null;
+      this.hint = volgende(cloneGrid(this.grid));
     }
 
     const cell = this.cellUnderMouse(ctx);
@@ -106,35 +126,53 @@ export class LevelScene implements Scene {
   }
 
   private trySwing(x: number, y: number): void {
-    if (!isLegal(this.grid, this.tool, x, y)) {
+    const klap = swing(this.grid, this.tool, x, y);
+    if (!klap) {
       this.refused = 1;
       return;
     }
-    const before = rubbleCount(this.grid);
-    swing(this.grid, this.tool, x, y);
-    const cleared = before - rubbleCount(this.grid);
     this.swings++;
     this.hint = null;
-    this.shake = cleared > 0 ? 1 : 0.4;
+    this.shake = 1;
+    for (const i of klap.geraakt) this.puff(i);
 
-    for (const i of footprint(this.grid, this.tool, x, y)) {
-      const cx = this.originX + (i % this.grid.width) * this.tile + this.tile / 2;
-      const cy = this.originY + Math.floor(i / this.grid.width) * this.tile + this.tile / 2;
-      for (let n = 0; n < 5; n++) {
-        this.dust.push({
-          x: cx, y: cy,
-          vx: (Math.random() - 0.5) * 110,
-          vy: -Math.random() * 110 - 20,
-          life: 0.4 + Math.random() * 0.5,
-          color: [C.KALK, C.ZANDGRIJS, C.WIT, C.STEEN][n % 4]!,
-        });
-      }
+    // Each course lets go a moment after the one below it.
+    klap.gevallen.forEach((golf, n) => {
+      for (const i of golf) this.vallend.set(i, this.time + 0.10 * (n + 1));
+    });
+    if (this.vallend.size === 0) this.finish();
+  }
+
+  /** Let go of everything whose moment has come, and raise the dust. */
+  private dropFallen(): void {
+    if (this.vallend.size === 0) return;
+    for (const [i, wanneer] of [...this.vallend]) {
+      if (this.time < wanneer) continue;
+      this.vallend.delete(i);
+      this.puff(i);
+      this.shake = Math.max(this.shake, 0.7);
     }
+    if (this.vallend.size === 0) this.finish();
+  }
 
-    if (isSolved(this.grid)) {
-      this.won = true;
-      this.wonAt = this.time;
-      this.save.record(this.level.id, this.swings, stars(this.swings, this.par));
+  private finish(): void {
+    if (this.won || !isSolved(this.grid)) return;
+    this.won = true;
+    this.wonAt = this.time;
+    this.save.record(this.level.id, this.swings, stars(this.swings, this.par));
+  }
+
+  private puff(i: number): void {
+    const cx = this.originX + (i % this.grid.width) * this.tile + this.tile / 2;
+    const cy = this.originY + Math.floor(i / this.grid.width) * this.tile + this.tile / 2;
+    for (let n = 0; n < 5; n++) {
+      this.dust.push({
+        x: cx, y: cy,
+        vx: (Math.random() - 0.5) * 110,
+        vy: -Math.random() * 110 - 20,
+        life: 0.4 + Math.random() * 0.5,
+        color: [C.KALK, C.ZANDGRIJS, C.WIT, C.STEEN][n % 4]!,
+      });
     }
   }
 
@@ -158,13 +196,16 @@ export class LevelScene implements Scene {
     this.drawTopBar(screen);
     this.drawBottomBar(screen);
     if (this.won) this.drawWon(screen);
+    if (this.uitleg) this.uitleg.render(screen, this.time);
   }
 
   /** Only the cells that are still wall, or have been knocked through. */
   private drawWall(screen: Screen, sx: number, sy: number): void {
     for (let y = 0; y < this.grid.height; y++) {
       for (let x = 0; x < this.grid.width; x++) {
-        const cell = at(this.grid, x, y)!;
+        const i = y * this.grid.width + x;
+        // Still drawn as wall until its moment: it has not landed yet.
+        const cell = this.vallend.has(i) ? CELL.STEEN : at(this.grid, x, y)!;
         // Openings are drawn as whole windows afterwards, not tile by tile.
         if (at(this.original, x, y) === CELL.LEEG) continue;
         this.drawCell(screen, x, y, cell,
@@ -176,7 +217,7 @@ export class LevelScene implements Scene {
   private drawCell(screen: Screen, gx: number, gy: number, cell: CellValue, px: number, py: number): void {
     const tile = this.tile;
     switch (cell) {
-      case CELL.PUIN: {
+      case CELL.STEEN: {
         // Plaster over brick, courses offset every other row.
         screen.fillRect(px, py, tile, tile, C.KALK);
         screen.ditherRect(px, py, tile, 3, C.ZANDGRIJS, C.KALK);
@@ -200,14 +241,33 @@ export class LevelScene implements Scene {
         screen.fillRect(px + 5, py + 11, tile - 9, 1, C.STEEN);
         break;
       case CELL.LEIDING:
-        this.drawHole(screen, px, py);
+        this.drawBedding(screen, gx, gy, px, py);
         this.drawRun(screen, gx, gy, px, py, CELL.LEIDING, C.ASGRIJS, C.ZANDGRIJS);
         break;
       case CELL.KABEL:
-        this.drawHole(screen, px, py);
+        this.drawBedding(screen, gx, gy, px, py);
         this.drawRun(screen, gx, gy, px, py, CELL.KABEL, C.DONKERROOD, C.LICHTOKER);
         break;
     }
+  }
+
+  /**
+   * What is behind a pipe. While there is still wall around it the pipe is
+   * chased into brick, which is where it has been all along; once the wall
+   * beside it has gone it is hanging in the daylight.
+   */
+  private drawBedding(screen: Screen, gx: number, gy: number, px: number, py: number): void {
+    const ingemetseld = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+      .some(([dx, dy]) => at(this.grid, gx + dx!, gy + dy!) === CELL.STEEN);
+    if (!ingemetseld) {
+      this.drawHole(screen, px, py);
+      return;
+    }
+    const tile = this.tile;
+    screen.fillRect(px, py, tile, tile, C.KALK);
+    screen.ditherRect(px, py, tile, 3, C.ZANDGRIJS, C.KALK);
+    screen.fillRect(px, py, tile, 1, C.WIT);
+    screen.fillRect(px, py + tile - 1, tile, 1, C.STEEN);
   }
 
   /**
@@ -278,7 +338,23 @@ export class LevelScene implements Scene {
     // be absent at the moment you are deciding.
     const pulse = Math.floor(this.time * 8) % 2 === 0;
     const color = legal ? C.SALIE : pulse ? C.ROESTROOD : C.DONKERROOD;
-    for (const i of footprint(this.grid, tool, target.x, target.y)) {
+    const raak = new Set(footprint(this.grid, tool, target.x, target.y));
+
+    // What the wall would then do by itself. You can judge this by eye on a
+    // real wall, so withholding it would be a riddle rather than a puzzle.
+    if (legal) {
+      const proef = cloneGrid(this.grid);
+      const klap = swing(proef, tool, target.x, target.y);
+      for (const i of klap?.gevallen.flat() ?? []) {
+        if (raak.has(i)) continue;
+        const px = this.originX + (i % this.grid.width) * this.tile + sx;
+        const py = this.originY + Math.floor(i / this.grid.width) * this.tile + sy;
+        screen.ditherRect(px + 1, py + 1, this.tile - 2, this.tile - 2, C.BOTERGEEL, C.KALK);
+        screen.strokeRect(px, py, this.tile, this.tile, C.OKER);
+      }
+    }
+
+    for (const i of raak) {
       const px = this.originX + (i % this.grid.width) * this.tile + sx;
       const py = this.originY + Math.floor(i / this.grid.width) * this.tile + sy;
       screen.strokeRect(px, py, this.tile, this.tile, color);
@@ -291,7 +367,7 @@ export class LevelScene implements Scene {
     screen.fillRect(0, TOP_H - 1, WIDTH, 1, C.STEEN);
     screen.text(`${ROOM_NAMES[this.level.ruimte]} - ${this.level.vlak}`, 6, 5, C.LICHTOKER);
 
-    const label = `SLAGEN ${String(this.swings).padStart(2, '0')}   PAR ${String(this.par).padStart(2, '0')}`;
+    const label = `STEEN ${String(steenCount(this.grid)).padStart(3)}   SLAG ${String(this.swings).padStart(2, '0')}  PAR ${String(this.par).padStart(2, '0')}`;
     const over = this.swings > this.par;
     screen.text(label, WIDTH - 6 - label.length * 6, 5, over ? C.ROESTROOD : C.SALIE);
   }
@@ -310,7 +386,7 @@ export class LevelScene implements Scene {
       screen.text(`${i + 1} ${tool.naam}`, bx + 4, y + 7, active ? C.WIT : C.ASGRIJS);
     }
 
-    screen.text('H = HINT', WIDTH - 6 - 8 * 6, y + 7, C.STEEN);
+    screen.text('U  H', WIDTH - 6 - 4 * 6, y + 7, C.STEEN);
     const message = this.refused > 0 ? 'DAAR ZIT IETS ACHTER. NIET DOEN.' : this.level.praatje;
     screen.text(message, 6, y + 20, this.refused > 0 ? C.ROESTROOD : C.ASGRIJS);
     screen.text('ESC = TERUG', WIDTH - 6 - 11 * 6, y + 20, C.STEEN);
