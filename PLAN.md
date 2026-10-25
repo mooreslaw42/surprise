@@ -313,8 +313,13 @@ Everything that hangs on the wall is pencilled on it where it really goes
 block of timber behind the board, in one of the four squares against it.
 Two klossen never touch, not even at the corner, and the numbers on the
 masking tape along the edges are what the detector beeps per row and per
-column. One click rules a square out, the next one drills, and a hole in
-the wrong place stays a hole.
+column. One click rules a square out, the next one drills, the third fills
+it back in. A hole in the wrong place still costs a star, and the wall
+keeps a mark where it was, but it can be patched: holes used to be
+permanent, which meant one slip left the counts wrong for good and the
+level could never be finished. A wall that looks done and is not now says
+what is wrong, because that is the moment someone decides the game is
+broken.
 
 Walls are generated and filtered, never drawn: the rules-only solver has
 to reach the end on its own, and the exact counter has to find exactly one

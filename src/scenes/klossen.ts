@@ -6,7 +6,7 @@ import { drawStar, STAR_W } from '../engine/ui.ts';
 import { Dialogue } from './dialogue.ts';
 import {
   MERK, type MerkWaarde, type DingSoort,
-  DING_NAMEN, dingOp, index, isKlos, isSolved, stars, xy,
+  DING_NAMEN, dingOp, geplaatst, index, isKlos, isSolved, stars, watMist, xy,
 } from '../puzzles/klossen/model.ts';
 import { volgende } from '../puzzles/klossen/solver.ts';
 import type { KlosLevel } from '../puzzles/klossen/levels.ts';
@@ -37,8 +37,14 @@ export class KlosScene implements Scene {
   private readonly originY: number;
 
   private merken: MerkWaarde[];
-  private gaten = 0;
+  /**
+   * Every square drilled into thin air, counted once however often it is
+   * patched and drilled again. The wall remembers; the puzzle forgives.
+   */
+  private readonly geboord = new Set<number>();
   private time = 0;
+  /** When the last pointless click was, so the bar can say why. */
+  private geweigerd = -9;
   private won = false;
   private wonAt = 0;
   private uitleg: Dialogue | null;
@@ -81,7 +87,7 @@ export class KlosScene implements Scene {
     if (ctx.input.justPressed('KeyU')) { this.uitleg = new Dialogue(this.level.uitleg); return; }
     if (ctx.input.justPressed('KeyR')) {
       this.merken = new Array(this.level.wand.width * this.level.wand.height).fill(MERK.ONBEKEND);
-      this.gaten = 0;
+      this.geboord.clear();
       return;
     }
     if (ctx.input.justPressed('KeyH')) {
@@ -93,15 +99,20 @@ export class KlosScene implements Scene {
 
     const i = this.celAt(ctx);
     if (i < 0 || !ctx.input.mouseClicked) return;
-    const was = this.merken[i]!;
-    // Drilled is drilled. One click rules a square out, the next one bores.
-    if (was === MERK.KLOS) return;
-    if (was === MERK.ONBEKEND) {
-      this.merken[i] = MERK.LEEG;
-    } else {
-      this.merken[i] = MERK.KLOS;
-      if (!isKlos(this.level.wand, i)) this.gaten++;
+    // No drilling into a window or into the thing you are trying to hang:
+    // there is nothing there to find, so the click is a slip, not a move.
+    if (this.level.wand.blok[i] || dingOp(this.level.wand, i)) {
+      this.geweigerd = this.time;
+      return;
     }
+    // Kruis, dan boren, dan weer dicht. A hole in the wrong place still
+    // counts against you, but it may be filled: one misclick used to leave
+    // the wall permanently wrong with nothing on screen saying why.
+    const was = this.merken[i]!;
+    this.merken[i] = was === MERK.ONBEKEND ? MERK.LEEG
+      : was === MERK.LEEG ? MERK.KLOS
+      : MERK.ONBEKEND;
+    if (this.merken[i] === MERK.KLOS && !isKlos(this.level.wand, i)) this.geboord.add(i);
     this.check();
   }
 
@@ -110,7 +121,7 @@ export class KlosScene implements Scene {
     if (isSolved(this.level.wand, this.merken)) {
       this.won = true;
       this.wonAt = this.time;
-      this.save.record(this.level.id, this.gaten, stars(this.gaten));
+      this.save.record(this.level.id, this.geboord.size, stars(this.geboord.size));
     }
   }
 
@@ -213,6 +224,13 @@ export class KlosScene implements Scene {
         screen.line(px + 3, py + 3, px + t - 4, py + t - 4, C.ASGRIJS);
         screen.line(px + t - 4, py + 3, px + 3, py + t - 4, C.ASGRIJS);
       }
+      // Filled in, but you can still see where it was. You always can.
+      if (!this.won && this.geboord.has(i) && this.merken[i] !== MERK.KLOS) {
+        const cx = px + Math.floor(t / 2);
+        const cy = py + Math.floor(t / 2);
+        screen.fillRect(cx - 1, cy - 1, 3, 3, C.ZANDGRIJS);
+        screen.set(cx, cy, C.STEEN);
+      }
       if (i === over && !this.won) screen.strokeRect(px, py, t, t, C.WIT);
     }
   }
@@ -255,8 +273,8 @@ export class KlosScene implements Scene {
     screen.text(`${this.level.ruimte} - ${this.level.vlak}`, 6, 5, C.LICHTOKER);
     const w = this.level.wand;
     const raak = w.klossen.filter((i) => this.merken[i] === MERK.KLOS).length;
-    const label = `KLOS ${raak}/${w.klossen.length}   GATEN ${this.gaten}`;
-    screen.text(label, WIDTH - 6 - label.length * 6, 5, this.gaten > 0 ? C.ROESTROOD : C.SALIE);
+    const label = `KLOS ${raak}/${w.klossen.length}   GATEN ${this.geboord.size}`;
+    screen.text(label, WIDTH - 6 - label.length * 6, 5, this.geboord.size > 0 ? C.ROESTROOD : C.SALIE);
   }
 
   private drawBottomBar(screen: Screen, over: number): void {
@@ -264,15 +282,23 @@ export class KlosScene implements Scene {
     screen.fillRect(0, y, WIDTH, BOTTOM_H, C.ZWART);
     screen.fillRect(0, y, WIDTH, 1, C.STEEN);
     const ding = over >= 0 ? dingOp(this.level.wand, over) : undefined;
-    screen.text(ding ? DING_NAMEN[ding.soort] : this.level.praatje, 6, y + 7,
-      ding ? C.BOTERGEEL : C.ASGRIJS);
+    // While you are still filling the wall in, the count is progress. Once
+    // every klos is placed and it is still not right, it is a complaint —
+    // and that is the moment someone thinks the game is broken.
+    const staan = geplaatst(this.merken).length;
+    const mist = this.won || staan === 0 ? null : watMist(this.level.wand, this.merken);
+    const klagend = mist !== null && staan >= this.level.wand.dingen.length;
+    const slip = this.time - this.geweigerd < 1.4 ? 'DAAR ZIT NIKS TE BOREN' : null;
+    screen.text(
+      slip ?? (ding ? DING_NAMEN[ding.soort] : mist ?? this.level.praatje), 6, y + 7,
+      slip || klagend ? C.ROESTROOD : ding ? C.BOTERGEEL : mist ? C.KALK : C.ASGRIJS);
     screen.text('U  H', WIDTH - 6 - 4 * 6, y + 7, C.STEEN);
-    screen.text('KLIK = KRUIS, NOG EEN KEER = BOREN', 6, y + 20, C.STEEN);
+    screen.text('KLIK: KRUIS - BOREN - WEER DICHT', 6, y + 20, C.STEEN);
     screen.text('R = OPNIEUW', WIDTH - 6 - 11 * 6, y + 20, C.STEEN);
   }
 
   private drawWon(screen: Screen): void {
-    const got = stars(this.gaten);
+    const got = stars(this.geboord.size);
     const w = 232;
     const h = 76;
     const x = Math.round((WIDTH - w) / 2);
@@ -284,7 +310,7 @@ export class KlosScene implements Scene {
     for (let i = 0; i < 3; i++) {
       drawStar(screen, Math.round((WIDTH - span) / 2) + i * (STAR_W * 2 + 8), y + 22, i < got, 2);
     }
-    screen.textCentered(this.gaten === 0 ? 'GEEN GAT TE VEEL' : `${this.gaten} GATEN TE VULLEN`,
+    screen.textCentered(this.geboord.size === 0 ? 'GEEN GAT TE VEEL' : `${this.geboord.size} GATEN GEVULD`,
       WIDTH / 2, y + 46, C.KALK);
     if (Math.floor(this.time * 2) % 2 === 0) {
       screen.textCentered('ENTER', WIDTH / 2, y + 60, C.SALIE);

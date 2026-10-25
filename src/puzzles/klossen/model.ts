@@ -197,6 +197,35 @@ export function missers(w: Wand, merken: readonly MerkWaarde[]): number {
   return n;
 }
 
+/** Dutch plural for the handful of words the bar needs. */
+function meervoud(n: number, een: string, meer: string): string {
+  return `${n} ${n === 1 ? een : meer}`;
+}
+
+/**
+ * The one thing still wrong, in the order it is worth saying.
+ *
+ * A wall that looks finished and is not accepted has to explain itself.
+ * Without this the player checks the same forty squares again and blames
+ * the game, which is exactly what happened.
+ */
+export function watMist(w: Wand, merken: readonly MerkWaarde[]): string | null {
+  const fouten = faults(w, merken);
+  if (fouten.length === 0) return null;
+  if (fouten.some((f) => f.kind === 'tegen')) return 'TWEE KLOSSEN RAKEN ELKAAR';
+  if (fouten.some((f) => f.kind === 'raak')) return 'DAAR KAN GEEN KLOS ZITTEN';
+
+  const staan = geplaatst(merken).length;
+  const nodig = w.dingen.length;
+  if (staan < nodig) return `${meervoud(nodig - staan, 'KLOS', 'KLOSSEN')} TE WEINIG`;
+  if (staan > nodig) return `${meervoud(staan - nodig, 'KLOS', 'KLOSSEN')} TE VEEL`;
+
+  const lijnen = fouten.filter((f) => f.kind === 'kolom' || f.kind === 'rij').length;
+  if (lijnen > 0) return `${meervoud(lijnen, 'RIJ OF KOLOM KLOPT', 'RIJEN OF KOLOMMEN KLOPPEN')} NIET`;
+  const los = fouten.filter((f) => f.kind === 'zonder').length;
+  return `${meervoud(los, 'DING HANGT', 'DINGEN HANGEN')} NOG NERGENS AAN`;
+}
+
 export function stars(gaten: number): number {
   if (gaten === 0) return 3;
   if (gaten <= 2) return 2;
