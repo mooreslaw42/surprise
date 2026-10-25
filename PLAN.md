@@ -40,7 +40,7 @@ Pim is the pixel-art host in the text box at the bottom.
 
 | # | Stage | Mechanic | What you do |
 |---|---|---|---|
-| 0 | Leeghalen | Rush Hour sliding blocks | shove bank, kast, koelkast out through the door openings |
+| 0 | Leeghalen | Rush Hour sliding blocks | shove bank, kast, koelkast out through the door opening |
 | 1 | Sloop | sledgehammer / Minesweeper | smash every tile except the dragende balk, de gasleiding, en die ene kabel |
 | 2 | Isolatie | polyomino packing | fit odd-shaped wool between the studs — target Rc, zero koudebruggen |
 | 3 | Elektra | non-crossing routing (Flow) | sockets and lights to the meterkast, nothing crosses, groups stay under 16A |
@@ -247,6 +247,16 @@ one marked GELEVERD.
 The sliding puzzle it replaced was good but wrong for ventilation, so it
 moved to Leeghalen — stage 1, shoving the furniture out through the door,
 which is what the stage table always wanted it for.
+
+It arrived there still drawn as ventilation duct, which meant six identical
+ribbed grey rectangles in a room the text kept calling a bank and a kast.
+Every piece now knows what it is and is drawn as that thing seen from above:
+the bank has arms and cushions, the boekenkast has spines, the koelkast has
+a freezer and two handles, the aanrecht has a sink and draining grooves, the
+dozen are taped shut. The floor under them is the white marble that was
+there before the sloop, because stage 1 is the last time anyone sees it.
+What has to get out keeps its own colours and wears a yellow ring instead,
+so the room stays a room and the target still reads at a glance.
 
 Isolatie is built: pack the stud cavity full of wool with no gap and no
 overlap, because every gap is a koudebrug. There is more wool in the stack

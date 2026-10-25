@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   type Stuk,
+  MEUBEL_NAMEN,
   bezetting, cellsOf, hoofdIndex, isSolved, kanSchuiven, parsePlan, schuif, sleutel, stars,
 } from './model.ts';
 import { solve } from './solver.ts';
@@ -24,14 +25,14 @@ test('parsePlan reads runs of a letter as one piece', () => {
   assert.deepEqual(cellsOf(a), [{ x: 2, y: 1 }, { x: 2, y: 2 }, { x: 2, y: 3 }]);
   const t = plan.stukken.find((s) => s.hoofd)!;
   assert.equal(t.orientatie, 'horizontaal');
-  assert.equal(plan.aansluiting.y, t.y, 'the outlet lines up with the hoofdkanaal');
+  assert.equal(plan.deur.y, t.y, 'the doorway lines up with the piece that has to leave');
 });
 
 test('parsePlan rejects drawings it cannot make sense of', () => {
   assert.throws(() => parsePlan(['TTA', 'TT']), /ragged/);
   assert.throws(() => parsePlan(['TT.A.A']), /broken in two/);
   assert.throws(() => parsePlan(['TT.A..', '...A..', '..AA..']), /not a straight run/);
-  assert.throws(() => parsePlan(['AA....']), /no hoofdkanaal/);
+  assert.throws(() => parsePlan(['AA....']), /nothing that has to get out/);
   assert.throws(() => parsePlan(['TT...A']), /only one cell/);
   assert.throws(() => parsePlan(['T.....', 'T.....', 'AA....']), /must lie horizontally/);
 });
@@ -82,7 +83,7 @@ test('bezetting marks pieces, fixed cells and empty space apart', () => {
   assert.equal(grid[2 * plan.width + 4], -1, 'empty');
 });
 
-test('solved only once the hoofdkanaal reaches the far edge', () => {
+test('solved only once the big piece reaches the far edge', () => {
   const plan = simpel();
   assert.equal(isSolved(plan, plan.stukken), false);
   const out: Stuk[] = plan.stukken.map((s) => (s.hoofd ? { ...s, x: 4 } : s));
@@ -134,4 +135,38 @@ test('stars are awarded against par', () => {
   assert.equal(stars(6, 6), 3);
   assert.equal(stars(10, 6), 2);
   assert.equal(stars(11, 6), 1);
+});
+
+test('a letter gets the furniture it was given, and a kast if it was given none', () => {
+  const plan = parsePlan(['TTA...', '..A...'], { T: 'bank' });
+  assert.equal(plan.stukken.find((s) => s.id === 'T')!.soort, 'bank');
+  assert.equal(plan.stukken.find((s) => s.id === 'A')!.soort, 'kast');
+});
+
+test('no room is six of the same thing', () => {
+  // The whole point of the soort: a room you can read at a glance.
+  for (const level of SCHUIF_LEVELS) {
+    const soorten = new Set(level.plan.stukken.map((s) => s.soort));
+    assert.ok(soorten.size >= 4,
+      `${level.id} has only ${soorten.size} kinds of furniture in it`);
+  }
+});
+
+test('every piece knows what it is, and its name fits the bar', () => {
+  for (const level of SCHUIF_LEVELS) {
+    for (const stuk of level.plan.stukken) {
+      const naam = MEUBEL_NAMEN[stuk.soort];
+      assert.ok(naam && naam.length > 0, `${stuk.id} in ${level.id} has no name`);
+      // Six pixels a glyph, and the bar also carries " - MOET ERUIT".
+      assert.ok((naam.length + 13) * 6 < 384, naam);
+    }
+  }
+});
+
+test('the piece that has to leave is one of the big ones, not a stack of boxes', () => {
+  for (const level of SCHUIF_LEVELS) {
+    const hoofd = level.plan.stukken.find((s) => s.hoofd)!;
+    assert.ok(['bank', 'kast', 'koelkast'].includes(hoofd.soort),
+      `${level.id} asks you to carry out ${hoofd.soort}`);
+  }
 });

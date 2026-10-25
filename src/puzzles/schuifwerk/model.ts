@@ -11,6 +11,30 @@
 
 export type Orientatie = 'horizontaal' | 'verticaal';
 
+/**
+ * What the thing actually is. Decides nothing about the puzzle and
+ * everything about whether you can see what you are shoving: a room of
+ * identical grey blocks is a sliding puzzle, a room with the bank, the
+ * boekenkast and the koelkast in it is his room.
+ */
+export type MeubelSoort =
+  | 'bank' | 'fauteuil' | 'kast' | 'boekenkast' | 'eettafel' | 'salontafel'
+  | 'koelkast' | 'fornuis' | 'aanrecht' | 'dozen' | 'tvmeubel';
+
+export const MEUBEL_NAMEN: Record<MeubelSoort, string> = {
+  bank: 'DE BANK',
+  fauteuil: 'DE FAUTEUIL',
+  kast: 'DE KAST',
+  boekenkast: 'DE BOEKENKAST',
+  eettafel: 'DE EETTAFEL',
+  salontafel: 'DE SALONTAFEL',
+  koelkast: 'DE KOELKAST',
+  fornuis: 'HET FORNUIS',
+  aanrecht: 'HET AANRECHT',
+  dozen: 'EEN STAPEL DOZEN',
+  tvmeubel: 'HET TV-MEUBEL',
+};
+
 export type Stuk = {
   readonly id: string;
   /** Left-most, or top-most, cell. */
@@ -18,6 +42,7 @@ export type Stuk = {
   readonly y: number;
   readonly lengte: number;
   readonly orientatie: Orientatie;
+  readonly soort: MeubelSoort;
   /** The one piece that has to get out of the door. */
   readonly hoofd: boolean;
 };
@@ -25,11 +50,11 @@ export type Stuk = {
 export type Plan = {
   readonly width: number;
   readonly height: number;
-  /** Immovable: a beam, the chimney, the unit itself. */
+  /** Immovable: the schouw, a balk, the radiator nobody ever took off. */
   readonly vast: readonly { x: number; y: number }[];
   readonly stukken: readonly Stuk[];
-  /** Where the hoofdkanaal has to arrive, just outside the right-hand edge. */
-  readonly aansluiting: { x: number; y: number };
+  /** The doorway, just outside the right-hand wall. */
+  readonly deur: { x: number; y: number };
 };
 
 export type Zet = { readonly id: string; readonly stap: number };
@@ -92,13 +117,13 @@ export function hoofdIndex(stukken: readonly Stuk[]): number {
   return stukken.findIndex((s) => s.hoofd);
 }
 
-/** Done when the hoofdkanaal has slid clear of the right-hand edge. */
+/** Done when the big piece has slid out through the door. */
 export function isSolved(plan: Plan, stukken: readonly Stuk[]): boolean {
   const i = hoofdIndex(stukken);
   if (i < 0) return false;
   const hoofd = stukken[i]!;
   return hoofd.orientatie === 'horizontaal'
-    && hoofd.y === plan.aansluiting.y
+    && hoofd.y === plan.deur.y
     && hoofd.x + hoofd.lengte - 1 >= plan.width - 1;
 }
 
@@ -114,11 +139,18 @@ export function stars(zetten: number, par: number): number {
 }
 
 /**
- * Plans are authored as ASCII art. '.' empty, '#' fixed, 'T' the hoofdkanaal,
- * any other letter a duct section; repeated letters that sit next to each
- * other form one piece.
+ * Plans are authored as ASCII art. '.' empty floor, '#' something that does
+ * not move, 'T' the piece that has to get out, any other letter a piece of
+ * furniture; repeated letters that sit next to each other form one item.
+ *
+ * `soorten` says what each letter is. A letter with nothing said about it is
+ * a kast, which is what an unlabelled brown rectangle in a room usually is.
  */
-export function parsePlan(rows: readonly string[], aansluitingRij?: number): Plan {
+export function parsePlan(
+  rows: readonly string[],
+  soorten: Readonly<Record<string, MeubelSoort>> = {},
+  deurRij?: number,
+): Plan {
   const height = rows.length;
   const width = rows[0]?.length ?? 0;
   const vast: { x: number; y: number }[] = [];
@@ -150,16 +182,20 @@ export function parsePlan(rows: readonly string[], aansluitingRij?: number): Pla
       ? Math.max(...cells.map((c) => c.x)) - x + 1
       : Math.max(...cells.map((c) => c.y)) - y + 1;
     if (span !== cells.length) throw new Error(`piece ${letter} is broken in two`);
-    stukken.push({ id: letter, x, y, lengte: cells.length, orientatie, hoofd: letter === 'T' });
+    stukken.push({
+      id: letter, x, y, lengte: cells.length, orientatie,
+      soort: soorten[letter] ?? 'kast',
+      hoofd: letter === 'T',
+    });
   }
   stukken.sort((a, b) => a.id.localeCompare(b.id));
 
   const hoofd = stukken.find((s) => s.hoofd);
-  if (!hoofd) throw new Error('plan has no hoofdkanaal');
-  if (hoofd.orientatie !== 'horizontaal') throw new Error('the hoofdkanaal must lie horizontally');
+  if (!hoofd) throw new Error('plan has nothing that has to get out');
+  if (hoofd.orientatie !== 'horizontaal') throw new Error('the piece to get out must lie horizontally');
 
   return {
     width, height, vast, stukken,
-    aansluiting: { x: width, y: aansluitingRij ?? hoofd.y },
+    deur: { x: width, y: deurRij ?? hoofd.y },
   };
 }
