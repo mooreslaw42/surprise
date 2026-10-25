@@ -6,7 +6,7 @@ import { ISOLATIE_LEVELS } from '../puzzles/isolatie/levels.ts';
 import { SCHILDER_LEVELS } from '../puzzles/schilderen/levels.ts';
 import { VLOER_LEVELS } from '../puzzles/vloeren/levels.ts';
 import { KLOS_LEVELS } from '../puzzles/klossen/levels.ts';
-import type { RoomId } from './house.ts';
+import { ROOM_NAMES } from './house.ts';
 
 /**
  * The stage ladder. A stage is gated: no room may start the next one until
@@ -18,7 +18,8 @@ export type StageKind = 'leeghalen' | 'sloop' | 'isolatie' | 'elektra' | 'klosse
 
 export type StageEntry = {
   readonly id: string;
-  readonly ruimte: RoomId;
+  /** The room, spelled the way the card shows it. */
+  readonly titel: string;
   readonly vlak: string;
   /** The wall, for a thumbnail, when the card is tall enough to show one. */
   readonly rows?: readonly string[];
@@ -45,7 +46,7 @@ function kanaalStap(n: number): Stage {
     tussendoor: true,
     entries: [{
       id: level.id,
-      ruimte: 'woonkamer',
+      titel: 'HET HELE HUIS',
       vlak: `PLAN ${n}`,
       samenvatting: `${level.bord.roosters.length} ROOSTERS`,
     }],
@@ -57,13 +58,18 @@ export const STAGES: readonly Stage[] = [
     kind: 'leeghalen',
     nummer: 1,
     naam: 'LEEGHALEN',
-    entries: SCHUIF_LEVELS.map((l) => ({ id: l.id, ruimte: 'woonkamer' as RoomId, vlak: l.ruimte })),
+    entries: SCHUIF_LEVELS.map((l) => ({
+      id: l.id,
+      titel: l.ruimte,
+      vlak: 'LEEGHALEN',
+      samenvatting: `${l.plan.stukken.length} STUKS`,
+    })),
   },
   {
     kind: 'sloop',
     nummer: 2,
     naam: 'SLOOP',
-    entries: SLOOP_LEVELS.map((l) => ({ id: l.id, ruimte: l.ruimte, vlak: l.vlak, rows: l.rows })),
+    entries: SLOOP_LEVELS.map((l) => ({ id: l.id, titel: ROOM_NAMES[l.ruimte], vlak: l.vlak, rows: l.rows })),
   },
   kanaalStap(1),
   {
@@ -72,8 +78,8 @@ export const STAGES: readonly Stage[] = [
     naam: 'ISOLATIE',
     entries: ISOLATIE_LEVELS.map((l) => ({
       id: l.id,
-      ruimte: 'woonkamer' as RoomId,
-      vlak: l.ruimte,
+      titel: l.ruimte,
+      vlak: 'ISOLEREN',
       samenvatting: `${l.muur.dekens.length} DEKENS`,
     })),
   },
@@ -85,7 +91,7 @@ export const STAGES: readonly Stage[] = [
       const wissel = l.board.devices.some((d) => d.kind === 'schakelaar' && d.naar !== undefined);
       return {
         id: l.id,
-        ruimte: l.ruimte,
+        titel: ROOM_NAMES[l.ruimte],
         vlak: l.vlak,
         // Kept short enough for a card: 18 characters at six pixels each.
         samenvatting: wissel
@@ -101,7 +107,7 @@ export const STAGES: readonly Stage[] = [
     naam: 'DICHTZETTEN',
     entries: KLOS_LEVELS.map((l) => ({
       id: l.id,
-      ruimte: l.surface.ruimte,
+      titel: ROOM_NAMES[l.surface.ruimte],
       vlak: l.vlak,
       samenvatting: `${l.wand.klossen.length} KLOSSEN`,
     })),
@@ -112,8 +118,8 @@ export const STAGES: readonly Stage[] = [
     naam: 'VLOEREN',
     entries: VLOER_LEVELS.map((l) => ({
       id: l.id,
-      ruimte: 'woonkamer' as RoomId,
-      vlak: l.ruimte,
+      titel: l.ruimte,
+      vlak: 'VLOER LEGGEN',
       samenvatting: `${l.vloer.rijen} RIJEN`,
     })),
   },
@@ -123,8 +129,8 @@ export const STAGES: readonly Stage[] = [
     naam: 'SCHILDEREN',
     entries: SCHILDER_LEVELS.map((l) => ({
       id: l.id,
-      ruimte: 'woonkamer' as RoomId,
-      vlak: `${l.ruimte} ${l.vlak}`.slice(0, 16),
+      titel: l.ruimte,
+      vlak: l.vlak,
       samenvatting: `${l.muur.verfbaar.filter(Boolean).length} VAKKEN`,
     })),
   },
@@ -135,9 +141,47 @@ export const STAGES: readonly Stage[] = [
     naam: 'OPLEVERING',
     entries: [{
       id: KANAAL_LEVELS[2]!.id,
-      ruimte: 'woonkamer',
+      titel: 'HET HELE HUIS',
       vlak: 'HET HELE SYSTEEM',
       samenvatting: `${KANAAL_LEVELS[2]!.bord.roosters.length} ROOSTERS`,
     }],
   },
 ];
+
+/** Whether a level has been through at least once. */
+export type Gedaan = (id: string) => boolean;
+
+/** Every wall in the stage done, which is what opens the next one. */
+export function stageAf(stage: Stage, gedaan: Gedaan): boolean {
+  return stage.entries.every((e) => gedaan(e.id));
+}
+
+/**
+ * The gate itself. A stage opens only once every stage before it is finished
+ * — no room may start the next phase until all three are through this one.
+ * Browsing ahead is free; starting is not.
+ */
+export function stageOpen(index: number, gedaan: Gedaan): boolean {
+  return blokkade(index, gedaan) === null;
+}
+
+/** Which earlier stage is in the way, for a menu that has to say why. */
+export function blokkade(index: number, gedaan: Gedaan): Stage | null {
+  for (let s = 0; s < index && s < STAGES.length; s++) {
+    if (!stageAf(STAGES[s]!, gedaan)) return STAGES[s]!;
+  }
+  return null;
+}
+
+/** Where to drop someone coming back: the furthest stage they have opened. */
+export function versteFase(gedaan: Gedaan): number {
+  let n = 0;
+  while (n + 1 < STAGES.length && stageAf(STAGES[n]!, gedaan)) n++;
+  return n;
+}
+
+export function stageLabel(stage: Stage): string {
+  return stage.tussendoor
+    ? `${stage.naam} ${stage.nummer}`
+    : `FASE ${stage.nummer} - ${stage.naam}`;
+}

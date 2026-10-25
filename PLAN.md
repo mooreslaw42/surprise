@@ -12,6 +12,12 @@ Levels are grouped into renovation stages. The gate is the joke: **no room may s
 until every room has finished the previous one.** You are forced through the same phase-by-phase
 slog he has actually lived, except this time it ends.
 
+Shut, though, is not hidden. The menu pages through the whole ladder whether or not you have
+earned it: every stage is a pip along the top, every wall still shows its card, and the ones
+you cannot start yet sit behind a padlock with a line saying what is in the way. Looking ahead
+at eight phases of work you have not reached is part of the joke, and it is the only way to
+see that the ventilation keeps on not happening.
+
 Played first person: no avatar, you are looking at the surface you are working on.
 Pim is the pixel-art host in the text box at the bottom.
 
