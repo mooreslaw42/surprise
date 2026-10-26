@@ -1,6 +1,29 @@
 import { WIDTH, HEIGHT, type Screen } from './screen.ts';
 
 /**
+ * Fill the straight-line gaps between recorded pointer positions so no cell
+ * boundary is skipped, however fast the flick or however coarsely the browser
+ * sampled it. Steps a virtual pixel at a time, which is finer than any tile,
+ * so consecutive points land on the same cell or an orthogonal neighbour.
+ */
+export function densify(points: readonly { x: number; y: number }[]): { x: number; y: number }[] {
+  if (points.length === 0) return [];
+  const out = [points[0]!];
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]!;
+    const b = points[i]!;
+    const span = Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+    for (let s = 1; s <= span; s++) {
+      out.push({
+        x: Math.round(a.x + ((b.x - a.x) * s) / span),
+        y: Math.round(a.y + ((b.y - a.y) * s) / span),
+      });
+    }
+  }
+  return out;
+}
+
+/**
  * Keyboard and mouse, reported in virtual pixel coordinates so puzzle code
  * never sees a real screen pixel. Laptop target: mouse drives the puzzles,
  * keyboard drives menus and shortcuts.
@@ -24,6 +47,15 @@ export class Input {
   mouseReleased = false;
   /** False until the pointer has been over the canvas at least once. */
   mouseOver = false;
+  /**
+   * Every pointer position seen since the last step, oldest first, starting
+   * at the press when the button went down this step. The end position alone
+   * is a lie when a flick crosses several cells between two steps — or when
+   * the browser coalesces a burst of moves into one event — so a scene that
+   * follows a drag cell by cell walks this instead. Densify it first: the
+   * recorded points can still be cells apart.
+   */
+  readonly mousePath: { x: number; y: number }[] = [];
 
   private readonly screen: Screen;
 
@@ -57,6 +89,7 @@ export class Input {
       this.mouseX = p.x;
       this.mouseY = p.y;
       this.mouseOver = true;
+      this.mousePath.push(p);
     });
     canvas.addEventListener('mouseleave', () => {
       this.mouseOver = false;
@@ -73,6 +106,9 @@ export class Input {
       this.mouseOver = true;
       this.mouseDown = true;
       this.mouseClicked = true;
+      // Start the path at the grab, so a press-and-flick in one step still
+      // traces from where the drag began.
+      this.mousePath.push(p);
     });
     window.addEventListener('mouseup', () => {
       this.mouseDown = false;
@@ -104,6 +140,7 @@ export class Input {
     this.released.clear();
     this.mouseClicked = false;
     this.mouseReleased = false;
+    this.mousePath.length = 0;
   }
 
   /** Hardware cursor is hidden, so we draw our own. */

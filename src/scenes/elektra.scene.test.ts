@@ -21,6 +21,8 @@ type Mouse = {
   x: number; y: number; down: boolean; clicked: boolean;
   /** Where the button went down, when that is not where the mouse now is. */
   press?: { x: number; y: number };
+  /** Every position seen this step, when the pointer travelled during it. */
+  path?: { x: number; y: number }[];
   released?: boolean;
 };
 
@@ -30,6 +32,7 @@ function context(mouse: Mouse, keys: Set<string> = new Set()): SceneContext {
     mouseY: mouse.y,
     mousePressX: mouse.press?.x ?? mouse.x,
     mousePressY: mouse.press?.y ?? mouse.y,
+    mousePath: mouse.path ?? [],
     mouseDown: mouse.down,
     mouseClicked: mouse.clicked,
     mouseReleased: mouse.released ?? false,
@@ -71,6 +74,33 @@ function drag(scene: ElektraScene, width: number, height: number, route: { x: nu
   const last = cellCentre(width, height, route[route.length - 1]!);
   scene.update(1 / 60, context({ x: last.x, y: last.y, down: false, clicked: false }));
 }
+
+/**
+ * The whole run laid in one step: press on the device, the pointer sweeps
+ * across every cell before the next step, and the button comes up. Only the
+ * end cell would land here if the scene read where the mouse stopped instead
+ * of the path it took.
+ */
+function flick(scene: ElektraScene, width: number, height: number, route: { x: number; y: number }[]): void {
+  const path = route.map((c) => cellCentre(width, height, c));
+  const end = path[path.length - 1]!;
+  scene.update(1 / 60, context({
+    x: end.x, y: end.y, down: true, clicked: true, press: path[0], path,
+  }));
+  scene.update(1 / 60, context({ x: end.x, y: end.y, down: false, clicked: false }));
+}
+
+test('a flick across the wall wires the whole run, not just its last cell', () => {
+  for (const level of ELEKTRA_LEVELS) {
+    const save = new Save(null);
+    const scene = new ElektraScene(level, save);
+    dismissUitleg(scene);
+    for (const route of solve(level.board).routes) {
+      flick(scene, level.board.width, level.board.height, route);
+    }
+    assert.ok(save.isDone(level.id), `${level.id}: a flicked run never reached the meterkast`);
+  }
+});
 
 test('wiring every socket by hand completes the level', () => {
   for (const level of ELEKTRA_LEVELS) {

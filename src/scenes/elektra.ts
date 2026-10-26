@@ -1,4 +1,5 @@
 import { C, luma } from '../engine/palette.ts';
+import { densify } from '../engine/input.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
 import type { Save } from '../engine/save.ts';
@@ -70,6 +71,24 @@ export class ElektraScene implements Scene {
     return p;
   }
 
+  /**
+   * The board cells the pointer crossed this step, in order, following the
+   * whole mouse path. A quick flick over several cells used to leave the run
+   * stranded on whichever one a step happened to catch.
+   */
+  private trail(ctx: SceneContext): Point[] {
+    const raw = ctx.input.mousePath ?? [];
+    const points = raw.length > 0 ? raw : [{ x: ctx.input.mouseX, y: ctx.input.mouseY }];
+    const cells: Point[] = [];
+    for (const p of densify(points)) {
+      const cell = this.cellFrom(ctx, p.x, p.y);
+      if (!cell) continue;
+      const last = cells[cells.length - 1];
+      if (!last || !samePoint(last, cell)) cells.push(cell);
+    }
+    return cells;
+  }
+
   update(dt: number, ctx: SceneContext): void {
     this.time += dt;
     if (this.won) {
@@ -96,8 +115,6 @@ export class ElektraScene implements Scene {
     }
     if (ctx.input.justPressed('KeyR')) this.routes = this.routes.map(() => []);
 
-    const cell = this.cellAt(ctx);
-
     // Where the button went down, not where the mouse ended up: press and
     // release can share a step, and a run has to start at the device.
     const gedrukt = this.cellFrom(ctx, ctx.input.mousePressX, ctx.input.mousePressY);
@@ -113,7 +130,9 @@ export class ElektraScene implements Scene {
       }
     }
 
-    if (this.drawing !== null && cell) this.extend(this.drawing, cell);
+    if (this.drawing !== null) {
+      for (const step of this.trail(ctx)) this.extend(this.drawing, step);
+    }
 
     if (!ctx.input.mouseDown && this.drawing !== null) {
       const route = this.routes[this.drawing]!;

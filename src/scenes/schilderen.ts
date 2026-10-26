@@ -1,4 +1,5 @@
 import { C } from '../engine/palette.ts';
+import { densify } from '../engine/input.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
 import type { Save } from '../engine/save.ts';
@@ -54,12 +55,28 @@ export class SchilderScene implements Scene {
     this.originY = geometry.originY;
   }
 
-  private celAt(ctx: SceneContext): number {
+  private celAt(ctx: SceneContext, mx: number, my: number): number {
     const m = this.level.muur;
-    const x = Math.floor((ctx.input.mouseX - this.originX) / this.tile);
-    const y = Math.floor((ctx.input.mouseY - this.originY) / this.tile);
+    const x = Math.floor((mx - this.originX) / this.tile);
+    const y = Math.floor((my - this.originY) / this.tile);
     if (!ctx.input.mouseOver || x < 0 || y < 0 || x >= m.width || y >= m.height) return -1;
     return y * m.width + x;
+  }
+
+  /**
+   * The cells the roller crossed this step, in order, following the whole
+   * mouse path and not just where it ended. A quick flick over several
+   * squares used to register only the one a step happened to catch.
+   */
+  private trail(ctx: SceneContext): number[] {
+    const raw = ctx.input.mousePath ?? [];
+    const points = raw.length > 0 ? raw : [{ x: ctx.input.mouseX, y: ctx.input.mouseY }];
+    const cells: number[] = [];
+    for (const p of densify(points)) {
+      const cel = this.celAt(ctx, p.x, p.y);
+      if (cells.length === 0 || cells[cells.length - 1] !== cel) cells.push(cel);
+    }
+    return cells;
   }
 
   update(dt: number, ctx: SceneContext): void {
@@ -83,12 +100,20 @@ export class SchilderScene implements Scene {
 
     if (ctx.input.mouseClicked) this.rolt = true;
     // A stroke can start and finish inside one step. The roller comes off at
-    // the end of it, but not before the square it finished on is painted.
+    // the end of it, but not before the squares it ran over are painted.
     const rolt = this.rolt && (ctx.input.mouseDown || ctx.input.mouseReleased);
     if (!ctx.input.mouseDown) this.rolt = false;
     if (!rolt) return;
 
-    const cel = this.celAt(ctx);
+    for (const cel of this.trail(ctx)) {
+      this.roll(cel);
+      this.check();
+      if (this.won) break;
+    }
+  }
+
+  /** Lay one square under the roller, or lift back off it. */
+  private roll(cel: number): void {
     if (cel < 0 || !this.level.muur.verfbaar[cel]) return;
     const kop = this.streek[this.streek.length - 1]!;
     if (cel === kop) return;
@@ -99,7 +124,6 @@ export class SchilderScene implements Scene {
     }
     if (!buren(this.level.muur, kop).includes(cel)) return;
     this.streek.push(cel);
-    this.check();
   }
 
   private check(): void {
