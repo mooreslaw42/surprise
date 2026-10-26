@@ -46,7 +46,9 @@ function kanaalStap(n: number): Stage {
     tussendoor: true,
     entries: [{
       id: level.id,
-      titel: 'HET HELE HUIS',
+      // Which rooms the drawing actually covers; only the last one is the
+      // whole house, and saying so earlier gives the gag away.
+      titel: level.dekking,
       vlak: `PLAN ${n}`,
       samenvatting: `${level.bord.roosters.length} ROOSTERS`,
     }],
@@ -100,6 +102,7 @@ export const STAGES: readonly Stage[] = [
       };
     }),
   },
+  kanaalStap(2),
   {
     // The phase is dichtzetten; the puzzle in it is finding the klossen.
     kind: 'klossen',
@@ -112,6 +115,7 @@ export const STAGES: readonly Stage[] = [
       samenvatting: `${l.wand.klossen.length} KLOSSEN`,
     })),
   },
+  kanaalStap(3),
   {
     kind: 'vloeren',
     nummer: 6,
@@ -134,16 +138,15 @@ export const STAGES: readonly Stage[] = [
       samenvatting: `${l.muur.verfbaar.filter(Boolean).length} VAKKEN`,
     })),
   },
-  kanaalStap(2),
   {
     kind: 'kanalen',
     nummer: 8,
     naam: 'OPLEVERING',
     entries: [{
-      id: KANAAL_LEVELS[2]!.id,
+      id: KANAAL_LEVELS[3]!.id,
       titel: 'HET HELE HUIS',
       vlak: 'HET HELE SYSTEEM',
-      samenvatting: `${KANAAL_LEVELS[2]!.bord.roosters.length} ROOSTERS`,
+      samenvatting: `${KANAAL_LEVELS[3]!.bord.roosters.length} ROOSTERS`,
     }],
   },
 ];

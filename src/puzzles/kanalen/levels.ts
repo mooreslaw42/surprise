@@ -40,6 +40,12 @@ const UITLEG_LATER = [
   'KLIKKEN OM TE DRAAIEN. ALLES MOET AAN ELKAAR, EN ALLES MOET AAN DE WTW.',
 ];
 
+const UITLEG_GROOT = [
+  'TWEE KAMERS IN EEN PLAN. DE KOKERS MOETEN STRAKS ONDER DE VLOER DOOR, DUS NU MOET HET KLOPPEN.',
+  'ZELFDE REGELS, DRIE KEER ZOVEEL STUKKEN. ELKE OPENING OP EEN OPENING, ALLES AAN DE WTW.',
+  'EN NEE, HIJ IS ER NOG STEEDS NIET.',
+];
+
 const UITLEG_BAAS = [
   'DIT IS HEM DAN. HET HELE VENTILATIESYSTEEM, IN EEN KEER, ZOALS HET ALTIJD BEDOELD WAS.',
   'ELKE KOKER, ELK ROOSTER, ELKE BOCHT. ALLES MOET KLOPPEN EN ALLES MOET AAN DE WTW HANGEN.',
@@ -84,8 +90,26 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     },
   },
   {
-    id: 'kanalen-baas',
+    id: 'kanalen-3',
     nummer: 3,
+    titel: 'KANAALPLAN 3',
+    praatje: 'DE HELE BOVENKANT VAN HET HUIS IN EEN PLAN.',
+    levering: 'LEVERING VERWACHT: WEEK 31',
+    baas: false,
+    dekking: 'WOONKAMER + KEUKEN',
+    uitleg: UITLEG_GROOT,
+    bord: {
+      width, height,
+      masks: [12, 4, 2, 8, 3, 11, 5, 6, 2, 8, 13, 13, 14, 7, 6, 14, 3, 11, 13, 11,
+        2, 10, 4, 5, 7, 9, 2, 9, 4, 8, 1, 13, 4, 1, 12, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      wtw: 5,
+      roosters: [1, 2, 3, 8, 9, 20, 22, 26, 28, 29, 30, 32, 33],
+    },
+  },
+  {
+    id: 'kanalen-baas',
+    nummer: 4,
     titel: 'HET HELE SYSTEEM',
     praatje: 'ALLES IN EEN KEER. HIJ WACHT AL TWEE JAAR.',
     levering: 'GELEVERD',
