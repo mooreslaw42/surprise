@@ -12,6 +12,13 @@ export class Input {
 
   mouseX = 0;
   mouseY = 0;
+  /**
+   * Where the button went down, which is not where the mouse is now when a
+   * whole gesture — press, travel, release — lands between two steps. Scenes
+   * that drag something need the grab, not the let-go.
+   */
+  mousePressX = 0;
+  mousePressY = 0;
   mouseDown = false;
   mouseClicked = false;
   mouseReleased = false;
@@ -37,16 +44,33 @@ export class Input {
       this.mouseDown = false;
     });
 
-    canvas.addEventListener('mousemove', (e) => {
+    const virtueel = (e: MouseEvent): { x: number; y: number } => {
       const rect = canvas.getBoundingClientRect();
-      this.mouseX = Math.floor(((e.clientX - rect.left) / rect.width) * WIDTH);
-      this.mouseY = Math.floor(((e.clientY - rect.top) / rect.height) * HEIGHT);
+      return {
+        x: Math.floor(((e.clientX - rect.left) / rect.width) * WIDTH),
+        y: Math.floor(((e.clientY - rect.top) / rect.height) * HEIGHT),
+      };
+    };
+
+    canvas.addEventListener('mousemove', (e) => {
+      const p = virtueel(e);
+      this.mouseX = p.x;
+      this.mouseY = p.y;
       this.mouseOver = true;
     });
     canvas.addEventListener('mouseleave', () => {
       this.mouseOver = false;
     });
-    canvas.addEventListener('mousedown', () => {
+    canvas.addEventListener('mousedown', (e) => {
+      // Read the position off the press itself rather than trusting the last
+      // mousemove: a press can arrive without one, and a scene that grabs
+      // something has to know where the grab was.
+      const p = virtueel(e);
+      this.mouseX = p.x;
+      this.mouseY = p.y;
+      this.mousePressX = p.x;
+      this.mousePressY = p.y;
+      this.mouseOver = true;
       this.mouseDown = true;
       this.mouseClicked = true;
     });

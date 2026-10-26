@@ -14,6 +14,7 @@ import type { Screen } from '../engine/screen.ts';
 function context(x: number, y: number, clicked: boolean, keys: Set<string> = new Set()): SceneContext {
   const input = {
     mouseX: x, mouseY: y, mouseDown: clicked, mouseClicked: clicked, mouseOver: true,
+    mousePressX: x, mousePressY: y, mouseReleased: false,
     isDown: (code: string) => keys.has(code),
     justPressed: (code: string) => keys.has(code),
     justReleased: () => false,

@@ -82,8 +82,11 @@ export class SchilderScene implements Scene {
     }
 
     if (ctx.input.mouseClicked) this.rolt = true;
+    // A stroke can start and finish inside one step. The roller comes off at
+    // the end of it, but not before the square it finished on is painted.
+    const rolt = this.rolt && (ctx.input.mouseDown || ctx.input.mouseReleased);
     if (!ctx.input.mouseDown) this.rolt = false;
-    if (!this.rolt) return;
+    if (!rolt) return;
 
     const cel = this.celAt(ctx);
     if (cel < 0 || !this.level.muur.verfbaar[cel]) return;

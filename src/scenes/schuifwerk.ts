@@ -5,7 +5,7 @@ import type { Save } from '../engine/save.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import { Dialogue } from './dialogue.ts';
 import {
-  type MeubelSoort, type Stuk,
+  type MeubelSoort, type Plan, type Stuk,
   MEUBEL_NAMEN, cellsOf, isSolved, kanSchuiven, schuif, stars,
 } from '../puzzles/schuifwerk/model.ts';
 import { solve } from '../puzzles/schuifwerk/solver.ts';
@@ -13,6 +13,22 @@ import type { SchuifLevel } from '../puzzles/schuifwerk/levels.ts';
 
 const TOP_H = 16;
 const BOTTOM_H = 30;
+
+/**
+ * Where the room sits on screen and how big a cell is. Out here because the
+ * tests have to work out where a given cell is before they can click it.
+ */
+export function vlakVan(plan: Plan): { tile: number; originX: number; originY: number } {
+  const tile = Math.max(8, Math.min(
+    Math.floor((HEIGHT - TOP_H - BOTTOM_H - 10) / plan.height),
+    Math.floor((WIDTH - 60) / (plan.width + 1)),
+  ));
+  return {
+    tile,
+    originX: Math.round((WIDTH - (plan.width + 1) * tile) / 2),
+    originY: TOP_H + Math.round((HEIGHT - TOP_H - BOTTOM_H - plan.height * tile) / 2),
+  };
+}
 
 /**
  * The room from above, with everything still in it. Slide the furniture until
@@ -47,19 +63,20 @@ export class SchuifScene implements Scene {
     this.stukken = level.plan.stukken.map((s) => ({ ...s }));
     this.uitleg = new Dialogue(level.uitleg);
 
-    const plan = level.plan;
-    this.tile = Math.max(8, Math.min(
-      Math.floor((HEIGHT - TOP_H - BOTTOM_H - 10) / plan.height),
-      Math.floor((WIDTH - 60) / (plan.width + 1)),
-    ));
-    this.originX = Math.round((WIDTH - (plan.width + 1) * this.tile) / 2);
-    this.originY = TOP_H + Math.round((HEIGHT - TOP_H - BOTTOM_H - plan.height * this.tile) / 2);
+    const vlak = vlakVan(level.plan);
+    this.tile = vlak.tile;
+    this.originX = vlak.originX;
+    this.originY = vlak.originY;
   }
 
   private cellAt(ctx: SceneContext): { x: number; y: number } {
+    return this.cellFrom(ctx.input.mouseX, ctx.input.mouseY);
+  }
+
+  private cellFrom(x: number, y: number): { x: number; y: number } {
     return {
-      x: Math.floor((ctx.input.mouseX - this.originX) / this.tile),
-      y: Math.floor((ctx.input.mouseY - this.originY) / this.tile),
+      x: Math.floor((x - this.originX) / this.tile),
+      y: Math.floor((y - this.originY) / this.tile),
     };
   }
 
@@ -99,11 +116,18 @@ export class SchuifScene implements Scene {
 
     const cell = this.cellAt(ctx);
     if (ctx.input.mouseClicked && ctx.input.mouseOver) {
-      const i = this.stukOp(cell);
-      if (i >= 0) this.sleept = { index: i, grepen: cell, begon: { ...this.stukken[i]! } };
+      // The grab is where the button went down. A quick flick puts the press
+      // and the release inside one step, and by then the mouse is already at
+      // the far end of the drag — grabbing there picks up the wrong piece, or
+      // none at all.
+      const gegrepen = this.cellFrom(ctx.input.mousePressX, ctx.input.mousePressY);
+      const i = this.stukOp(gegrepen);
+      if (i >= 0) this.sleept = { index: i, grepen: gegrepen, begon: { ...this.stukken[i]! } };
     }
 
-    if (this.sleept && ctx.input.mouseDown) {
+    // Also on the step that sees the release, which for a flick is the same
+    // step as the press: the piece has to travel before the drag is closed.
+    if (this.sleept && (ctx.input.mouseDown || ctx.input.mouseReleased)) {
       const { index, grepen, begon } = this.sleept;
       const stuk = this.stukken[index]!;
       // How far the mouse has travelled along the piece's own axis.

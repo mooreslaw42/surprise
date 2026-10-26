@@ -17,14 +17,22 @@ import type { Screen } from '../engine/screen.ts';
  * Drives the scene the way a mouse does. ElektraScene.update touches nothing
  * but the input, so it can be exercised without a canvas.
  */
-type Mouse = { x: number; y: number; down: boolean; clicked: boolean };
+type Mouse = {
+  x: number; y: number; down: boolean; clicked: boolean;
+  /** Where the button went down, when that is not where the mouse now is. */
+  press?: { x: number; y: number };
+  released?: boolean;
+};
 
 function context(mouse: Mouse, keys: Set<string> = new Set()): SceneContext {
   const input = {
     mouseX: mouse.x,
     mouseY: mouse.y,
+    mousePressX: mouse.press?.x ?? mouse.x,
+    mousePressY: mouse.press?.y ?? mouse.y,
     mouseDown: mouse.down,
     mouseClicked: mouse.clicked,
+    mouseReleased: mouse.released ?? false,
     mouseOver: true,
     isDown: (code: string) => keys.has(code),
     justPressed: (code: string) => keys.has(code),

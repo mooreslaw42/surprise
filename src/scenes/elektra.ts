@@ -59,8 +59,12 @@ export class ElektraScene implements Scene {
   }
 
   private cellAt(ctx: SceneContext): Point | null {
-    const x = Math.floor((ctx.input.mouseX - this.originX) / this.tile);
-    const y = Math.floor((ctx.input.mouseY - this.originY) / this.tile);
+    return this.cellFrom(ctx, ctx.input.mouseX, ctx.input.mouseY);
+  }
+
+  private cellFrom(ctx: SceneContext, mx: number, my: number): Point | null {
+    const x = Math.floor((mx - this.originX) / this.tile);
+    const y = Math.floor((my - this.originY) / this.tile);
     const p = { x, y };
     if (!ctx.input.mouseOver || tileAt(this.level.board, p) === undefined) return null;
     return p;
@@ -94,14 +98,17 @@ export class ElektraScene implements Scene {
 
     const cell = this.cellAt(ctx);
 
-    if (ctx.input.mouseClicked && cell) {
-      const device = this.level.board.devices.findIndex((d) => samePoint(d.cel, cell));
+    // Where the button went down, not where the mouse ended up: press and
+    // release can share a step, and a run has to start at the device.
+    const gedrukt = this.cellFrom(ctx, ctx.input.mousePressX, ctx.input.mousePressY);
+    if (ctx.input.mouseClicked && gedrukt) {
+      const device = this.level.board.devices.findIndex((d) => samePoint(d.cel, gedrukt));
       if (device >= 0) {
         this.drawing = device;
-        this.routes[device] = [cell];
+        this.routes[device] = [gedrukt];
       } else {
         // Clicking a laid cable takes it out again.
-        const owner = this.routes.findIndex((r) => r.some((p) => samePoint(p, cell)));
+        const owner = this.routes.findIndex((r) => r.some((p) => samePoint(p, gedrukt)));
         if (owner >= 0) this.routes[owner] = [];
       }
     }
