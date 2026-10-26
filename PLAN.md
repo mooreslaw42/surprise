@@ -1,0 +1,353 @@
+# DE EEUWIGE VERBOUWING
+*Een Sinterklaassurprise voor Wouter — 5 december 2026*
+
+A pixel-art puzzle game about a house that, unlike the real one, actually gets finished.
+
+---
+
+## 1. Concept
+
+Three connected rooms — woonkamer, keuken, tv-kamer. Each wall, floor and ceiling is a level.
+Levels are grouped into renovation stages. The gate is the joke: **no room may start a stage
+until every room has finished the previous one.** You are forced through the same phase-by-phase
+slog he has actually lived, except this time it ends.
+
+Shut, though, is not hidden. The menu pages through the whole ladder whether or not you have
+earned it: every stage is a pip along the top, every wall still shows its card, and the ones
+you cannot start yet sit behind a padlock with a line saying what is in the way. Looking ahead
+at eight phases of work you have not reached is part of the joke, and it is the only way to
+see that the ventilation keeps on not happening.
+
+Played first person: no avatar, you are looking at the surface you are working on.
+Pim is the pixel-art host in the text box at the bottom.
+
+**Title candidates** — working title is the first:
+`DE EEUWIGE VERBOUWING` · `TWEE JAAR LATER` · `SUPER SLOOP BROS` · `KLUSKWARTIER`
+
+### Cast
+| Who | Role |
+|---|---|
+| Wouter | the player. Meticulous. Measures ten times. |
+| Pim | host, narrator, hint-giver |
+| Moeder | asks, every stage, when she gets her kleiatelier back |
+| Zus | asks, every stage, for help with the tiny house |
+| Zwart & Dekker | the tools. They break. *Altijd dekking, nooit garantie.* |
+| Het ventilatiesysteem | planned forever, delivered never |
+
+---
+
+## 2. Stage ladder
+
+| # | Stage | Mechanic | What you do |
+|---|---|---|---|
+| 0 | Leeghalen | Rush Hour sliding blocks | shove bank, kast, koelkast out through the door opening |
+| 1 | Sloop | collapse / load paths | bring the wall down on itself, around de dragende balk, de gasleiding, en die ene kabel |
+| 2 | Isolatie | polyomino packing | fit odd-shaped wool between the studs — target Rc, zero koudebruggen |
+| 3 | Elektra | non-crossing routing (Flow) | sockets and lights to the meterkast, nothing crosses, groups stay under 16A |
+| 4 | Water & afvoer | pipe rotation + gravity | warm, koud, afvoer — and the afvoer must run downhill |
+| 5 | Dichtzetten | deduction (tents-and-trees) | find the klossen behind the board before you drill |
+| 6 | Vloeren | plank laying | wooden floors, staggered joints, reuse your cut-offs |
+| 7 | Schilderen | Eulerian path | roller every tile without lifting the roller or walking through wet paint |
+| 8 | Oplevering | boss | see below |
+
+### Ventilatie — the running gag
+Sits outside the ladder. One planning level after most stages, six in total.
+**Mini Metro mechanics**: route ducts from the WTW unit to every room, balance airflow in m3/h,
+stay inside the duct budget. Each is harder than the last. Each ends with a delivery notice.
+`WTW = Wachten Totdat 't Werkt.` It never arrives.
+
+### Boss level — Oplevering
+The ventilation unit is delivered. One mega-level across all three rooms at once: ducts have to
+pass through the walls you already closed, around the wiring you already routed, under the floor
+you already laid. **Everything you built becomes an obstacle.** Two years of running gag, paid off
+in one level. Then the outro video plays.
+
+---
+
+## 3. Level matrix
+
+Provisional — final surface selection waits on the floor plan. Each stage takes only the surfaces
+that make construction sense, which is why the counts differ and why no surface appears in every
+stage. Target **30 levels**.
+
+| Stage | Levels | Surfaces |
+|---|---|---|
+| Leeghalen | 3 | one per room (room-scale, not surface) |
+| Sloop | 3 | woonkamer binnenmuur, keuken achterwand, tv-kamer plafond |
+| Isolatie | 3 | the three buitenmuren |
+| Elektra | 3 | keuken wand (two groups), woonkamer wand, tv-kamer plafond (lighting) |
+| Water & afvoer | 2 | keuken achterwand, keuken vloer — only the kitchen has water |
+| Dichtzetten | 3 | woonkamer plafond, keuken wand, tv-kamer wand |
+| Vloeren | 3 | all three floors |
+| Schilderen | 3 | woonkamer wand, keuken wand, tv-kamer plafond |
+| Ventilatie | 6 | interstitial |
+| Oplevering | 1 | all rooms |
+| **Total** | **30** | |
+
+---
+
+## 4. Three mechanics built on top
+
+**Measuring.** Appears only on the stages where you cut material — Isolatie, Dichtzetten, Vloeren.
+Drag the rolmaat across the surface. Measure once and you get an estimate, and the grid may be off
+by a tile. Measure three times and average, and you get exact dimensions.
+*Meten is weten. Tien keer meten is Wouter.*
+
+**Real numbers.** Rc-values that must sum to a target. Groups that trip at 3680W. Duct pressure
+drop over length and bends. Afschot in mm per metre. Waste percentages on cut lists. Correct
+physics, not decoration — but tuned to "satisfying", not "homework".
+
+**Zwart & Dekker.** The tool snaps mid-level. Comic interruption only: sprite breaks, jingle plays,
+Pim hands you a new one, you continue. It never costs progress. Tool durability as a real resource
+would just be irritating.
+
+**Scoring.** Three stars per level on an efficiency metric, never on time: metres of cable, percent
+waste, number of swings, m3/h deviation. No timers anywhere, optional on the boss.
+
+**Hints.** Pim offers one after 60 seconds, always available on demand, never forced. Skip unlocks
+after three failed attempts so the hard gate can never become a dead end.
+
+---
+
+## 5. Art direction
+
+- Internal resolution **384x216**, integer-scaled to the window, letterboxed. x5 is exactly 1080p.
+- Flat front elevation per surface. Isometric cutaway for the house map.
+- Fixed **24-colour palette**, C64-adjacent, extended so the real room colours fit.
+- Hand-coded 5x7 bitmap font with Dutch diacritics. No web fonts, no licensing, no network.
+- Scanlines and CRT vignette, both toggleable.
+- Hammer-confetti on level complete. No photo crossfades, no sentiment.
+- **Surfaces render procedurally** from a per-surface JSON spec — dimensions plus feature
+  positions for windows, doors, sockets, radiators, beams. Adding a surface is a data entry, not a
+  sprite sheet. Three or four hand-tuned hero screens on top: title, house map, boss, outro.
+
+### Audio
+Chiptune arrangements after his own records, written as data for a small WebAudio synth:
+- *Can't You Hear Me Knocking* — riff, level themes
+- *I'm Going Home* — boogie, the boss
+- *Blue in Green* — ballad, house map and menus
+
+All three are still in copyright, so the URL stays unlisted and unindexed. Private family gift.
+
+### Dutch copy
+`jij` throughout. Puns at full throttle. Seeds: *Opgeleverd!* · *Rc je wel?* ·
+*Alles met een beetje afschot* · *Onder spanning* · *WTW: Wachten Totdat 't Werkt* ·
+*Zwart & Dekker: altijd dekking, nooit garantie* · *Meten is weten, tien keer meten is Wouter*
+
+---
+
+## 6. Tech
+
+TypeScript + Vite. Hand-rolled canvas-2D pixel renderer, no engine. Static deploy to Vercel.
+localStorage with a versioned save schema. No backend, no Supabase, no telemetry.
+
+```
+src/data/house.ts      rooms, surfaces, real dimensions, features
+src/data/levels.ts     manifest: surface x stage x puzzle config
+src/engine/            canvas, palette, pixel font, input, scene stack, audio, save
+src/puzzles/<name>/    each mechanic: load(config) / update / render / isSolved / score
+src/solvers/<name>/    one solver per mechanic, runs in tests
+src/scenes/            title, house map, stage select, level, dialogue, outro
+```
+
+**Every level is machine-verified solvable.** A hand-authored Sokoban or Flow board that turns out
+to be impossible on 5 December would be a disaster, so each mechanic ships with a solver that runs
+over the whole level manifest in the test suite. This is real work and it is in the schedule.
+
+The house is pure data, so mechanics get built and tuned on placeholder geometry now and the real
+floor plan drops in later without touching puzzle code.
+
+---
+
+## 7. Schedule
+
+| Week | Dates | Work |
+|---|---|---|
+| 1 | 20-26 Oct | engine, palette, font, input, scenes, house data model, house map, Sloop end to end — **playable slice** |
+| 2 | 27 Oct-2 Nov | Elektra and Ventilatie. The two hero mechanics, built early because they carry the game |
+| 3 | 3-9 Nov | Isolatie, Water, solvers and test harness |
+| 4 | 10-16 Nov | Dichtzetten, Vloeren, Schilderen |
+| 5 | 17-23 Nov | real geometry in, full level content, art pass, audio, boss |
+| 6 | 24-30 Nov | difficulty tuning on playtests, outro video, box art, poster, deploy |
+| - | 1-4 Dec | buffer, nothing else |
+
+**Floor plan and video wanted by 1 November, hard stop 15 November.** Week 5 cannot slip.
+
+### Print deliverables
+- Box art, 300dpi PNG, for a 300x200x100mm box
+- Level-map poster, A3 at 300dpi — the house as a stage ladder, Nintendo-manual style
+
+---
+
+## 8. Risks
+
+| Risk | Mitigation |
+|---|---|
+| Floor plan arrives late | house is data-driven; build on placeholder geometry |
+| Art volume across ~20 surfaces | procedural surface renderer from JSON spec |
+| A hand-authored level is unsolvable | per-mechanic solvers in the test suite |
+| Difficulty mis-tuned for a physics nerd | per-level knob, hints, skip-after-three; tuned week 6 |
+| Eight mechanics is a lot | each is small and classic; two hardest first, in week 2 |
+| Music transcription eats time | audio is week 5, two days budgeted, game ships silent if needed |
+
+---
+
+## 9. Stand van zaken
+
+Week 1 done: engine, palette, save, house map, and **Sloop playable end to end**.
+
+The Sloop mechanic was minimum set cover with forbidden cells, and it was
+too easy: with a 3x3 voorhamer and nothing much in the way, hitting whatever
+was in front of you was as good as thinking. There was nothing to work out.
+
+It is now a collapse. The wall is masonry, and a brick stands as long as
+there is something solid under it or under one of its two shoulders. Take
+out three and the brick above follows; take out a whole course and the wall
+has nothing left to stand on. A hole closes up into a triangle as it rises,
+so a wide bite low down is worth far more than a deep one, and two swings
+side by side are worth far more than two swings apart.
+
+That turns the question from "how many hammer-widths of wall is there" into
+"where do you have to hit before the wall does the rest" — and the answer is
+not greedy. Every shipped wall is checked against the two obvious
+approaches, always take the biggest bite and just work along the bottom, and
+both have to lose by a clear margin, which is a test rather than a hope.
+
+The services are what give it teeth. A gasleiding or a cable is an umbrella:
+what rests on it never falls on its own, so there is a column of wall
+standing dry underneath that has to come apart by hand, with the beitel,
+because the voorhamer is not allowed near it. Where they run was chosen by
+sweeping every position and keeping the layout that punished greed hardest.
+tools/sloop-kies.ts does the sweep.
+
+Par is computed by an exact solver rather than written down by hand, so it
+can never drift from the level, and the same solver powers the hint. The
+solver leans on one fact: swings and collapse both only ever take bricks
+away, so playing a set of swings in any order leaves the same wall standing.
+What is searched is a set, not a sequence.
+
+Levels are no longer drawn by hand. tools/walls.py finds the wall planes in
+the lidar scan, projects each one into an elevation, and detects the openings
+as gaps bounded by wall above and below. data/house.ts holds the result as
+measured surfaces, and the Sloop grid is generated from those: real width,
+real ceiling height, real windows, with a lintel over each opening. Knock a
+hole in an outside wall and you see the garden.
+
+Which wall belongs to which room is still a guess, and marked so in the data.
+Nothing downstream depends on it: relabelling is three fields in house.ts.
+
+Week 2, Elektra: run a cable from every stopcontact to the meterkast without
+any two crossing, around the real windows and lintels. The no-crossing rule
+took three goes to get right — see model.ts — and the solver that sets par
+also proves every level is wireable.
+
+Six walls now, so six levels per stage. Elektra escalates: sockets to the
+meterkast, then a lamp that must reach a schakelaar first, then two lamps
+sharing one switch. A lamp's amps land on whichever groep its switch
+reached, so the chain decides the load as well as the route.
+
+Nine Elektra levels. The last three add a wisselschakelaar — one lamp
+switched from two places, so the run goes lamp to the near switch, that to
+the far one, and only the far one to the lichtgroep. Three walls appear in
+Elektra only: interior walls that never had to come down but still need
+wiring.
+
+Later levels add a lichtgroep. Lights and wandcontactdozen may not share a
+breaker, which is real practice, so lamps are forced onto LICHT and the
+remaining decision is which of two socket groups each stopcontact goes on —
+decided by the amps. Some walls also carry waterleiding that was already
+there and has to be routed around.
+
+Ventilatie is a rotation puzzle: the whole system as a blueprint with every
+piece turned the wrong way. Click to turn a quarter; it is right when every
+opening meets an opening, nothing vents into a wall, and the lot hangs
+together back to the WTW. Duct that is actually joined lights up, so the
+system fills in as it comes right. The drawing sits on the house: the real
+footprint from the scan, walled, with the rooms named, so a rooster is in a
+room rather than at a coordinate. Two plans between phases, each covering
+one room, then the boss over the whole house — eighteen roosters, par 69. That one is the only
+one marked GELEVERD.
+
+The sliding puzzle it replaced was good but wrong for ventilation, so it
+moved to Leeghalen — stage 1, shoving the furniture out through the door,
+which is what the stage table always wanted it for.
+
+It arrived there still drawn as ventilation duct, which meant six identical
+ribbed grey rectangles in a room the text kept calling a bank and a kast.
+Every piece now knows what it is and is drawn as that thing seen from above:
+the bank has arms and cushions, the boekenkast has spines, the koelkast has
+a freezer and two handles, the aanrecht has a sink and draining grooves, the
+dozen are taped shut. The floor under them is the white marble that was
+there before the sloop, because stage 1 is the last time anyone sees it.
+What has to get out keeps its own colours and wears a yellow ring instead,
+so the room stays a room and the target still reads at a glance.
+
+Isolatie is built: pack the stud cavity full of wool with no gap and no
+overlap, because every gap is a koudebrug. There is more wool in the stack
+than the cavity needs and the awkward shapes carry the most Rc, so which
+batts get the space is the decision — the number on a batt changes the
+outcome rather than decorating it.
+
+Schilderen is the roller: cover the whole wall in one run, keeping the wet
+edge, and every square you go over twice shows as a lap mark. The wall is a
+measured one, drawn in its room, and it turns from the old finish to fresh
+oker behind the roller — so how far you have got, and which corner you have
+left bare, is something you look at. Par is the number of squares, which a
+perfect run covers exactly once.
+
+Water is dropped. Two attempts went in the bin: a manifold-balancing puzzle
+that was unreadable, and a drain-fall one that read well but was work he
+never did. If a stage needs inventing twice, the stage is the problem.
+
+Vloeren is the floor: one decision per course, how long its first plank is,
+with the off-cut carrying to the next course and the joint rule making the
+cheap start often the illegal one.
+
+Dichtzetten is deduction, which nothing else in the game is. The first go
+at it was a nonogram of the frame and it did not work: a dense grid of
+runs, abstract to look at, tedious to fill in. Replaced with klossen,
+which is tents-and-trees with a stud finder.
+
+Everything that hangs on the wall is pencilled on it where it really goes
+— kastjes, a tv-beugel, a radiator — and each one needs its own klos, a
+block of timber behind the board, in one of the four squares against it.
+Two klossen never touch, not even at the corner, and the numbers on the
+masking tape along the edges are what the detector beeps per row and per
+column. One click rules a square out, the next one drills, the third fills
+it back in. A hole in the wrong place still costs a star, and the wall
+keeps a mark where it was, but it can be patched: holes used to be
+permanent, which meant one slip left the counts wrong for good and the
+level could never be finished. A wall that looks done and is not now says
+what is wrong, because that is the moment someone decides the game is
+broken — and it points: the squares a complaint is about are ringed in
+red, and a row or column the detector disagrees with goes red on the
+tape. Saying two klossen touch without saying which two sends the player
+back over the whole wall, and on a grid a corner-to-corner pair does not
+look like it is touching at all, so the message names the rule as well.
+
+Walls are generated and filtered, never drawn: the rules-only solver has
+to reach the end on its own, and the exact counter has to find exactly one
+answer. There is a test that the rules never deduce a square the answer
+disagrees with, because a rule that oversteps would hand the player a hole.
+
+No plumbing stage. He did not do any worth the name.
+
+## 10. Waiting on the wall designs
+
+Deferred on purpose until the real wall drawings arrive, because they will
+decide both:
+
+- **Level content.** Every stage's levels should sit on the actual walls.
+  Sloop and Elektra already do, from the scan; Isolatie's cavities and
+  Ventilatie's plans are still stand-ins.
+- **Difficulty.** The puzzles are a notch too easy across the board. Tuning
+  them before the real geometry lands would only mean tuning them twice.
+
+The data is all in `data/`, so both are data edits rather than rewrites.
+
+## 11. Open
+
+- Final title
+- Final surface selection (needs floor plan)
+- Ceiling heights, window and door positions — from CamToPlan export plus video
+- Outro video from Pim
