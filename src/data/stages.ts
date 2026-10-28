@@ -124,7 +124,7 @@ export const STAGES: readonly Stage[] = [
       id: l.id,
       titel: l.ruimte,
       vlak: 'VLOER LEGGEN',
-      samenvatting: `${l.vloer.rijen} RIJEN`,
+      samenvatting: `${l.vloer.vorm.length} RIJEN`,
     })),
   },
   {
