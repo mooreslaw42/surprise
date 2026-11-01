@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <title>De Eeuwige Verbouwing</title>
+    <meta name="description" content="Een pixel-art puzzelspel over een huis dat, anders dan het echte, wel af komt. Een Sinterklaassurprise." />
+    <meta name="theme-color" content="#0e0d0b" />
+    <!-- Pixel-art house in the game's own palette, inline so there is no asset to ship. -->
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiIgc2hhcGUtcmVuZGVyaW5nPSJjcmlzcEVkZ2VzIj48cmVjdCB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIGZpbGw9IiMwZTBkMGIiLz48cmVjdCB4PSIyIiB5PSIxMyIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEiIGZpbGw9IiM0NjM5MmYiLz48cG9seWdvbiBwb2ludHM9IjgsMiAxNCw3IDIsNyIgZmlsbD0iIzkxM2IyNyIvPjxwb2x5Z29uIHBvaW50cz0iOCwyIDE0LDcgOCw3IiBmaWxsPSIjNmUyZjIzIi8+PHJlY3QgeD0iNyIgeT0iMiIgd2lkdGg9IjIiIGhlaWdodD0iMSIgZmlsbD0iI2MyNWYzMyIvPjxyZWN0IHg9IjExIiB5PSIzIiB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBmaWxsPSIjNDYzOTJmIi8+PHJlY3QgeD0iMyIgeT0iNyIgd2lkdGg9IjEwIiBoZWlnaHQ9IjYiIGZpbGw9IiNjYzhhMmUiLz48cmVjdCB4PSIzIiB5PSI3IiB3aWR0aD0iMTAiIGhlaWdodD0iMSIgZmlsbD0iI2YwYzA2YSIvPjxyZWN0IHg9IjUiIHk9IjkiIHdpZHRoPSIzIiBoZWlnaHQ9IjMiIGZpbGw9IiM4ZmMzZGQiLz48cmVjdCB4PSI1IiB5PSI5IiB3aWR0aD0iMyIgaGVpZ2h0PSIxIiBmaWxsPSIjMmQ0NjYzIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMiIgaGVpZ2h0PSIzIiBmaWxsPSIjNmUyZjIzIi8+PHJlY3QgeD0iMSIgeT0iNiIgd2lkdGg9IjEiIGhlaWdodD0iOCIgZmlsbD0iIzlhOTA4MSIvPjxyZWN0IHg9IjEiIHk9IjgiIHdpZHRoPSI0IiBoZWlnaHQ9IjEiIGZpbGw9IiM5YTkwODEiLz48cmVjdCB4PSIxIiB5PSIxMSIgd2lkdGg9IjQiIGhlaWdodD0iMSIgZmlsbD0iIzlhOTA4MSIvPjwvc3ZnPg==" />
+    <!-- Link previews, for when the surprise is shared as a bare URL. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="De Eeuwige Verbouwing" />
+    <meta property="og:description" content="Een pixel-art puzzelspel over een huis dat wel af komt." />
     <style>
       html, body {
         margin: 0;
@@ -18,10 +26,21 @@
         image-rendering: pixelated;
         cursor: none;
       }
+      #geen-js {
+        color: #cdc6b2;
+        font: 16px/1.5 system-ui, sans-serif;
+        text-align: center;
+        margin: 20vh auto 0;
+        max-width: 30em;
+        padding: 0 1em;
+      }
     </style>
   </head>
   <body>
     <canvas id="screen"></canvas>
+    <noscript>
+      <p id="geen-js">De Eeuwige Verbouwing draait in de browser met JavaScript. Zet JavaScript aan om te spelen.</p>
+    </noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
