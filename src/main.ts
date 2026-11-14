@@ -163,6 +163,12 @@ class Game implements SceneContext {
   }
 }
 
+// Typing the switch onto the address of a page that is already open only
+// changes the hash; reload so it is actually read.
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#alles' || location.hash === '#opnieuw') location.reload();
+});
+
 const canvas = document.getElementById('screen');
 if (!(canvas instanceof HTMLCanvasElement)) throw new Error('canvas #screen missing');
 const save = new Save(typeof localStorage === 'undefined' ? null : localStorage);
