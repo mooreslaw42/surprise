@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {
   type Bord,
   NOORD, OOST, ZUID, WEST, LEEG,
-  afstand, draai, faults, isSolved, openingen, periode, soort, stars, verbonden,
+  AF, TOE, afstand, draai, faults, isSolved, kortste, lucht, openingen, periode, soort, stars, verbonden,
 } from './model.ts';
-import { solve } from './solver.ts';
+import { solve, tel } from './solver.ts';
 import { KANAAL_LEVELS } from './levels.ts';
 import { PLATTEGROND, binnenshuis, ruimteOp } from '../../data/plattegrond.ts';
 
@@ -81,7 +81,7 @@ test('every shipped plan comes right, and par is the fewest turns', () => {
     // The cost really is the number of turns from the board as it ships.
     let turns = 0;
     for (let i = 0; i < level.bord.masks.length; i++) {
-      const d = afstand(level.bord.masks[i]!, oplossing[i]!);
+      const d = kortste(level.bord.masks[i]!, oplossing[i]!);
       assert.ok(d >= 0, `${level.id}: piece ${i} is not a turn of the original`);
       turns += d;
     }
@@ -89,15 +89,56 @@ test('every shipped plan comes right, and par is the fewest turns', () => {
   }
 });
 
-test('every rooster ends up fed by the unit', () => {
+test('every rooster ends up on its own system', () => {
   for (const level of KANAAL_LEVELS) {
     const { oplossing } = solve(level.bord, level.bord.masks);
-    const live = verbonden(level.bord, oplossing);
+    const { h } = lucht(level.bord, oplossing);
+    const af = new Set(level.bord.afRoosters ?? []);
     for (const r of level.bord.roosters) {
-      assert.ok(live[r], `${level.id}: rooster ${r} gets no air`);
+      assert.equal(h[r], af.has(r) ? AF : TOE, `${level.id}: rooster ${r} is on the wrong air`);
     }
-    assert.ok(live[level.bord.wtw], `${level.id}: the unit is not in its own system`);
   }
+});
+
+test('every plan has exactly one answer', () => {
+  for (const level of KANAAL_LEVELS) {
+    assert.equal(tel(level.bord, level.bord.masks, 2), 1, `${level.id}: somewhere the player has to guess`);
+  }
+});
+
+test('from the second plan on there are two systems, and they cross', () => {
+  assert.equal(KANAAL_LEVELS[0]!.bord.afvoer, undefined, 'the first plan is for learning to turn');
+  for (const level of KANAAL_LEVELS.slice(1)) {
+    assert.notEqual(level.bord.afvoer, undefined, `${level.id} is one system`);
+    assert.ok((level.bord.kruisingen ?? []).length >= 1, `${level.id} has no kruising`);
+    assert.ok((level.bord.afRoosters ?? []).length >= 2, `${level.id} has almost no afvoer`);
+  }
+});
+
+test('air goes straight over a kruising and does not turn onto the other duct', () => {
+  // A cross of five cells: toevoer runs west to east, afvoer north to south.
+  const bord = {
+    width: 3, height: 3,
+    masks: [0, ZUID, 0, OOST, 15, WEST, 0, NOORD, 0],
+    wtw: 3, afvoer: 1, roosters: [5, 7], afRoosters: [7], kruisingen: [4],
+  };
+  assert.ok(isSolved(bord, bord.masks));
+  const { h, v } = lucht(bord, bord.masks);
+  assert.equal(h[4], TOE);
+  assert.equal(v[4], AF);
+  // The same drawing with an ordinary four-way piece there: one system.
+  const samen = { ...bord, kruisingen: [] };
+  assert.ok(faults(samen, samen.masks).some((f) => f.kind === 'gemengd'));
+});
+
+test('a rooster on the wrong system is a fault even when nothing leaks', () => {
+  const bord = {
+    width: 3, height: 1, masks: [OOST, OOST | WEST, WEST],
+    wtw: 0, afvoer: 2, roosters: [] as number[], afRoosters: [] as number[],
+  };
+  assert.ok(faults(bord, bord.masks).some((f) => f.kind === 'gemengd'), 'the two units are joined');
+  const fout = { width: 2, height: 2, masks: [OOST, WEST, OOST, WEST], wtw: 0, afvoer: 2, roosters: [1, 3], afRoosters: [1] };
+  assert.deepEqual(faults(fout, fout.masks).filter((f) => f.kind === 'verkeerd').map((f) => f.at), [1, 3]);
 });
 
 test('the plans build, each harder than the last', () => {

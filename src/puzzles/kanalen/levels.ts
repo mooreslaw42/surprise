@@ -4,10 +4,15 @@ import { PLATTEGROND } from '../../data/plattegrond.ts';
 /**
  * Kanaalplannen: the ventilation drawing, with the pieces turned wrong.
  *
- * Generated rather than drawn — a spanning tree of duct over the rooms, then
- * a set number of pieces turned off true — so every board is solvable by
- * construction and its par is known. Baked in here so a plan never changes
- * under someone mid-game.
+ * Generated rather than drawn, by tools/kanaal-zoek.ts: duct grown over the
+ * rooms as trees, every piece then turned at random, and the board kept only
+ * if exactly one arrangement makes it right. So each is solvable, its par is
+ * known, and nowhere on it does the player have to guess. Baked in here so a
+ * plan never changes under someone mid-game.
+ *
+ * The first is one system, to learn the turning on. From the second on there
+ * are two — toevoer and afvoer, which may not meet — and kruisingen where
+ * one is carried over the other. That is what stopped this being a patience.
  *
  * Every board is the whole footprint, with duct only in the rooms that plan
  * covers; the rest of the house is drawn around it. The shape is the real one
@@ -32,28 +37,29 @@ export type KanaalLevel = {
 const UITLEG_EERSTE = [
   'HET VENTILATIEPLAN. ALLE KANALEN STAAN VERKEERD OM.',
   'KLIK OP EEN STUK EN HET DRAAIT EEN KWARTSLAG. RECHTERMUIS DRAAIT DE ANDERE KANT OP.',
-  'HET KLOPT ALS ELKE OPENING OP EEN OPENING UITKOMT, NIETS BLIND ZIT, EN ALLES AAN DE WTW HANGT.',
+  'HET KLOPT ALS ELKE OPENING OP EEN OPENING UITKOMT, NIETS BLIND ZIT, EN ALLES AAN DE WTW HANGT. ER IS MAAR EEN MANIER, DUS EERST KIJKEN, DAN DRAAIEN.',
 ];
 
-const UITLEG_LATER = [
-  'HET PLAN, WEER. GROTER, EN MEER STUKKEN STAAN VERKEERD.',
-  'KLIKKEN OM TE DRAAIEN. ALLES MOET AAN ELKAAR, EN ALLES MOET AAN DE WTW.',
+const UITLEG_TWEE = [
+  'HET PLAN, WEER. MAAR EEN WTW IS TWEE SYSTEMEN: TOEVOER BLAAST VERSE LUCHT IN, AFVOER ZUIGT DE OUDE WEG.',
+  'GROEN IS TOEVOER, ROOD IS AFVOER. ELK ROOSTER MOET AAN ZIJN EIGEN KLEUR HANGEN, EN DE TWEE MOGEN ELKAAR NERGENS RAKEN.',
+  'WAAR ZE ELKAAR KRUISEN LIGT EEN KRUISING: DE EEN GAAT OVER DE ANDER HEEN. DIE ZIT VAST EN DRAAIT NIET.',
 ];
 
 const UITLEG_GROOT = [
-  'TWEE KAMERS IN EEN PLAN. DE KOKERS MOETEN STRAKS ONDER DE VLOER DOOR, DUS NU MOET HET KLOPPEN.',
-  'ZELFDE REGELS, DRIE KEER ZOVEEL STUKKEN. ELKE OPENING OP EEN OPENING, ALLES AAN DE WTW.',
+  'TWEE KAMERS IN EEN PLAN, TWEE SYSTEMEN, DRIE KRUISINGEN.',
+  'BEGIN BIJ WAT VASTLIGT: DE RAND, DE KRUISINGEN, DE ROOSTERS MET HUN KLEUR. DE REST VOLGT.',
   'EN NEE, HIJ IS ER NOG STEEDS NIET.',
 ];
 
 const UITLEG_VIER = [
   'PLAN VIER. NU MET DE TV-KAMER ERBIJ, WANT DIE STOND ER DE VORIGE KEER NIET OP.',
-  'JE KENT HET: KLIKKEN OM TE DRAAIEN, ELKE OPENING OP EEN OPENING, ALLES AAN DE WTW.',
+  'JE KENT HET: GROEN AAN GROEN, ROOD AAN ROOD, NERGENS DOOR ELKAAR.',
   'DE UNIT ZELF IS ONDERWEG. DAT IS HIJ AL EEN TIJDJE.',
 ];
 
 const UITLEG_VIJF = [
-  'HET HELE HUIS, IN EEN PLAN. ELKE KOKER, ELK ROOSTER, ELKE BOCHT.',
+  'HET HELE HUIS, IN EEN PLAN. ELKE KOKER, ELK ROOSTER, VIJF KRUISINGEN.',
   'ALS DIT KLOPT, HOEFT HIJ ALLEEN NOG MAAR GELEVERD TE WORDEN.',
   'ALLEEN NOG MAAR.',
 ];
@@ -63,36 +69,39 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     id: 'kanalen-1',
     nummer: 1,
     titel: 'KANAALPLAN 1',
-    praatje: 'ALLEEN DE KEUKEN. DRAAI DE STUKKEN TOT HET KLOPT.',
+    praatje: 'ALLEEN DE KEUKEN. ER IS MAAR EEN MANIER.',
     levering: 'LEVERING VERWACHT: WEEK 14',
     baas: false,
     dekking: 'KEUKEN',
     uitleg: UITLEG_EERSTE,
     bord: {
       width, height,
-      masks: [0, 0, 0, 0, 0, 1, 7, 5, 5, 6, 0, 0, 0, 0, 0, 8, 10, 1, 5, 13,
-        0, 0, 0, 0, 0, 3, 12, 4, 5, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      masks: [0, 0, 0, 0, 0, 8, 13, 1, 12, 4, 0, 0, 0, 0, 0, 12, 15, 13, 14, 1,
+        0, 0, 0, 0, 0, 8, 8, 6, 5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       wtw: 5,
-      roosters: [15, 17, 27],
+      roosters: [7, 9, 19, 25, 26, 29],
     },
   },
   {
     id: 'kanalen-2',
     nummer: 2,
     titel: 'KANAALPLAN 2',
-    praatje: 'NU DE WOONKAMER ERBIJ. ZELFDE IDEE, MEER STUKKEN.',
+    praatje: 'DE WOONKAMER. GROEN BLAAST, ROOD ZUIGT.',
     levering: 'LEVERING VERWACHT: WEEK 23',
     baas: false,
     dekking: 'WOONKAMER',
-    uitleg: UITLEG_LATER,
+    uitleg: UITLEG_TWEE,
     bord: {
       width, height,
-      masks: [9, 6, 8, 3, 1, 0, 0, 0, 0, 0, 4, 10, 11, 6, 1, 0, 0, 0, 0, 0,
-        1, 11, 15, 7, 14, 0, 0, 0, 0, 0, 1, 5, 12, 8, 8, 0, 0, 0, 0, 0,
+      masks: [1, 6, 4, 12, 6, 0, 0, 0, 0, 0, 2, 6, 15, 7, 2, 0, 0, 0, 0, 0,
+        7, 5, 13, 12, 9, 0, 0, 0, 0, 0, 8, 4, 13, 2, 1, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      wtw: 2,
-      roosters: [4, 10, 14, 20, 30, 33, 34],
+      wtw: 0,
+      roosters: [2, 14, 30, 31, 33, 34],
+      afvoer: 10,
+      afRoosters: [2, 30, 31, 33],
+      kruisingen: [12],
     },
   },
   {
@@ -106,49 +115,56 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     uitleg: UITLEG_GROOT,
     bord: {
       width, height,
-      masks: [12, 4, 2, 8, 3, 11, 5, 6, 2, 8, 13, 13, 14, 7, 6, 14, 3, 11, 13, 11,
-        2, 10, 4, 5, 7, 9, 2, 9, 4, 8, 1, 13, 4, 1, 12, 0, 0, 0, 0, 0,
+      masks: [2, 13, 13, 5, 12, 3, 5, 7, 8, 8, 1, 3, 11, 4, 14, 15, 6, 6, 13, 12,
+        2, 5, 15, 10, 15, 3, 2, 8, 14, 8, 8, 5, 14, 2, 1, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      wtw: 5,
-      roosters: [1, 2, 3, 8, 9, 20, 22, 26, 28, 29, 30, 32, 33],
+      wtw: 4,
+      roosters: [0, 8, 9, 10, 13, 20, 26, 27, 29, 30, 33, 34],
+      afvoer: 5,
+      afRoosters: [8, 9, 20, 27, 29],
+      kruisingen: [15, 22, 24],
     },
   },
   {
     id: 'kanalen-4',
     nummer: 4,
     titel: 'KANAALPLAN 4',
-    praatje: 'DE ANDERE KANT VAN HET HUIS. HET PLAN IS INMIDDELS BETER DAN HET HUIS.',
+    praatje: 'HET PLAN IS INMIDDELS BETER DAN HET HUIS.',
     levering: 'LEVERING VERWACHT: WEEK 47',
     baas: false,
     dekking: 'WOONKAMER + TV-KAMER',
     uitleg: UITLEG_VIER,
     bord: {
       width, height,
-      masks: [3, 1, 4, 6, 8, 0, 0, 0, 0, 0, 12, 7, 5, 13, 11, 0, 0, 0, 0, 0,
-        8, 4, 8, 5, 7, 0, 0, 0, 0, 0, 6, 5, 5, 5, 14, 6, 8, 5, 9, 1,
-        0, 0, 0, 0, 0, 10, 8, 12, 14, 14, 0, 0, 0, 0, 0, 6, 14, 6, 8, 12],
+      masks: [4, 10, 6, 12, 3, 0, 0, 0, 0, 0, 4, 1, 5, 5, 8, 0, 0, 0, 0, 0,
+        9, 11, 12, 14, 9, 0, 0, 0, 0, 0, 1, 14, 5, 5, 11, 12, 1, 13, 9, 1,
+        0, 0, 0, 0, 0, 11, 10, 15, 15, 14, 0, 0, 0, 0, 0, 8, 1, 3, 8, 2],
       wtw: 59,
-      roosters: [1, 2, 4, 20, 21, 22, 36, 39, 46, 58],
+      roosters: [0, 10, 11, 14, 30, 36, 39, 55, 56],
+      afvoer: 58,
+      afRoosters: [36, 56],
+      kruisingen: [47, 48],
     },
   },
   {
-    // This board was the boss until the boss became a level of its own: the
-    // whole house on one sheet. It is now the last time it is only a plan.
     id: 'kanalen-5',
     nummer: 5,
     titel: 'KANAALPLAN 5',
-    praatje: 'HET HELE HUIS OP EEN VEL. DIT IS HET LAATSTE PLAN. ECHT.',
+    praatje: 'HET HELE HUIS. HET LAATSTE PLAN. ECHT.',
     levering: 'LEVERING VERWACHT: MORGEN',
     baas: false,
     dekking: 'HET HELE HUIS',
     uitleg: UITLEG_VIJF,
     bord: {
       width, height,
-      masks: [4, 9, 1, 5, 3, 12, 5, 5, 1, 8, 8, 11, 9, 1, 11, 13, 3, 2, 3, 3,
-        4, 14, 11, 9, 2, 13, 14, 1, 10, 4, 1, 6, 4, 11, 5, 11, 10, 1, 7, 3,
-        0, 0, 0, 0, 0, 7, 15, 15, 15, 12, 0, 0, 0, 0, 0, 1, 2, 2, 1, 1],
+      masks: [4, 11, 5, 5, 11, 2, 4, 9, 2, 4, 8, 15, 14, 5, 15, 6, 11, 6, 8, 13,
+        8, 15, 7, 1, 1, 12, 15, 14, 13, 12, 8, 7, 10, 5, 5, 6, 10, 1, 11, 4,
+        0, 0, 0, 0, 0, 11, 15, 7, 15, 3, 0, 0, 0, 0, 0, 2, 4, 1, 4, 2],
       wtw: 0,
-      roosters: [2, 8, 9, 10, 13, 17, 20, 24, 27, 29, 30, 32, 37, 55, 56, 57, 58, 59],
+      roosters: [5, 6, 8, 9, 18, 20, 23, 24, 30, 37, 39, 55, 56, 57, 58, 59],
+      afvoer: 10,
+      afRoosters: [6, 8, 9, 18, 20, 23, 37, 39, 56, 58],
+      kruisingen: [11, 14, 21, 46, 48],
     },
   },
 ];

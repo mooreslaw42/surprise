@@ -445,8 +445,15 @@ the level for you. Both fixed.
   caps the level at two stars.
 
 Not touched, because they were reworked on Pim's own playtests and held up:
-Sloop, Elektra, Dichtzetten, Vloeren. Not touched and still a patience:
-the kanaalplannen. Par 59, 66 and 69 in a row is a lot of clicking.
+Sloop, Elektra, Dichtzetten, Vloeren.
+
+**The kanaalplannen** were the last patience and are not one any more. From
+plan 2 on the drawing is two systems, toevoer and afvoer, each with its own
+roosters, which may never join; where they pass there is a kruising, one
+duct over the other, bolted down. Every plan has exactly one answer, which
+the test suite counts, and every piece ships turned. Par is 16, 18, 30, 32
+and 49 — lower than the 59, 66 and 69 it was, because a turn now goes either
+way round and because the work moved from the mouse to the head.
 
 **The rooms, from the photos.** The woonkamer ceiling is one pale salie,
 beams and boards alike; the keuken's is white; the tv-kamer's is white with

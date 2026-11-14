@@ -7,8 +7,8 @@ import type { Save } from '../engine/save.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import { Dialogue } from './dialogue.ts';
 import {
-  LEEG, RICHTINGEN,
-  draai, faults, isSolved, stars, verbonden,
+  AF, LEEG, RICHTINGEN, TOE,
+  afstand, draai, faults, isSolved, lucht, periode, stars,
 } from '../puzzles/kanalen/model.ts';
 import { solve } from '../puzzles/kanalen/solver.ts';
 import type { KanaalLevel } from '../puzzles/kanalen/levels.ts';
@@ -88,7 +88,9 @@ export class KanalenScene implements Scene {
       const { oplossing } = solve(this.level.bord, this.masks);
       const i = this.masks.findIndex((m, k) => m !== oplossing[k]);
       if (i >= 0) {
-        this.masks[i] = draai(this.masks[i]!, 1);
+        // Whichever way round is shorter, as the player would.
+        const om = afstand(this.masks[i]!, oplossing[i]!);
+        this.masks[i] = draai(this.masks[i]!, om * 2 > periode(this.masks[i]!) ? 3 : 1);
         this.draaien++;
       }
       this.check();
@@ -96,7 +98,8 @@ export class KanalenScene implements Scene {
     }
 
     const i = this.cellAt(ctx);
-    if (i >= 0 && this.masks[i] !== LEEG && ctx.input.mouseClicked) {
+    const vast = (this.level.bord.kruisingen ?? []).includes(i);
+    if (i >= 0 && this.masks[i] !== LEEG && !vast && ctx.input.mouseClicked) {
       // The explanation has always promised this; now the mouse delivers.
       this.masks[i] = draai(this.masks[i]!, ctx.input.mouseRechts ? 3 : 1);
       this.draaien++;
@@ -184,24 +187,60 @@ export class KanalenScene implements Scene {
     }
   }
 
-  /** Lit where the air actually reaches, pale where it does not. */
+  /** Body and edge colour for a length of duct, by what air is in it. */
+  private kleurVan(merk: number): { kleur: number; rand: number } {
+    if (merk === TOE) return { kleur: C.SALIE, rand: C.DONKERSALIE };
+    if (merk === AF) return { kleur: C.ROESTROOD, rand: C.DONKERROOD };
+    if (merk === (TOE | AF)) {
+      // Both at once: the one thing that must not happen, so it shouts.
+      return Math.floor(this.time * 4) % 2 === 0
+        ? { kleur: C.MAGENTA, rand: C.WIT } : { kleur: C.WIT, rand: C.MAGENTA };
+    }
+    return { kleur: C.ZANDGRIJS, rand: C.ASGRIJS };
+  }
+
+  /**
+   * Green where the fresh air reaches, red where the stale air is drawn
+   * off, pale where neither does. A kruising is drawn as what it is: one
+   * duct lying across another, with a gap either side to show it is over.
+   */
   private drawDuct(screen: Screen): void {
     const bord = this.level.bord;
-    const live = verbonden(bord, this.masks);
+    const { h, v } = lucht(bord, this.masks);
     const lek = new Set<number>();
-    for (const f of faults(bord, this.masks)) if (f.kind === 'lek') lek.add(f.at);
+    const fout = new Set<number>();
+    for (const f of faults(bord, this.masks)) {
+      if (f.kind === 'lek') lek.add(f.at);
+      if (f.kind === 'verkeerd') fout.add(f.at);
+    }
+    const kruis = new Set(bord.kruisingen ?? []);
+    const af = new Set(bord.afRoosters ?? []);
+    const mid = Math.floor(this.tile / 2);
+    const thick = Math.max(3, Math.floor(this.tile / 4));
+    const off = mid - Math.floor(thick / 2);
 
     for (let i = 0; i < this.masks.length; i++) {
       const mask = this.masks[i]!;
       if (mask === LEEG) continue;
       const x = this.originX + (i % bord.width) * this.tile;
       const y = this.originY + Math.floor(i / bord.width) * this.tile;
-      const mid = Math.floor(this.tile / 2);
-      const thick = Math.max(3, Math.floor(this.tile / 4));
-      const off = mid - Math.floor(thick / 2);
-      const kleur = live[i] ? C.SALIE : C.ZANDGRIJS;
-      const rand = live[i] ? C.DONKERSALIE : C.ASGRIJS;
 
+      if (kruis.has(i)) {
+        const onder = this.kleurVan(v[i]!);
+        const boven = this.kleurVan(h[i]!);
+        screen.fillRect(x + off, y, thick, this.tile, onder.kleur);
+        screen.fillRect(x + off, y, 1, this.tile, onder.rand);
+        screen.fillRect(x, y + off - 2, this.tile, thick + 4, C.DIEPBLAUW);
+        screen.fillRect(x, y + off, this.tile, thick, boven.kleur);
+        screen.fillRect(x, y + off, this.tile, 1, boven.rand);
+        // Bolted down: four dots, so nobody tries to turn it.
+        for (const [dx, dy] of [[2, 2], [this.tile - 3, 2], [2, this.tile - 3], [this.tile - 3, this.tile - 3]] as const) {
+          screen.set(x + dx, y + dy, C.ZANDGRIJS);
+        }
+        continue;
+      }
+
+      const { kleur, rand } = this.kleurVan(h[i]!);
       for (const r of RICHTINGEN) {
         if (!(mask & r.bit)) continue;
         if (r.dx === 0) {
@@ -218,16 +257,33 @@ export class KanalenScene implements Scene {
       screen.fillRect(x + off - 1, y + off - 1, thick + 2, thick + 2, kleur);
       screen.strokeRect(x + off - 1, y + off - 1, thick + 2, thick + 2, rand);
 
-      if (i === bord.wtw) {
+      if (i === bord.wtw || i === bord.afvoer) {
+        const isAf = i === bord.afvoer;
         screen.fillRect(x + 2, y + 2, this.tile - 4, this.tile - 4, C.ASGRIJS);
-        screen.strokeRect(x + 2, y + 2, this.tile - 4, this.tile - 4, C.WIT);
+        screen.strokeRect(x + 2, y + 2, this.tile - 4, this.tile - 4,
+          bord.afvoer === undefined ? C.WIT : isAf ? C.ROESTROOD : C.SALIE);
         const spin = Math.floor(this.time * 6) % 2 === 0;
         screen.fillRect(x + mid - 4, y + mid - (spin ? 0 : 1), 9, 2, C.ROET);
         screen.fillRect(x + mid - (spin ? 1 : 0), y + mid - 4, 2, 9, C.ROET);
       } else if (bord.roosters.includes(i)) {
-        screen.fillRect(x + mid - 4, y + mid - 4, 9, 9, live[i] ? C.BOTERGEEL : C.ZANDGRIJS);
-        screen.strokeRect(x + mid - 4, y + mid - 4, 9, 9, C.ROET);
-        for (let g = -2; g <= 2; g += 2) screen.fillRect(x + mid - 3, y + mid + g, 7, 1, C.ROET);
+        // The frame says which air it wants, lit or not; the inside lights
+        // only when that is the air it is getting.
+        const wil = af.has(i) ? AF : TOE;
+        const goed = h[i] === wil;
+        const kader = bord.afvoer === undefined ? C.ROET : wil === AF ? C.ROESTROOD : C.SALIE;
+        screen.fillRect(x + mid - 5, y + mid - 5, 11, 11, kader);
+        screen.fillRect(x + mid - 4, y + mid - 4, 9, 9, goed ? C.BOTERGEEL : C.ZANDGRIJS);
+        if (wil === AF) {
+          // Extract: a round grille. Supply: slats.
+          screen.strokeEllipse(x + mid, y + mid, 3, 3, C.ROET);
+          screen.set(x + mid, y + mid, C.ROET);
+        } else {
+          for (let g = -2; g <= 2; g += 2) screen.fillRect(x + mid - 3, y + mid + g, 7, 1, C.ROET);
+        }
+        if (fout.has(i)) {
+          screen.line(x + mid - 4, y + mid - 4, x + mid + 4, y + mid + 4, C.MAGENTA);
+          screen.line(x + mid + 4, y + mid - 4, x + mid - 4, y + mid + 4, C.MAGENTA);
+        }
       }
 
       if (lek.has(i)) screen.fillRect(x + 1, y + 1, 2, 2, C.ROESTROOD);
@@ -236,7 +292,7 @@ export class KanalenScene implements Scene {
 
   private drawHover(screen: Screen, ctx: SceneContext): void {
     const i = this.cellAt(ctx);
-    if (i < 0 || this.masks[i] === LEEG) return;
+    if (i < 0 || this.masks[i] === LEEG || (this.level.bord.kruisingen ?? []).includes(i)) return;
     const x = this.originX + (i % this.level.bord.width) * this.tile;
     const y = this.originY + Math.floor(i / this.level.bord.width) * this.tile;
     screen.strokeRect(x, y, this.tile, this.tile, C.WIT);
@@ -259,13 +315,26 @@ export class KanalenScene implements Scene {
     const bord = this.level.bord;
     screen.fillRect(0, y, WIDTH, BOTTOM_H, C.ZWART);
     screen.fillRect(0, y, WIDTH, 1, C.STEEN);
-    const live = verbonden(bord, this.masks);
-    const aan = bord.roosters.filter((i) => live[i]).length;
+    const { h } = lucht(bord, this.masks);
+    const af = new Set(bord.afRoosters ?? []);
+    const aan = bord.roosters.filter((i) => h[i] === (af.has(i) ? AF : TOE)).length;
     screen.text(`ROOSTERS ${aan}/${bord.roosters.length}`, 6, y + 7, C.KALK);
+    if (bord.afvoer !== undefined) {
+      // Which colour is which, where it is always in view.
+      screen.fillRect(112, y + 7, 7, 7, C.SALIE);
+      screen.text('TOEVOER', 122, y + 7, C.SALIE);
+      screen.fillRect(176, y + 7, 7, 7, C.ROESTROOD);
+      screen.text('AFVOER', 186, y + 7, C.ROESTROOD);
+    }
     screen.text('U  H', WIDTH - 6 - 4 * 6, y + 7, C.STEEN);
-    const lekken = faults(bord, this.masks).filter((f) => f.kind === 'lek').length;
-    screen.text(lekken > 0 ? `${lekken} OPEN EINDEN` : this.level.praatje, 6, y + 20,
-      lekken > 0 ? C.ROESTROOD : C.ASGRIJS);
+    const mis = faults(bord, this.masks);
+    const lekken = mis.filter((f) => f.kind === 'lek').length;
+    const gemengd = mis.some((f) => f.kind === 'gemengd');
+    const verkeerd = mis.filter((f) => f.kind === 'verkeerd').length;
+    const regel = gemengd ? 'TOEVOER EN AFVOER ZITTEN AAN ELKAAR'
+      : verkeerd > 0 ? `${verkeerd} ROOSTERS AAN DE VERKEERDE LUCHT`
+        : lekken > 0 ? `${lekken} OPEN EINDEN` : this.level.praatje;
+    screen.text(regel, 6, y + 20, gemengd || verkeerd > 0 || lekken > 0 ? C.ROESTROOD : C.ASGRIJS);
     screen.text('R = OPNIEUW', WIDTH - 6 - 11 * 6, y + 20, C.STEEN);
   }
 

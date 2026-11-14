@@ -9,6 +9,18 @@
  *
  * Openings are a four-bit mask so turning a piece is a rotate of those bits,
  * and two pieces meet when each has the side facing the other open.
+ *
+ * That much is a patience: turn things until they light up. What makes it a
+ * puzzle is that a WTW is two systems, not one. Fresh air goes out to the
+ * rooms on the TOEVOER and stale air comes back on the AFVOER, each from its
+ * own side of the unit, each to its own roosters, and the two must never
+ * join — a kitchen extract blowing into the bedroom supply is the one thing
+ * the whole machine exists to prevent. Where they have to pass each other
+ * there is a kruising: one duct over the other, not joined, and not turnable.
+ *
+ * So a piece that fits its neighbours is no longer enough. It has to fit
+ * them on the right system, and every plan is chosen so that only one
+ * arrangement of the whole drawing does.
  */
 
 export const NOORD = 1;
@@ -34,7 +46,19 @@ export type Bord = {
   readonly wtw: number;
   /** Indices of the roosters, which are the dead ends. */
   readonly roosters: readonly number[];
+  /**
+   * Where the stale air comes back to. With this set the drawing is two
+   * systems: `wtw` feeds the toevoer and this collects the afvoer.
+   */
+  readonly afvoer?: number;
+  /** Which of the roosters are on the afvoer. The rest are toevoer. */
+  readonly afRoosters?: readonly number[];
+  /** Cells where two ducts cross without joining. All four sides open. */
+  readonly kruisingen?: readonly number[];
 };
+
+export const TOE = 1;
+export const AF = 2;
 
 /** One quarter turn clockwise: N->E->S->W->N. */
 export function draai(mask: number, kwarten = 1): number {
@@ -48,7 +72,13 @@ export function periode(mask: number): number {
   return 4;
 }
 
-/** Fewest turns from one orientation of a piece to another. */
+/** Fewest turns either way round: the right mouse button turns it back. */
+export function kortste(van: number, naar: number): number {
+  const d = afstand(van, naar);
+  return d < 0 ? d : Math.min(d, periode(van) - d);
+}
+
+/** Clockwise turns from one orientation of a piece to another. */
 export function afstand(van: number, naar: number): number {
   for (let k = 0; k < 4; k++) if (draai(van, k) === naar) return k;
   return -1;
@@ -84,11 +114,61 @@ export function buur(bord: Bord, i: number, richting: typeof RICHTINGEN[number])
 
 export type Fault =
   | { kind: 'lek'; at: number; richting: number }
-  | { kind: 'los'; at: number };
+  | { kind: 'los'; at: number }
+  /** Toevoer and afvoer meet here: the two systems are one system. */
+  | { kind: 'gemengd'; at: number }
+  /** A rooster hanging on the wrong system. */
+  | { kind: 'verkeerd'; at: number };
+
+/**
+ * Which system reaches each cell: TOE, AF, both, or neither. Kept per axis,
+ * because at a kruising the duct running east-west and the one running
+ * north-south are two different ducts. Everywhere else the two agree.
+ */
+export type Lucht = { readonly h: Uint8Array; readonly v: Uint8Array };
+
+export function lucht(bord: Bord, masks: readonly number[]): Lucht {
+  const h = new Uint8Array(masks.length);
+  const v = new Uint8Array(masks.length);
+  const kruis = new Set(bord.kruisingen ?? []);
+
+  const stroom = (bron: number, merk: number): void => {
+    if (masks[bron] === LEEG || masks[bron] === undefined) return;
+    // Each entry is a cell and the side the air came in by (-1 at the unit).
+    const stack: [number, number][] = [[bron, -1]];
+    while (stack.length) {
+      const [i, binnen] = stack.pop()!;
+      const dwars = kruis.has(i);
+      const horizontaal = binnen === OOST || binnen === WEST;
+      if (dwars) {
+        const as = horizontaal ? h : v;
+        if (as[i]! & merk) continue;
+        as[i] = as[i]! | merk;
+      } else {
+        if (h[i]! & merk) continue;
+        h[i] = h[i]! | merk;
+        v[i] = v[i]! | merk;
+      }
+      for (const richting of RICHTINGEN) {
+        if (!(masks[i]! & richting.bit)) continue;
+        // Over a kruising the air only goes straight on.
+        if (dwars && binnen >= 0 && richting.terug !== binnen) continue;
+        const j = buur(bord, i, richting);
+        if (j < 0 || !(masks[j]! & richting.terug)) continue;
+        stack.push([j, richting.terug]);
+      }
+    }
+  };
+
+  stroom(bord.wtw, TOE);
+  if (bord.afvoer !== undefined) stroom(bord.afvoer, AF);
+  return { h, v };
+}
 
 /**
  * Everything wrong with the drawing: an opening that meets a wall or a blank
- * cell or a closed side, and any duct not joined back to the unit.
+ * cell or a closed side, duct not joined back to a unit, the two systems
+ * joined to each other, and a rooster on the wrong one.
  */
 export function faults(bord: Bord, masks: readonly number[]): Fault[] {
   const out: Fault[] = [];
@@ -105,30 +185,24 @@ export function faults(bord: Bord, masks: readonly number[]): Fault[] {
     }
   }
 
-  const bereikt = verbonden(bord, masks);
+  const { h, v } = lucht(bord, masks);
+  const af = new Set(bord.afRoosters ?? []);
   for (let i = 0; i < masks.length; i++) {
-    if (masks[i] !== LEEG && !bereikt[i]) out.push({ kind: 'los', at: i });
+    if (masks[i] === LEEG) continue;
+    if (h[i] === 0 || v[i] === 0) out.push({ kind: 'los', at: i });
+    if (h[i] === (TOE | AF) || v[i] === (TOE | AF)) out.push({ kind: 'gemengd', at: i });
+  }
+  for (const i of bord.roosters) {
+    const moet = af.has(i) ? AF : TOE;
+    if (h[i] !== 0 && h[i] !== moet) out.push({ kind: 'verkeerd', at: i });
   }
   return out;
 }
 
-/** Which cells the air actually reaches from the unit. */
+/** Which cells the fresh air actually reaches from the unit. */
 export function verbonden(bord: Bord, masks: readonly number[]): boolean[] {
-  const seen = new Array<boolean>(masks.length).fill(false);
-  if (masks[bord.wtw] === LEEG) return seen;
-  seen[bord.wtw] = true;
-  const stack = [bord.wtw];
-  while (stack.length) {
-    const i = stack.pop()!;
-    for (const richting of RICHTINGEN) {
-      if (!(masks[i]! & richting.bit)) continue;
-      const j = buur(bord, i, richting);
-      if (j < 0 || seen[j] || !(masks[j]! & richting.terug)) continue;
-      seen[j] = true;
-      stack.push(j);
-    }
-  }
-  return seen;
+  const { h, v } = lucht(bord, masks);
+  return masks.map((_, i) => Boolean((h[i]! | v[i]!) & TOE));
 }
 
 export function isSolved(bord: Bord, masks: readonly number[]): boolean {

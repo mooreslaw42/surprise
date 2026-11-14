@@ -1,7 +1,7 @@
 import {
   type Bord,
   LEEG, NOORD, OOST, ZUID, WEST,
-  afstand, draai, isSolved, periode,
+  draai, isSolved, kortste, periode,
 } from './model.ts';
 
 /**
@@ -19,6 +19,46 @@ import {
 const NODE_BUDGET = 2_000_000;
 
 export type SolveResult = { par: number; oplossing: number[] };
+
+/**
+ * How many different arrangements make the drawing right, up to `max`. A
+ * plan ships when this is one: with two answers there is a place where the
+ * player can only guess, and a guess is a turn he is charged for.
+ */
+export function tel(bord: Bord, masks: readonly number[], max = 2, budget = NODE_BUDGET): number {
+  const n = masks.length;
+  const keuzes: number[][] = masks.map((mask) => {
+    const out: number[] = [];
+    for (let k = 0; k < periode(mask); k++) out.push(draai(mask, k));
+    return out;
+  });
+  const gekozen = new Array<number>(n).fill(0);
+  let gevonden = 0;
+  let nodes = 0;
+  const plaats = (i: number): void => {
+    if (gevonden >= max) return;
+    if (++nodes > budget) throw new Error('kanalen counter gave up');
+    if (i === n) {
+      if (isSolved(bord, gekozen)) gevonden++;
+      return;
+    }
+    const x = i % bord.width;
+    const y = Math.floor(i / bord.width);
+    for (const kandidaat of keuzes[i]!) {
+      if (x === 0 && (kandidaat & WEST)) continue;
+      if (x === bord.width - 1 && (kandidaat & OOST)) continue;
+      if (y === 0 && (kandidaat & NOORD)) continue;
+      if (y === bord.height - 1 && (kandidaat & ZUID)) continue;
+      if (x > 0 && Boolean(gekozen[i - 1]! & OOST) !== Boolean(kandidaat & WEST)) continue;
+      if (y > 0 && Boolean(gekozen[i - bord.width]! & ZUID) !== Boolean(kandidaat & NOORD)) continue;
+      gekozen[i] = kandidaat;
+      plaats(i + 1);
+    }
+    gekozen[i] = LEEG;
+  };
+  plaats(0);
+  return gevonden;
+}
 
 export function solve(bord: Bord, masks: readonly number[]): SolveResult {
   const n = masks.length;
@@ -62,7 +102,7 @@ export function solve(bord: Bord, masks: readonly number[]): SolveResult {
         if (Boolean(boven & ZUID) !== Boolean(kandidaat & NOORD)) continue;
       }
       gekozen[i] = kandidaat;
-      plaats(i + 1, kosten + afstand(masks[i]!, kandidaat));
+      plaats(i + 1, kosten + kortste(masks[i]!, kandidaat));
     }
     gekozen[i] = LEEG;
   };
