@@ -4,6 +4,7 @@ import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
 import type { Save } from '../engine/save.ts';
 import { HouseMapScene } from './housemap.ts';
+import { IntroScene } from './intro.ts';
 
 const CEILING_H = 30;
 const WALL_Y = CEILING_H + 6;
@@ -58,7 +59,9 @@ export class TitleScene implements Scene {
       // Reset before leaving, so coming back out of the house map finds the
       // wall whole and the hammer up again.
       this.zwaai = -1;
-      ctx.push(new HouseMapScene(this.save));
+      // The first time through, Pim has something to say first.
+      const kaart = (): HouseMapScene => new HouseMapScene(this.save);
+      ctx.push(IntroScene.nodig(this.save) ? new IntroScene(this.save, kaart) : kaart());
     }
   }
 

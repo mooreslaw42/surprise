@@ -43,13 +43,18 @@ export class Dialogue {
 
   // No parameter properties anywhere in this codebase: node's strip-only
   // type removal, which runs the tests, does not support them.
-  constructor(paragraphs: readonly string[], naam = 'PIM') {
+  /**
+   * `vast` is for verse: the lines are shown exactly as given, one under the
+   * other, neither wrapped nor spaced apart. Prose wraps and gets a blank
+   * line between paragraphs.
+   */
+  constructor(paragraphs: readonly string[], naam = 'PIM', vast = false) {
     this.naam = naam;
     // The name picks the face, so a caller only ever says who is talking.
     this.wie = (Object.keys(SPREKER_NAAM) as Spreker[]).find((w) => SPREKER_NAAM[w] === naam) ?? 'pim';
     const columns = Math.floor((PANEL_W - PIM_W - PAD * 4) / 6);
-    this.lines = [];
-    paragraphs.forEach((p, i) => {
+    this.lines = vast ? [...paragraphs] : [];
+    if (!vast) paragraphs.forEach((p, i) => {
       if (i > 0) this.lines.push('');
       this.lines.push(...wrap(p, columns));
     });

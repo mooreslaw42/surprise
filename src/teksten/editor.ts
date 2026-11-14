@@ -1,3 +1,4 @@
+import { strofen } from '../data/intro.ts';
 import { register, type Tekst } from '../data/tekstregister.ts';
 import { kentTeken } from '../engine/font.ts';
 import { C, PALETTE } from '../engine/palette.ts';
@@ -60,6 +61,13 @@ function problemen(t: Tekst, regels: readonly string[]): string[] {
     if (hoogte > SCHERM_H - 8) uit.push('Too long: the box is taller than the screen. Split it or cut it.');
   }
   if (t.soort === 'regel' && (regels[0] ?? '').length === 0) uit.push('Empty.');
+  if (t.soort === 'strofen') {
+    strofen(regels).forEach((strofe, i) => {
+      if (new Dialogue(strofe, 'PIM', true).height > SCHERM_H - 40) {
+        uit.push(`Strofe ${i + 1} has ${strofe.length} lines: too tall for the screen. Put a blank line in it.`);
+      }
+    });
+  }
   return uit;
 }
 
@@ -70,7 +78,7 @@ function alsTekst(t: Tekst, regels: readonly string[]): string {
 function uitTekst(t: Tekst, ruw: string): string[] {
   const schoon = ruw.toUpperCase().replace(/\r/g, '');
   if (t.soort === 'regel') return [schoon.replace(/\n/g, ' ').trim()];
-  if (t.soort === 'regels') {
+  if (t.soort === 'regels' || t.soort === 'strofen') {
     const regels = schoon.split('\n').map((r) => r.trimEnd());
     while (regels.length > 0 && regels[regels.length - 1] === '') regels.pop();
     return regels;
@@ -78,7 +86,12 @@ function uitTekst(t: Tekst, ruw: string): string[] {
   return schoon.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, ' ').trim()).filter((p) => p.length > 0);
 }
 
-/** A canvas showing the text the way the game will draw it. */
+/** The text the way the game will draw it: one picture, or one per strofe. */
+function proeven(t: Tekst, regels: readonly string[]): HTMLCanvasElement[] {
+  if (t.soort !== 'strofen') return [proef(t, regels)];
+  return strofen(regels).map((strofe) => proef(t, strofe));
+}
+
 function proef(t: Tekst, regels: readonly string[]): HTMLCanvasElement {
   const buffer = new PixelBuffer(SCHERM_W, SCHERM_H);
   buffer.clear(C.ZWART);
@@ -87,8 +100,8 @@ function proef(t: Tekst, regels: readonly string[]): HTMLCanvasElement {
   let w = SCHERM_W;
   let h = 14;
 
-  if (t.soort === 'alineas') {
-    const dialoog = new Dialogue(regels.length > 0 ? regels : [''], SPREKER_NAAM[t.wie ?? 'pim']);
+  if (t.soort === 'alineas' || t.soort === 'strofen') {
+    const dialoog = new Dialogue(regels.length > 0 ? regels : [''], SPREKER_NAAM[t.wie ?? 'pim'], t.soort === 'strofen');
     // Typed out in full: one very long frame with nothing pressed.
     const stil = { input: { confirmed: () => false, mouseClicked: false } } as unknown as SceneContext;
     dialoog.update(999, stil);
@@ -175,7 +188,7 @@ function kaart(t: Tekst): HTMLElement {
 
   const kop = document.createElement('div');
   kop.className = 'kop';
-  if (t.soort === 'alineas') {
+  if (t.soort === 'alineas' || t.soort === 'strofen') {
     const wie = document.createElement('span');
     wie.className = `wie ${t.wie ?? 'pim'}`;
     wie.textContent = SPREKER_NAAM[t.wie ?? 'pim'];
@@ -220,12 +233,15 @@ function kaart(t: Tekst): HTMLElement {
     if (t.soort === 'alineas') {
       const regelsOpScherm = regels.reduce((n, p) => n + wrap(p, 44).length, 0) + Math.max(0, regels.length - 1);
       hulp.textContent = `Blank line = new paragraph. ${regels.length} paragraph${regels.length === 1 ? '' : 's'}, ${regelsOpScherm} lines on screen.`;
+    } else if (t.soort === 'strofen') {
+      const n = strofen(regels).length;
+      hulp.textContent = `One line per line, shown exactly as typed. Blank line = next box (Enter in the game). ${n} strofe${n === 1 ? '' : 'n'}, ${t.max} characters a line at most.`;
     } else if (t.soort === 'regels') {
       hulp.textContent = `One line per line, blank lines kept. ${regels.length} lines${t.max ? `, ${t.max} characters each at most` : ''}.`;
     } else {
       hulp.textContent = `${(regels[0] ?? '').length} of ${t.max ?? '-'} characters. The red mark is where the line has to stop.`;
     }
-    rechts.replaceChildren(proef(t, regels));
+    rechts.replaceChildren(...proeven(t, regels));
     werkKopBij();
   };
 

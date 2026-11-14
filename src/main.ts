@@ -192,6 +192,7 @@ if (location.hash === '#alles') {
     save.zetVlag(`praatje-${stage.id}`);
   }
   save.zetVlag('outro');
+  save.zetVlag('intro');
   history.replaceState(null, '', location.pathname);
 } else if (location.hash === '#opnieuw') {
   save.reset();

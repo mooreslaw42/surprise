@@ -9,6 +9,7 @@ import { TUINHUIS_LEVEL } from '../puzzles/tuinhuis/levels.ts';
 import { VLOER_LEVELS } from '../puzzles/vloeren/levels.ts';
 import { EIGEN_LEIDING, UITLEG as BAAS_UITLEG, WEIGERING } from '../scenes/oplevering.ts';
 import type { Spreker } from '../scenes/portretten.ts';
+import { INTRO } from './intro.ts';
 import { AFTITELING, GEDICHT, SLOT } from './outro.ts';
 import { METEN, NA_FASE, PECH, WENK } from './praatjes.ts';
 import { STAGES, stageLabel } from './stages.ts';
@@ -31,8 +32,11 @@ export type Tekst = {
   readonly groep: string;
   /** What it is, in a few words. */
   readonly kop: string;
-  /** Speech wraps by itself; lines are kept as typed; a single line is one. */
-  readonly soort: 'alineas' | 'regels' | 'regel';
+  /**
+   * Speech wraps by itself; lines are kept as typed; a single line is one;
+   * strofen are lines kept as typed, a box per group between blank lines.
+   */
+  readonly soort: 'alineas' | 'regels' | 'regel' | 'strofen';
   readonly wie?: Spreker;
   /** Most characters on a line, where the screen sets a limit. */
   readonly max?: number;
@@ -85,6 +89,9 @@ export function register(): Tekst[] {
       uitleg: s.id.endsWith('kopgevel') ? UITLEG_EERSTE : UITLEG_LEIDING,
     })),
   ] as Level[]) levels.set(l.id, l);
+
+  // What a box of speech holds across, beside the portrait.
+  lijst('intro.gedicht', 'VOOR HET BEGINT', 'PIM: HET GEDICHT VOORAF, EEN STROFE PER ENTER', INTRO, 'strofen', 'pim', 44);
 
   for (const stage of STAGES) {
     const groep = stageLabel(stage);
