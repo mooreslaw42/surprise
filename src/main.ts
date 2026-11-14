@@ -1,3 +1,4 @@
+import { STAGES } from './data/stages.ts';
 import { Audio } from './engine/audio.ts';
 import { Input } from './engine/input.ts';
 import type { Effect } from './engine/muziek.ts';
@@ -165,6 +166,22 @@ class Game implements SceneContext {
 const canvas = document.getElementById('screen');
 if (!(canvas instanceof HTMLCanvasElement)) throw new Error('canvas #screen missing');
 const save = new Save(typeof localStorage === 'undefined' ? null : localStorage);
+
+// For testing, not for playing: open the page with #alles on the end and
+// every gate is open, with nothing marked as solved, so each level still
+// plays for its stars. #opnieuw wipes the save. Neither is mentioned anywhere
+// on screen.
+if (location.hash === '#alles') {
+  for (const stage of STAGES) {
+    for (const entry of stage.entries) save.slaOver(entry.id);
+    save.zetVlag(`praatje-${stage.id}`);
+  }
+  save.zetVlag('outro');
+  history.replaceState(null, '', location.pathname);
+} else if (location.hash === '#opnieuw') {
+  save.reset();
+  history.replaceState(null, '', location.pathname);
+}
 const game = new Game(canvas);
 game.push(new TitleScene(save));
 game.start();
