@@ -46,10 +46,16 @@ const UITLEG_GROOT = [
   'EN NEE, HIJ IS ER NOG STEEDS NIET.',
 ];
 
-const UITLEG_BAAS = [
-  'DIT IS HEM DAN. HET HELE VENTILATIESYSTEEM, IN EEN KEER, ZOALS HET ALTIJD BEDOELD WAS.',
-  'ELKE KOKER, ELK ROOSTER, ELKE BOCHT. ALLES MOET KLOPPEN EN ALLES MOET AAN DE WTW HANGEN.',
-  'NEEM DE TIJD. HIJ HEEFT TWEE JAAR GEWACHT.',
+const UITLEG_VIER = [
+  'PLAN VIER. NU MET DE TV-KAMER ERBIJ, WANT DIE STOND ER DE VORIGE KEER NIET OP.',
+  'JE KENT HET: KLIKKEN OM TE DRAAIEN, ELKE OPENING OP EEN OPENING, ALLES AAN DE WTW.',
+  'DE UNIT ZELF IS ONDERWEG. DAT IS HIJ AL EEN TIJDJE.',
+];
+
+const UITLEG_VIJF = [
+  'HET HELE HUIS, IN EEN PLAN. ELKE KOKER, ELK ROOSTER, ELKE BOCHT.',
+  'ALS DIT KLOPT, HOEFT HIJ ALLEEN NOG MAAR GELEVERD TE WORDEN.',
+  'ALLEEN NOG MAAR.',
 ];
 
 export const KANAAL_LEVELS: readonly KanaalLevel[] = [
@@ -108,14 +114,34 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     },
   },
   {
-    id: 'kanalen-baas',
+    id: 'kanalen-4',
     nummer: 4,
-    titel: 'HET HELE SYSTEEM',
-    praatje: 'ALLES IN EEN KEER. HIJ WACHT AL TWEE JAAR.',
-    levering: 'GELEVERD',
-    baas: true,
+    titel: 'KANAALPLAN 4',
+    praatje: 'DE ANDERE KANT VAN HET HUIS. HET PLAN IS INMIDDELS BETER DAN HET HUIS.',
+    levering: 'LEVERING VERWACHT: WEEK 47',
+    baas: false,
+    dekking: 'WOONKAMER + TV-KAMER',
+    uitleg: UITLEG_VIER,
+    bord: {
+      width, height,
+      masks: [3, 1, 4, 6, 8, 0, 0, 0, 0, 0, 12, 7, 5, 13, 11, 0, 0, 0, 0, 0,
+        8, 4, 8, 5, 7, 0, 0, 0, 0, 0, 6, 5, 5, 5, 14, 6, 8, 5, 9, 1,
+        0, 0, 0, 0, 0, 10, 8, 12, 14, 14, 0, 0, 0, 0, 0, 6, 14, 6, 8, 12],
+      wtw: 59,
+      roosters: [1, 2, 4, 20, 21, 22, 36, 39, 46, 58],
+    },
+  },
+  {
+    // This board was the boss until the boss became a level of its own: the
+    // whole house on one sheet. It is now the last time it is only a plan.
+    id: 'kanalen-5',
+    nummer: 5,
+    titel: 'KANAALPLAN 5',
+    praatje: 'HET HELE HUIS OP EEN VEL. DIT IS HET LAATSTE PLAN. ECHT.',
+    levering: 'LEVERING VERWACHT: MORGEN',
+    baas: false,
     dekking: 'HET HELE HUIS',
-    uitleg: UITLEG_BAAS,
+    uitleg: UITLEG_VIJF,
     bord: {
       width, height,
       masks: [4, 9, 1, 5, 3, 12, 5, 5, 1, 8, 8, 11, 9, 1, 11, 13, 3, 2, 3, 3,

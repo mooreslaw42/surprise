@@ -6,7 +6,16 @@ import type { Save } from '../engine/save.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import { SLOOP_LEVELS } from '../puzzles/sloop/levels.ts';
 import { ELEKTRA_LEVELS } from '../puzzles/elektra/levels.ts';
-import { STAGES, blokkade, stageAf, stageLabel, stageOpen, versteFase } from '../data/stages.ts';
+import { NA_FASE } from '../data/praatjes.ts';
+import { STAGES, allesAf, blokkade, stageAf, stageLabel, stageOpen, versteFase, type Stage } from '../data/stages.ts';
+import { TUINHUIS_LEVEL } from '../puzzles/tuinhuis/levels.ts';
+import { Dialogue } from './dialogue.ts';
+import { Klus } from './klus.ts';
+import { MeetScene } from './meten.ts';
+import { OpleveringScene } from './oplevering.ts';
+import { OutroScene } from './outro.ts';
+import { SPREKER_NAAM } from './portretten.ts';
+import { TuinhuisScene } from './tuinhuis.ts';
 import { LevelScene } from './level.ts';
 import { ElektraScene } from './elektra.ts';
 import { SchuifScene } from './schuifwerk.ts';
@@ -32,8 +41,14 @@ const MAX_CARD_H = 66;
 /** The ladder across the top: every stage at once, open or not. */
 const STRIP_Y = 21;
 const STRIP_H = 12;
-const PIP_W = 24;
+const PIP_W = 22;
+/** A ventilation drawing is not a phase, and its pip says so by being small. */
+const PIP_SMAL = 12;
 const PIP_GAP = 3;
+
+function pipBreedte(stage: Stage): number {
+  return stage.tussendoor ? PIP_SMAL : PIP_W;
+}
 const PIJL_W = 11;
 
 const SLOT = [
@@ -62,6 +77,8 @@ export class HouseMapScene implements Scene {
   private time = 0;
   /** When the last refusal was, so the card can flash and say why. */
   private geweigerd = -9;
+  /** Whoever has something to say about the phase that was just finished. */
+  private praatjes: Dialogue[] = [];
 
   constructor(save: Save) {
     this.save = save;
@@ -96,8 +113,28 @@ export class HouseMapScene implements Scene {
   }
 
   private pipX(i: number): number {
-    const total = STAGES.length * PIP_W + (STAGES.length - 1) * PIP_GAP;
-    return Math.round((WIDTH - total) / 2) + i * (PIP_W + PIP_GAP);
+    const total = STAGES.reduce((n, stage) => n + pipBreedte(stage), 0) + (STAGES.length - 1) * PIP_GAP;
+    let x = Math.round((WIDTH - total) / 2);
+    for (let s = 0; s < i; s++) x += pipBreedte(STAGES[s]!) + PIP_GAP;
+    return x;
+  }
+
+  /**
+   * The first finished phase nobody has remarked on yet. Looked for every
+   * time the map is on top, which is exactly when a level has just popped;
+   * the flag is set as it is queued, so each is said once, ever.
+   */
+  private zoekPraatje(): void {
+    for (const stage of STAGES) {
+      if (!stageAf(stage, this.gedaan)) return;
+      const vlag = `praatje-${stage.id}`;
+      if (this.save.vlag(vlag)) continue;
+      this.save.zetVlag(vlag);
+      const beats = NA_FASE[stage.id];
+      if (!beats) continue;
+      this.praatjes = beats.map((b) => new Dialogue(b.tekst, SPREKER_NAAM[b.wie]));
+      return;
+    }
   }
 
   private blader(richting: number): void {
@@ -107,6 +144,25 @@ export class HouseMapScene implements Scene {
 
   update(dt: number, ctx: SceneContext): void {
     this.time += dt;
+
+    if (this.praatjes.length === 0) this.zoekPraatje();
+    if (this.praatjes.length > 0) {
+      // Escape is for whoever is back with an old save and a queue of these.
+      if (ctx.input.justPressed('Escape')) this.praatjes = [];
+      else if (this.praatjes[0]!.update(dt, ctx)) this.praatjes.shift();
+      return;
+    }
+    // Everything said, everything done: the end plays itself, once. After
+    // that it is on O for whoever wants to see it again.
+    if (allesAf(this.gedaan)) {
+      if (!this.save.vlag('outro')) {
+        this.save.zetVlag('outro');
+        ctx.push(new OutroScene(this.save));
+        return;
+      }
+      if (ctx.input.justPressed('KeyO')) { ctx.push(new OutroScene(this.save)); return; }
+    }
+
     const n = this.entries().length;
 
     if (ctx.input.justPressed('Tab')) {
@@ -123,10 +179,10 @@ export class HouseMapScene implements Scene {
     const klik = ctx.input.mouseClicked && ctx.input.mouseOver;
     if (klik && ctx.input.mouseY >= STRIP_Y && ctx.input.mouseY < STRIP_Y + STRIP_H) {
       if (ctx.input.mouseX < this.pipX(0)) { this.blader(-1); return; }
-      if (ctx.input.mouseX >= this.pipX(STAGES.length - 1) + PIP_W) { this.blader(1); return; }
+      if (ctx.input.mouseX >= this.pipX(STAGES.length - 1) + pipBreedte(STAGES[STAGES.length - 1]!)) { this.blader(1); return; }
       for (let s = 0; s < STAGES.length; s++) {
         const px = this.pipX(s);
-        if (ctx.input.mouseX >= px && ctx.input.mouseX < px + PIP_W) {
+        if (ctx.input.mouseX >= px && ctx.input.mouseX < px + pipBreedte(STAGES[s]!)) {
           this.stage = s;
           this.selected = 0;
           return;
@@ -155,31 +211,71 @@ export class HouseMapScene implements Scene {
     }
     const entry = this.entries()[index];
     if (!entry) return;
-    const kind = STAGES[this.stage]!.kind;
-    if (kind === 'sloop') {
-      const level = SLOOP_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new LevelScene(level, this.save));
-    } else if (kind === 'leeghalen') {
-      const level = SCHUIF_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new SchuifScene(level, this.save));
-    } else if (kind === 'isolatie') {
-      const level = ISOLATIE_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new IsolatieScene(level, this.save));
-    } else if (kind === 'klossen') {
-      const level = KLOS_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new KlosScene(level, this.save));
-    } else if (kind === 'vloeren') {
-      const level = VLOER_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new VloerScene(level, this.save));
-    } else if (kind === 'schilderen') {
-      const level = SCHILDER_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new SchilderScene(level, this.save));
-    } else if (kind === 'kanalen') {
-      const level = KANAAL_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new KanalenScene(level, this.save));
-    } else {
-      const level = ELEKTRA_LEVELS.find((l) => l.id === entry.id);
-      if (level) ctx.push(new ElektraScene(level, this.save));
+    const stage = STAGES[this.stage]!;
+    const maak = this.sceneVoor(stage, entry.id);
+    if (!maak) return;
+
+    // Wrapped, so every level gets the same furniture: confetti, a hint
+    // when it drags, a way past, and one tool per phase that gives up — on
+    // any wall but the first, so the phase has been explained before the
+    // voorhamer comes apart.
+    const klus = (): Scene => new Klus(maak(), {
+      id: entry.id,
+      save: this.save,
+      pech: index > 0 ? stage.id : undefined,
+      baas: stage.kind === 'oplevering',
+    });
+
+    // The rolmaat first, the first time into a phase where things get cut.
+    const meten = `meten-${stage.id}`;
+    if (MeetScene.heeft(stage.id) && !this.save.vlag(meten)) {
+      this.save.zetVlag(meten);
+      ctx.push(new MeetScene(stage.id, klus));
+      return;
+    }
+    ctx.push(klus());
+  }
+
+  /** The level behind a card, not built until someone actually starts it. */
+  private sceneVoor(stage: Stage, id: string): (() => Scene) | null {
+    const save = this.save;
+    switch (stage.kind) {
+      case 'sloop': {
+        const level = SLOOP_LEVELS.find((l) => l.id === id);
+        return level ? () => new LevelScene(level, save) : null;
+      }
+      case 'leeghalen': {
+        const level = SCHUIF_LEVELS.find((l) => l.id === id);
+        return level ? () => new SchuifScene(level, save) : null;
+      }
+      case 'isolatie': {
+        const level = ISOLATIE_LEVELS.find((l) => l.id === id);
+        return level ? () => new IsolatieScene(level, save) : null;
+      }
+      case 'klossen': {
+        const level = KLOS_LEVELS.find((l) => l.id === id);
+        return level ? () => new KlosScene(level, save) : null;
+      }
+      case 'vloeren': {
+        const level = VLOER_LEVELS.find((l) => l.id === id);
+        return level ? () => new VloerScene(level, save) : null;
+      }
+      case 'schilderen': {
+        const level = SCHILDER_LEVELS.find((l) => l.id === id);
+        return level ? () => new SchilderScene(level, save) : null;
+      }
+      case 'kanalen': {
+        const level = KANAAL_LEVELS.find((l) => l.id === id);
+        return level ? () => new KanalenScene(level, save) : null;
+      }
+      case 'elektra': {
+        const level = ELEKTRA_LEVELS.find((l) => l.id === id);
+        return level ? () => new ElektraScene(level, save) : null;
+      }
+      case 'tuinhuis':
+        return () => new TuinhuisScene(TUINHUIS_LEVEL, save);
+      case 'oplevering':
+        return () => new OpleveringScene(save);
     }
   }
 
@@ -193,7 +289,7 @@ export class HouseMapScene implements Scene {
     screen.fillRect(0, 0, WIDTH, 20, C.ZWART);
     screen.fillRect(0, 19, WIDTH, 1, C.STEEN);
     screen.text(stageLabel(stage), 6, 7,
-      !open ? C.STEEN : stage.tussendoor ? C.MAGENTA : C.LICHTOKER);
+      !open ? C.STEEN : stage.tussendoor || stage.baas ? C.MAGENTA : C.LICHTOKER);
 
     const entries = this.entries();
     const done = entries.filter((e) => this.gedaan(e.id)).length;
@@ -204,6 +300,7 @@ export class HouseMapScene implements Scene {
     this.drawStrip(screen);
     for (let i = 0; i < entries.length; i++) this.drawCard(screen, i, open);
     this.drawFooter(screen, open, done, entries.length);
+    if (this.praatjes.length > 0) this.praatjes[0]!.render(screen, this.time);
   }
 
   /** Every stage as one pip, so the whole job is on screen at once. */
@@ -211,6 +308,7 @@ export class HouseMapScene implements Scene {
     screen.fillRect(0, STRIP_Y - 1, WIDTH, STRIP_H + 1, C.ZWART);
     STAGES.forEach((stage, s) => {
       const x = this.pipX(s);
+      const PIP_W = pipBreedte(stage);
       const af = stageAf(stage, this.gedaan);
       const open = stageOpen(s, this.gedaan);
       const hier = s === this.stage;
@@ -228,6 +326,14 @@ export class HouseMapScene implements Scene {
           screen.fillRect(cx - (2 - Math.abs(d)), cy + d, 2 * (2 - Math.abs(d)) + 1, 1,
             open ? C.MAGENTA : hier ? C.ASGRIJS : C.STEEN);
         }
+      } else if (stage.kind === 'tuinhuis') {
+        // A little house, because it is one: roof, wall, and a wheel.
+        const cx = x + Math.floor(PIP_W / 2);
+        const kleur = open ? C.MOSGROEN : C.STEEN;
+        for (let d = 0; d < 3; d++) screen.fillRect(cx - 1 - d * 2, STRIP_Y + 2 + d, 3 + d * 4, 1, kleur);
+        screen.fillRect(cx - 4, STRIP_Y + 5, 9, 3, inkt);
+        screen.set(cx - 2, STRIP_Y + 8, kleur);
+        screen.set(cx + 2, STRIP_Y + 8, kleur);
       } else {
         const tekst = String(stage.nummer);
         screen.text(tekst, x + Math.round((PIP_W - tekst.length * 6) / 2) + (open ? 0 : -2),
@@ -238,7 +344,7 @@ export class HouseMapScene implements Scene {
 
     // Page arrows, either side of the ladder.
     const links = this.pipX(0) - PIJL_W + 3;
-    const rechts = this.pipX(STAGES.length - 1) + PIP_W + 4;
+    const rechts = this.pipX(STAGES.length - 1) + pipBreedte(STAGES[STAGES.length - 1]!) + 4;
     const midden = STRIP_Y + Math.floor((STRIP_H - 2) / 2);
     for (let i = 0; i < 4; i++) {
       screen.fillRect(links + i, midden - i, 1, 2 * i + 1, C.ASGRIJS);
@@ -262,7 +368,7 @@ export class HouseMapScene implements Scene {
       kleur = C.STEEN;
     } else {
       const next = STAGES[this.stage + 1];
-      regel = !next ? 'LAATSTE FASE'
+      regel = !next ? (this.save.vlag('outro') ? 'OPGELEVERD.   O = DE AFLOOP NOG EEN KEER' : 'LAATSTE FASE')
         : done < totaal ? `${stageLabel(next)}: EERST ALLES HIER`
         : `${stageLabel(next)} IS OPEN`;
       kleur = !next || done < totaal ? C.STEEN : C.SALIE;

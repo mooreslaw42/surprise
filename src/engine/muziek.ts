@@ -25,6 +25,9 @@
 
 export type StemNaam = 'puls' | 'zaag' | 'driehoek' | 'bas' | 'slagwerk';
 
+/** One-off sounds, played over the music rather than as part of it. */
+export type Effect = 'klaar' | 'kapot' | 'fout' | 'tik' | 'fanfare';
+
 export type Slag = 'kick' | 'snare' | 'hat' | 'open' | 'crash';
 
 const SLAGWERK: Record<string, Slag> = {

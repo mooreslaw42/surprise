@@ -213,6 +213,10 @@ export class ElektraScene implements Scene {
       this.wonAt = this.time;
       const length = cableLength(this.routes);
       this.save.record(this.level.id, length, stars(length, this.par));
+      // Written down as laid, not as best: the last level is built around
+      // where these cables actually went.
+      const { width } = this.level.board;
+      this.save.bewaarDraden(this.level.id, this.routes.map((r) => r.map((p) => p.y * width + p.x)));
     }
   }
 

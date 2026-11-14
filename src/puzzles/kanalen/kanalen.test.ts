@@ -100,19 +100,19 @@ test('every rooster ends up fed by the unit', () => {
   }
 });
 
-test('the plans build to the boss', () => {
+test('the plans build, each harder than the last', () => {
   const pars = KANAAL_LEVELS.map((l) => solve(l.bord, l.bord.masks).par);
   assert.deepEqual(pars, [...pars].sort((a, b) => a - b), `pars go ${pars.join(', ')}`);
-  const baas = KANAAL_LEVELS.filter((l) => l.baas);
-  assert.equal(baas.length, 1, 'exactly one boss');
-  assert.equal(baas[0]!.id, KANAAL_LEVELS[KANAAL_LEVELS.length - 1]!.id, 'and it comes last');
-  assert.ok(baas[0]!.bord.roosters.length >= 10, 'the boss should be the whole house');
+  // The boss is no longer one of these: it became a level of its own, in
+  // puzzles/oplevering. What is left here is plans, and the last of them is
+  // the whole house on one sheet.
+  assert.ok(KANAAL_LEVELS.every((l) => !l.baas), 'no kanaalplan is the boss any more');
+  assert.ok(KANAAL_LEVELS[KANAAL_LEVELS.length - 1]!.bord.roosters.length >= 10, 'the last plan should be the whole house');
 });
 
-test('the boss is the one that finally arrives', () => {
+test('not one of them is ever delivered', () => {
   for (const level of KANAAL_LEVELS) {
-    if (level.baas) assert.equal(level.levering, 'GELEVERD');
-    else assert.match(level.levering, /LEVERING VERWACHT/, `${level.id} should still be waiting`);
+    assert.match(level.levering, /LEVERING VERWACHT/, `${level.id} should still be waiting`);
   }
 });
 

@@ -80,7 +80,7 @@ export class TitleScene implements Scene {
     screen.fillRect(0, HEIGHT - FOOTER_H, WIDTH, FOOTER_H, C.ZWART);
     screen.fillRect(0, HEIGHT - FOOTER_H, WIDTH, 1, C.STEEN);
     screen.text('S=SCANLINES  M=MUZIEK  P=PALET  D=ONTWERP  F=SCHERM', 6, HEIGHT - 10, C.ASGRIJS);
-    screen.text('V0.2', WIDTH - 29, HEIGHT - 10, C.STEEN);
+    screen.text('V0.9', WIDTH - 29, HEIGHT - 10, C.STEEN);
   }
 
   /** Up and back, then down and through, then a short recoil. */

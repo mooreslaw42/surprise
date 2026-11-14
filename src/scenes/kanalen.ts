@@ -97,7 +97,8 @@ export class KanalenScene implements Scene {
 
     const i = this.cellAt(ctx);
     if (i >= 0 && this.masks[i] !== LEEG && ctx.input.mouseClicked) {
-      this.masks[i] = draai(this.masks[i]!, 1);
+      // The explanation has always promised this; now the mouse delivers.
+      this.masks[i] = draai(this.masks[i]!, ctx.input.mouseRechts ? 3 : 1);
       this.draaien++;
       this.check();
     }

@@ -395,6 +395,35 @@ the house map. The screen was already telling you to slopen.
 
 M mutes it.
 
+## 9b. What landed on 14 November
+
+Everything that was a design or a line in the plan and is now in the game:
+
+- **Het tuinhuis** is built, to TUINHUIS.md, between Elektra and kanaalplan 2.
+  Two things changed in the building. The BANK is 1,5 m and not 2,0: as
+  written the five floor pieces were fifteen cells on a fourteen-cell floor.
+  And "loze ruimte" is the empty cells cut off from the main open space,
+  because nine fixed pieces in a fixed box always leave the same number empty.
+- **Oplevering** is the real boss, in `puzzles/oplevering/`: two drawings,
+  ONDER DE VLOER and BOVEN HET PLAFOND, three schachten, and a schacht refused
+  where his own cable or a klos is in the wall. Elektra now writes its routes
+  to the save (schema v2) and the board is grown from them when the level
+  starts. Simpler than BAAS.md in two places: any free cell with duct on both
+  drawings will take a schacht, rather than one fixed answer, and Sloop and
+  Vloeren leave nothing behind. The old whole-house board became kanaalplan 5.
+- **Six ventilation levels**: five plans, each with a later delivery date,
+  and the boss.
+- **The outro**: the house at night with the lights on, Moeder's last word,
+  the gedicht scrolling, the video if `public/outro.mp4` exists, credits.
+- **Moeder and Wiep** have faces and say something after every phase. All of
+  that copy is in `data/praatjes.ts` and `data/outro.ts`, and all of it is
+  a draft.
+- **Around every level** (`scenes/klus.ts`): hammer-confetti, Pim offering a
+  hint after a minute, O to skip after three resets, and one Zwart & Dekker
+  tool breaking per phase.
+- **Meten**: the rolmaat, three times, before Isolatie, Dichtzetten and
+  Vloeren. A gag rather than the mechanic in §4 — see `scenes/meten.ts`.
+
 ## 10. Waiting on the wall designs
 
 Deferred on purpose until the real wall drawings arrive, because they will
@@ -413,4 +442,8 @@ The data is all in `data/`, so both are data edits rather than rewrites.
 - Final title
 - Final surface selection (needs floor plan)
 - Ceiling heights, window and door positions — from CamToPlan export plus video
-- Outro video from Pim
+- Outro video from Pim, as `public/outro.mp4`
+- The gedicht, in `data/outro.ts`
+- Pim's read-through of `data/praatjes.ts`
+- What Moeder and Wiep actually look like (`scenes/portretten.ts` is a guess)
+- Box art and poster; og:image; CRT vignette

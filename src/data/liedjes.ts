@@ -187,6 +187,9 @@ const THEMA: Record<StageKind, Muziekkeuze> = {
   vloeren: { lied: RIFF, halveTonen: 2 },
   schilderen: { lied: RIFF, halveTonen: 7 },
   kanalen: { lied: RIFF, halveTonen: -4, tempo: 0.88 },
+  // The two bosses play the boogie; these are only here to keep the table whole.
+  tuinhuis: { lied: BOOGIE },
+  oplevering: { lied: BOOGIE },
 };
 
 export function thema(kind: StageKind): Muziekkeuze {

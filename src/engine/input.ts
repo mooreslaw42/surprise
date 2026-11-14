@@ -44,6 +44,8 @@ export class Input {
   mousePressY = 0;
   mouseDown = false;
   mouseClicked = false;
+  /** The click this step was the right button: turn it the other way. */
+  mouseRechts = false;
   mouseReleased = false;
   /** False until the pointer has been over the canvas at least once. */
   mouseOver = false;
@@ -106,6 +108,7 @@ export class Input {
       this.mouseOver = true;
       this.mouseDown = true;
       this.mouseClicked = true;
+      this.mouseRechts = e.button === 2;
       // Start the path at the grab, so a press-and-flick in one step still
       // traces from where the drag began.
       this.mousePath.push(p);
@@ -148,6 +151,7 @@ export class Input {
     this.pressed.clear();
     this.released.clear();
     this.mouseClicked = false;
+    this.mouseRechts = false;
     this.mouseReleased = false;
     this.mousePath.length = 0;
   }

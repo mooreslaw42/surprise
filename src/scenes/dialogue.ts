@@ -1,7 +1,8 @@
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { SceneContext } from '../engine/scene.ts';
-import { drawPim, PIM_W, PIM_H } from './pim.ts';
+import { PIM_W, PIM_H } from './pim.ts';
+import { drawPortret, SPREKER_NAAM, type Spreker } from './portretten.ts';
 
 /**
  * Pim, saying something. A portrait box with the text typing itself out
@@ -36,6 +37,7 @@ export class Dialogue {
   private readonly lines: string[];
   private readonly total: number;
   private readonly naam: string;
+  private readonly wie: Spreker;
   private revealed = 0;
   private done = false;
 
@@ -43,6 +45,8 @@ export class Dialogue {
   // type removal, which runs the tests, does not support them.
   constructor(paragraphs: readonly string[], naam = 'PIM') {
     this.naam = naam;
+    // The name picks the face, so a caller only ever says who is talking.
+    this.wie = (Object.keys(SPREKER_NAAM) as Spreker[]).find((w) => SPREKER_NAAM[w] === naam) ?? 'pim';
     const columns = Math.floor((PANEL_W - PIM_W - PAD * 4) / 6);
     this.lines = [];
     paragraphs.forEach((p, i) => {
@@ -90,7 +94,7 @@ export class Dialogue {
     const py = y + PAD;
     screen.fillRect(px - 2, py - 2, PIM_W + 4, PIM_H + 4, C.ROET);
     screen.strokeRect(px - 2, py - 2, PIM_W + 4, PIM_H + 4, C.STEEN);
-    drawPim(screen, px, py, this.talking && Math.floor(time * 9) % 2 === 0);
+    drawPortret(screen, this.wie, px, py, this.talking && Math.floor(time * 9) % 2 === 0);
 
     screen.fillRect(px - 2, py + PIM_H + 2, PIM_W + 4, NAME_H, C.DONKEROKER);
     screen.textCentered(this.naam, px + PIM_W / 2, py + PIM_H + 4, C.WIT);

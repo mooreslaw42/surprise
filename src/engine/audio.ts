@@ -1,6 +1,6 @@
 import {
-  boeken, hertz, stapDuur, zelfdeKeuze,
-  type Lied, type Muziekkeuze, type Noot, type Slag, type StemNaam,
+  boeken, hertz, stapDuur, toon as toonhoogte, zelfdeKeuze,
+  type Effect, type Lied, type Muziekkeuze, type Noot, type Slag, type StemNaam,
 } from './muziek.ts';
 
 /**
@@ -351,6 +351,54 @@ export class Audio {
     oud.gain.setValueAtTime(oud.gain.value, nu);
     oud.gain.linearRampToValueAtTime(0, nu + OVERVLOEI);
     window.setTimeout(() => oud.disconnect(), (OVERVLOEI + VOORUIT + 0.5) * 1000);
+  }
+
+  /**
+   * A one-off, over whatever is playing. Goes straight to the master rather
+   * than through the song's bus, so a level theme fading out does not take
+   * the fanfare with it.
+   */
+  effect(naam: Effect): void {
+    const ctx = this.ctx;
+    const master = this.master;
+    const echo = this.echo;
+    if (!ctx || !master || !echo || ctx.state !== 'running') return;
+    const nu = ctx.currentTime + 0.01;
+    const noot = (stem: Exclude<StemNaam, 'slagwerk'>, naam: string, na: number, duur: number, vol = 0.5): void => {
+      STEMMEN[stem]({ ctx, uit: master, echo, t: nu + na, duur, hz: hertz(toonhoogte(naam)), vol });
+    };
+    const slag = (welke: Slag, na: number, vol = 0.6): void => {
+      slagwerk({ ctx, uit: master, echo, t: nu + na, duur: 0.1, hz: 0, vol }, welke);
+    };
+
+    switch (naam) {
+      case 'klaar':
+        // Up the chord and a crash on top: done, in under a second.
+        ['c5', 'e5', 'g5', 'c6'].forEach((n, i) => noot('puls', n, i * 0.09, 0.12));
+        noot('driehoek', 'c4', 0, 0.5, 0.6);
+        slag('crash', 0.27, 0.5);
+        break;
+      case 'kapot':
+        // Something giving way, then the bits landing.
+        ['a3', 'eb3', 'a2', 'eb2'].forEach((n, i) => noot('zaag', n, i * 0.07, 0.08, 0.6));
+        slag('snare', 0.3);
+        slag('open', 0.36, 0.5);
+        slag('kick', 0.5);
+        break;
+      case 'fout':
+        noot('zaag', 'e2', 0, 0.16, 0.5);
+        noot('zaag', 'eb2', 0.02, 0.16, 0.5);
+        break;
+      case 'tik':
+        slag('hat', 0, 0.7);
+        break;
+      case 'fanfare':
+        // The one at the very end. Longer, and it resolves.
+        ['g4', 'c5', 'e5', 'g5', 'e5', 'g5', 'c6'].forEach((n, i) => noot('puls', n, i * 0.13, i === 6 ? 0.7 : 0.14));
+        ['c3', 'c3', 'g3', 'c4'].forEach((n, i) => noot('bas', n, i * 0.26, 0.24, 0.7));
+        slag('crash', 0.78, 0.6);
+        break;
+    }
   }
 
   /** M, on the keyboard. Keeps playing underneath, so it comes back in time. */

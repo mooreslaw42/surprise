@@ -1,5 +1,6 @@
 import { Audio } from './engine/audio.ts';
 import { Input } from './engine/input.ts';
+import type { Effect } from './engine/muziek.ts';
 import { C, PALETTE } from './engine/palette.ts';
 import { Screen, WIDTH, HEIGHT } from './engine/screen.ts';
 import type { Scene, SceneContext } from './engine/scene.ts';
@@ -42,6 +43,10 @@ class Game implements SceneContext {
     this.push(scene);
   }
 
+  geluid(naam: Effect): void {
+    this.audio.effect(naam);
+  }
+
   private current(): Scene | undefined {
     return this.stack[this.stack.length - 1];
   }
@@ -67,6 +72,16 @@ class Game implements SceneContext {
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
+  }
+
+  /**
+   * Run the game forward by hand, for looking at it from a test harness or a
+   * background tab where the browser hands out two frames a second. Only
+   * reachable on localhost; see the bottom of this file.
+   */
+  vooruit(seconden: number): void {
+    for (let t = 0; t < seconden; t += STEP) this.step(STEP);
+    this.render();
   }
 
   private step(dt: number): void {
@@ -153,3 +168,6 @@ const save = new Save(typeof localStorage === 'undefined' ? null : localStorage)
 const game = new Game(canvas);
 game.push(new TitleScene(save));
 game.start();
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  (window as unknown as { spel: Game }).spel = game;
+}

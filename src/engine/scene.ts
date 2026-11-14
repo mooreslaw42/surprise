@@ -1,5 +1,5 @@
 import type { Input } from './input.ts';
-import type { Muziekkeuze } from './muziek.ts';
+import type { Effect, Muziekkeuze } from './muziek.ts';
 import type { Screen } from './screen.ts';
 
 export interface SceneContext {
@@ -11,6 +11,11 @@ export interface SceneContext {
   pop(): void;
   /** Replace the whole stack. */
   replace(scene: Scene): void;
+  /**
+   * A one-off sound. Optional so a test can hand a scene a context without
+   * a sound card in it; scenes call it as ctx.geluid?.('klaar').
+   */
+  geluid?(naam: Effect): void;
 }
 
 export interface Scene {

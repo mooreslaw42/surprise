@@ -12,9 +12,12 @@ import { ROOM_NAMES } from './house.ts';
  * The stage ladder. A stage is gated: no room may start the next one until
  * every room has finished this one, which is the whole joke.
  *
- * Only the two built so far are listed; the rest of the ladder is in PLAN.md.
+ * Eight phases of work, five ventilation drawings slotted between them, and
+ * two bosses: the tuinhuis halfway, and the oplevering at the end.
  */
-export type StageKind = 'leeghalen' | 'sloop' | 'isolatie' | 'elektra' | 'klossen' | 'vloeren' | 'schilderen' | 'kanalen';
+export type StageKind =
+  | 'leeghalen' | 'sloop' | 'isolatie' | 'elektra' | 'klossen' | 'vloeren' | 'schilderen'
+  | 'kanalen' | 'tuinhuis' | 'oplevering';
 
 export type StageEntry = {
   readonly id: string;
@@ -28,11 +31,15 @@ export type StageEntry = {
 };
 
 export type Stage = {
+  /** Unique along the ladder. What the praatjes and the tool breaks key on. */
+  readonly id: string;
   readonly kind: StageKind;
   readonly nummer: number;
   readonly naam: string;
   /** Not a phase of the work: a drawing that happens between phases. */
   readonly tussendoor?: boolean;
+  /** One level, and it is not a wall. Gets its own pip and its own music. */
+  readonly baas?: boolean;
   readonly entries: readonly StageEntry[];
 };
 
@@ -40,6 +47,7 @@ export type Stage = {
 function kanaalStap(n: number): Stage {
   const level = KANAAL_LEVELS[n - 1]!;
   return {
+    id: `kp${n}`,
     kind: 'kanalen',
     nummer: n,
     naam: 'KANAALPLAN',
@@ -57,6 +65,7 @@ function kanaalStap(n: number): Stage {
 
 export const STAGES: readonly Stage[] = [
   {
+    id: 'leeghalen',
     kind: 'leeghalen',
     nummer: 1,
     naam: 'LEEGHALEN',
@@ -68,6 +77,7 @@ export const STAGES: readonly Stage[] = [
     })),
   },
   {
+    id: 'sloop',
     kind: 'sloop',
     nummer: 2,
     naam: 'SLOOP',
@@ -75,6 +85,7 @@ export const STAGES: readonly Stage[] = [
   },
   kanaalStap(1),
   {
+    id: 'isolatie',
     kind: 'isolatie',
     nummer: 3,
     naam: 'ISOLATIE',
@@ -86,6 +97,7 @@ export const STAGES: readonly Stage[] = [
     })),
   },
   {
+    id: 'elektra',
     kind: 'elektra',
     nummer: 4,
     naam: 'ELEKTRA',
@@ -102,9 +114,25 @@ export const STAGES: readonly Stage[] = [
       };
     }),
   },
+  {
+    // Not a phase: Wiep, on the drive, with a trailer. Behind the gate like
+    // everything else, which is the joke — this once he cannot put it off.
+    id: 'tuinhuis',
+    kind: 'tuinhuis',
+    nummer: 0,
+    naam: 'HET TUINHUIS',
+    baas: true,
+    entries: [{
+      id: 'tuinhuis',
+      titel: 'DE TUIN',
+      vlak: 'WIEP HAAR TINY HOUSE',
+      samenvatting: '9 STUKS  4,00 M',
+    }],
+  },
   kanaalStap(2),
   {
     // The phase is dichtzetten; the puzzle in it is finding the klossen.
+    id: 'dichtzetten',
     kind: 'klossen',
     nummer: 5,
     naam: 'DICHTZETTEN',
@@ -117,6 +145,7 @@ export const STAGES: readonly Stage[] = [
   },
   kanaalStap(3),
   {
+    id: 'vloeren',
     kind: 'vloeren',
     nummer: 6,
     naam: 'VLOEREN',
@@ -127,7 +156,9 @@ export const STAGES: readonly Stage[] = [
       samenvatting: `${l.vloer.vorm.length} RIJEN`,
     })),
   },
+  kanaalStap(4),
   {
+    id: 'schilderen',
     kind: 'schilderen',
     nummer: 7,
     naam: 'SCHILDEREN',
@@ -138,15 +169,18 @@ export const STAGES: readonly Stage[] = [
       samenvatting: `${l.muur.verfbaar.filter(Boolean).length} VAKKEN`,
     })),
   },
+  kanaalStap(5),
   {
-    kind: 'kanalen',
+    id: 'oplevering',
+    kind: 'oplevering',
     nummer: 8,
     naam: 'OPLEVERING',
+    baas: true,
     entries: [{
-      id: KANAAL_LEVELS[3]!.id,
+      id: 'oplevering',
       titel: 'HET HELE HUIS',
-      vlak: 'HET HELE SYSTEEM',
-      samenvatting: `${KANAAL_LEVELS[3]!.bord.roosters.length} ROOSTERS`,
+      vlak: 'DE UNIT IS ER',
+      samenvatting: '2 LAGEN 3 KOKERS',
     }],
   },
 ];
@@ -184,7 +218,12 @@ export function versteFase(gedaan: Gedaan): number {
 }
 
 export function stageLabel(stage: Stage): string {
-  return stage.tussendoor
-    ? `${stage.naam} ${stage.nummer}`
-    : `FASE ${stage.nummer} - ${stage.naam}`;
+  if (stage.tussendoor) return `${stage.naam} ${stage.nummer}`;
+  if (stage.nummer === 0) return stage.naam;
+  return `FASE ${stage.nummer} - ${stage.naam}`;
+}
+
+/** Everything done, which is what lets the outro play. */
+export function allesAf(gedaan: Gedaan): boolean {
+  return STAGES.every((stage) => stageAf(stage, gedaan));
 }
