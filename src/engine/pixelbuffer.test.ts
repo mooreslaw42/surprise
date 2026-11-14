@@ -127,3 +127,13 @@ test('ellipses clip at the edge without wrapping', () => {
   assert.equal(buf.get(9, 9), 0, 'must not wrap to the far corner');
   assert.doesNotThrow(() => buf.fillEllipse(-20, -20, 3, 3, 5));
 });
+
+test('accented capitals are drawn, not replaced by a question mark', async () => {
+  const { glyph, kentTeken } = await import('./font.ts');
+  for (const ch of 'ÉÈËÊÁÀÄÏÍÓÖÒÚÜ') {
+    assert.ok(kentTeken(ch), `${ch} is missing`);
+    assert.notDeepEqual(glyph(ch).bits, glyph('?').bits, `${ch} falls back`);
+  }
+  assert.ok(kentTeken('é'), 'lowercase folds up, accents included');
+  assert.equal(kentTeken('—'), false);
+});

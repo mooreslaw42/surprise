@@ -102,11 +102,7 @@ export class ElektraScene implements Scene {
       return;
     }
     if (ctx.input.justPressed('KeyU')) {
-      this.uitleg = new Dialogue([
-      'ELK STOPCONTACT WIL EEN DRAAD NAAR DE METERKAST. SLEEP HEM ERHEEN.',
-      'HET GETAL EROP IS WAT HIJ TREKT, IN AMPERE. EEN GROEP HOUDT ER 16. SAMEN MEER? DAN MOETEN ZE OVER TWEE GROEPEN.',
-      'DRADEN MOGEN NAAST ELKAAR LOPEN, MAAR NOOIT OVER ELKAAR HEEN.',
-    ]);
+      this.uitleg = new Dialogue(this.level.uitleg);
       return;
     }
     if (ctx.input.justPressed('Escape')) ctx.pop();

@@ -19,7 +19,7 @@ import { Dialogue } from './dialogue.ts';
 
 export const OPLEVERING_ID = 'oplevering';
 
-const UITLEG = [
+export const UITLEG = [
   'DE UNIT IS ER.',
   'NIET \'ONDERWEG\'. NIET \'VOLGENDE WEEK\'. ER.',
   'ALLES IN EEN KEER: ONDER DE VLOER NAAR DE KAMER, DE SCHACHT IN, BOVEN HET PLAFOND NAAR DE ROOSTERS.',
@@ -27,7 +27,10 @@ const UITLEG = [
   'EEN SCHACHT KAN ALLEEN WAAR OP ALLEBEI DE TEKENINGEN EEN KANAAL LIGT. EN NIET WAAR JE ZELF AL IETS IN DE MUUR HEBT GESTOPT. KIES ZE GOED.',
 ];
 
-const WEIGERING: Record<Weigering, string> = {
+/** Said once, in full, by Pim, the first time a schacht lands on his own cable. */
+export const EIGEN_LEIDING = ['DAAR ZIT JE EIGEN LEIDING.'];
+
+export const WEIGERING: Record<Weigering, string> = {
   kabel: 'DAAR LOOPT JE EIGEN KABEL.',
   klos: 'DAAR ZIT EEN KLOS. DIE HEB JE ZELF GEVONDEN.',
   geen: 'EEN SCHACHT MOET TEGEN EEN BINNENMUUR.',
@@ -187,7 +190,7 @@ export class OpleveringScene implements Scene {
     // Said in full once, by Pim, and after that it is only a line of text.
     if (nee === 'kabel' && !this.eigenLeidingGezegd) {
       this.eigenLeidingGezegd = true;
-      this.uitleg = new Dialogue(['DAAR ZIT JE EIGEN LEIDING.']);
+      this.uitleg = new Dialogue(EIGEN_LEIDING);
       return;
     }
     this.zeg(WEIGERING[nee]);

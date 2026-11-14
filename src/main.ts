@@ -1,4 +1,6 @@
 import { STAGES } from './data/stages.ts';
+import { EIGEN } from './data/teksten.eigen.ts';
+import { pasToe } from './data/tekstregister.ts';
 import { Audio } from './engine/audio.ts';
 import { Input } from './engine/input.ts';
 import type { Effect } from './engine/muziek.ts';
@@ -163,6 +165,10 @@ class Game implements SceneContext {
   }
 }
 
+// The text editor saved: come back up with the new wording. Dev server only;
+// in a build there is no `hot` and this is nothing.
+import.meta.hot?.on('teksten:bewaard', () => location.reload());
+
 // Typing the switch onto the address of a page that is already open only
 // changes the hash; reload so it is actually read.
 window.addEventListener('hashchange', () => {
@@ -171,6 +177,9 @@ window.addEventListener('hashchange', () => {
 
 const canvas = document.getElementById('screen');
 if (!(canvas instanceof HTMLCanvasElement)) throw new Error('canvas #screen missing');
+// Pim's wording first, before any scene reads a line of it.
+pasToe(EIGEN);
+
 const save = new Save(typeof localStorage === 'undefined' ? null : localStorage);
 
 // For testing, not for playing: open the page with #alles on the end and

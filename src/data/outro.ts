@@ -22,8 +22,8 @@ export const GEDICHT: readonly string[] = [
   'EN DIT VERDWIJNT VANZELF.',
 ];
 
-/** True while the lines above are the stand-in. Shows a note on screen. */
-export const GEDICHT_IS_CONCEPT = true;
+/** While the gedicht still opens with this, the screen says CONCEPT. */
+export const GEDICHT_CONCEPT_REGEL = 'HIER KOMT HET GEDICHT.';
 
 /**
  * The video message. Put the file at public/outro.mp4 and it plays after the

@@ -1,5 +1,5 @@
 import { BAAS, MENU } from '../data/liedjes.ts';
-import { AFTITELING, GEDICHT, GEDICHT_IS_CONCEPT, SLOT, VIDEO } from '../data/outro.ts';
+import { AFTITELING, GEDICHT, GEDICHT_CONCEPT_REGEL, SLOT, VIDEO } from '../data/outro.ts';
 import { STAGES } from '../data/stages.ts';
 import type { Muziekkeuze } from '../engine/muziek.ts';
 import { C } from '../engine/palette.ts';
@@ -158,7 +158,7 @@ export class OutroScene implements Scene {
     if (this.fase === 'gedicht') {
       this.drawNacht(screen, true);
       this.drawRol(screen, GEDICHT, t, C.KALK);
-      if (GEDICHT_IS_CONCEPT) screen.text('CONCEPT', WIDTH - 48, 4, C.ROESTROOD);
+      if (GEDICHT[0] === GEDICHT_CONCEPT_REGEL) screen.text('CONCEPT', WIDTH - 48, 4, C.ROESTROOD);
       this.drawEnter(screen, t > 1);
       return;
     }

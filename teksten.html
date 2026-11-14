@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Teksten - De Eeuwige Verbouwing</title>
+<style>
+  :root {
+    --bg: #14110e; --paneel: #1f1a15; --rand: #3a3027; --inkt: #ece6d6; --zacht: #a3998a;
+    --oker: #cc8a2e; --licht: #f0c06a; --salie: #7e9c86; --rood: #c25f33; --magenta: #b05a80;
+    --blauw: #8fc3dd;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--inkt); font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+  header {
+    position: sticky; top: 0; z-index: 5; background: #0e0c0a; border-bottom: 1px solid var(--rand);
+    padding: 10px 20px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+  }
+  header h1 { font-size: 16px; margin: 0; color: var(--licht); letter-spacing: .04em; }
+  header .tel { color: var(--zacht); font-size: 13px; }
+  header .ruimte { flex: 1; }
+  input[type=search] {
+    background: var(--paneel); border: 1px solid var(--rand); color: var(--inkt);
+    padding: 6px 10px; border-radius: 6px; width: 200px; font: inherit;
+  }
+  button {
+    font: inherit; cursor: pointer; border-radius: 6px; border: 1px solid var(--rand);
+    background: var(--paneel); color: var(--inkt); padding: 6px 12px;
+  }
+  button:hover { border-color: var(--zacht); }
+  button.aan { background: var(--oker); border-color: var(--oker); color: #14110e; }
+  button.bewaar { background: var(--salie); border-color: var(--salie); color: #0e0c0a; font-weight: 600; }
+  button.bewaar:disabled { background: var(--paneel); border-color: var(--rand); color: var(--zacht); cursor: default; }
+  button.klein { padding: 2px 8px; font-size: 12px; color: var(--zacht); }
+  #status { font-size: 13px; color: var(--zacht); min-width: 9em; }
+  #status.fout { color: var(--rood); }
+  .blad { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 0; }
+  nav { position: sticky; top: 53px; align-self: start; max-height: calc(100vh - 53px); overflow: auto; padding: 16px 12px 40px 20px; }
+  nav a {
+    display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 5px;
+    color: var(--inkt); text-decoration: none; font-size: 13px;
+  }
+  nav a:hover { background: var(--paneel); }
+  nav a span { color: var(--zacht); font-variant-numeric: tabular-nums; }
+  nav a.klaar span { color: var(--salie); }
+  main { padding: 8px 24px 80px 12px; max-width: 1080px; }
+  section h2 {
+    font-size: 14px; letter-spacing: .08em; color: var(--licht); margin: 28px 0 10px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--rand);
+  }
+  .kaart {
+    background: var(--paneel); border: 1px solid var(--rand); border-left: 3px solid var(--rand);
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 12px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 18px;
+  }
+  .kaart.gewijzigd { border-left-color: var(--oker); }
+  .kaart.nagekeken { border-left-color: var(--salie); }
+  .kaart.mis { border-left-color: var(--rood); }
+  .kop { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; letter-spacing: .05em; color: var(--zacht); }
+  .wie { padding: 1px 8px; border-radius: 10px; font-weight: 600; color: #14110e; }
+  .wie.pim { background: var(--oker); } .wie.moeder { background: var(--salie); } .wie.wiep { background: var(--blauw); }
+  .kop .ruimte { flex: 1; }
+  .kop label { display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--inkt); }
+  textarea, input.regel {
+    width: 100%; background: #14110e; color: var(--inkt); border: 1px solid var(--rand); border-radius: 6px;
+    padding: 8px 10px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; resize: vertical;
+  }
+  textarea:focus, input.regel:focus { outline: none; border-color: var(--oker); }
+  .hulp { font-size: 12px; color: var(--zacht); margin-top: 4px; }
+  .waarschuwing { font-size: 12px; color: var(--rood); margin-top: 4px; }
+  .proef { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .proef canvas { image-rendering: pixelated; max-width: 100%; height: auto; border: 1px solid var(--rand); background: #000; }
+  .leeg { color: var(--zacht); padding: 40px 0; }
+  @media (max-width: 900px) {
+    .blad { grid-template-columns: 1fr; } nav { display: none; }
+    .kaart { grid-template-columns: 1fr; } main { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>DE EEUWIGE VERBOUWING &middot; teksten</h1>
+  <span class="tel" id="tel"></span>
+  <span class="ruimte"></span>
+  <input type="search" id="zoek" placeholder="Search the script">
+  <button data-filter="alles" class="aan">All</button>
+  <button data-filter="open">To review</button>
+  <button data-filter="gewijzigd">Changed</button>
+  <button data-filter="mis">Problems</button>
+  <span id="status"></span>
+  <button class="bewaar" id="bewaar" disabled>Save</button>
+</header>
+<div class="blad">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<script type="module" src="/src/teksten/editor.ts"></script>
+</body>
+</html>
