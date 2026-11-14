@@ -82,7 +82,10 @@ export class VloerScene implements Scene {
     if (ctx.input.justPressed('KeyU')) { this.uitleg = new Dialogue(this.level.uitleg); return; }
     if (ctx.input.justPressed('KeyR')) { this.plan = volPlan(this.level.vloer); return; }
     if (ctx.input.justPressed('KeyH')) {
-      this.plan = solve(this.level.vloer).plan;
+      // The next course that is not as the best floor has it, and only that.
+      const goed = solve(this.level.vloer).plan;
+      const i = goed.findIndex((eerste, r) => this.plan[r] !== eerste);
+      if (i >= 0) this.plan[i] = goed[i]!;
       this.check();
       return;
     }

@@ -111,7 +111,20 @@ export class ElektraScene implements Scene {
     }
     if (ctx.input.justPressed('Escape')) ctx.pop();
     if (ctx.input.justPressed('KeyH')) {
-      this.routes = solve(this.level.board).routes;
+      // One cable of the shortest wiring, not the whole wall. Anything of his
+      // that crosses where it has to go is pulled back out.
+      const goed = solve(this.level.board).routes;
+      const gelijk = (a: Route, b: Route): boolean =>
+        a.length === b.length && a.every((p, k) => samePoint(p, b[k]!));
+      const i = goed.findIndex((r, k) => !gelijk(r, this.routes[k]!));
+      if (i >= 0) {
+        const nieuw = goed[i]!;
+        this.routes = this.routes.map((r, k) => {
+          if (k === i) return [...nieuw];
+          if (gelijk(r, goed[k]!)) return r;
+          return r.some((p) => nieuw.some((q) => samePoint(p, q))) ? [] : r;
+        });
+      }
       this.check();
       return;
     }
@@ -222,7 +235,7 @@ export class ElektraScene implements Scene {
 
   render(screen: Screen, ctx: SceneContext): void {
     screen.clear(C.ZWART);
-    drawCeiling(screen, this.room);
+    drawCeiling(screen, this.room, this.surface.ruimte);
     drawWallGround(screen, this.room, this.surface.afwerking);
     this.drawWall(screen);
     this.drawOpenings(screen);

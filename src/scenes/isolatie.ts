@@ -100,7 +100,19 @@ export class IsolatieScene implements Scene {
       return;
     }
     if (ctx.input.justPressed('KeyH')) {
-      this.plaatsingen = solve(this.level.muur).plaatsingen;
+      // One batt of the best fill, put where it goes; whatever was lying in
+      // its way comes back out. A hint that fills the wall is not a hint.
+      const goed = solve(this.level.muur).plaatsingen;
+      const zelfde = (a: Plaatsing, b: Plaatsing): boolean =>
+        a.x === b.x && a.y === b.y && this.cellen(a).join() === this.cellen(b).join()
+        && this.level.muur.dekens[a.deken]!.rc === this.level.muur.dekens[b.deken]!.rc;
+      const volgende = goed.find((g) => !this.plaatsingen.some((p) => zelfde(p, g)));
+      if (volgende) {
+        const plek = new Set(this.cellen(volgende));
+        this.plaatsingen = this.plaatsingen.filter((p) =>
+          p.deken !== volgende.deken && !this.cellen(p).some((c) => plek.has(c)));
+        this.plaatsingen.push(volgende);
+      }
       this.vast = null;
       this.check();
       return;

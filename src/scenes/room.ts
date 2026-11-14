@@ -1,6 +1,6 @@
 import { C } from '../engine/palette.ts';
 import { WIDTH, type Screen } from '../engine/screen.ts';
-import type { Afwerking, Prop, Surface } from '../data/house.ts';
+import type { Afwerking, Prop, RoomId, Surface } from '../data/house.ts';
 
 /**
  * The room around the puzzle.
@@ -63,19 +63,43 @@ export function layout(topBar: number, bottomBar: number, screenH: number): Room
   return { ceilingY, ceilingH, wallY: ceilingY + ceilingH, wallH: floorY - (ceilingY + ceilingH), floorY, floorH };
 }
 
-/** Salie boards, white beams across, white cornice. The signature of the house. */
-export function drawCeiling(screen: Screen, l: RoomLayout): void {
-  screen.fillRect(0, l.ceilingY, WIDTH, l.ceilingH, C.SALIE);
+/**
+ * The ceiling, which is the first thing that says which room this is.
+ *
+ * From the photos, not from memory of them. The woonkamer is tongue-and-
+ * groove boards and beams painted one pale salie, beam and board alike, and
+ * the beam along the wall is that colour too — there is no white cornice.
+ * The keuken is the same carpentry painted white. The tv-kamer, the room
+ * still being worked on, has white boards and a strip of old green showing
+ * where the ceiling used to meet the wall.
+ */
+export function drawCeiling(screen: Screen, l: RoomLayout, ruimte: RoomId = 'woonkamer'): void {
+  const wit = ruimte !== 'woonkamer';
+  const plank = wit ? C.WIT : C.LICHTSALIE;
+  const groef = wit ? C.KALK : C.SALIE;
+  const schaduw = wit ? C.ZANDGRIJS : C.DONKERSALIE;
+
+  screen.fillRect(0, l.ceilingY, WIDTH, l.ceilingH, plank);
   for (let y = l.ceilingY + 2; y < l.ceilingY + l.ceilingH - 4; y += 3) {
-    screen.fillRect(0, y, WIDTH, 1, C.DONKERSALIE);
+    screen.fillRect(0, y, WIDTH, 1, groef);
   }
-  for (let x = 14; x < WIDTH; x += 58) {
-    screen.fillRect(x, l.ceilingY, 7, l.ceilingH - 4, C.KALK);
-    screen.fillRect(x, l.ceilingY, 1, l.ceilingH - 4, C.WIT);
-    screen.fillRect(x + 6, l.ceilingY, 1, l.ceilingH - 4, C.ZANDGRIJS);
+  if (ruimte !== 'tvkamer') {
+    // Beams across, the same paint as the boards, told apart by their shadow.
+    for (let x = 14; x < WIDTH; x += 58) {
+      screen.fillRect(x, l.ceilingY, 8, l.ceilingH - 4, plank);
+      screen.fillRect(x, l.ceilingY, 1, l.ceilingH - 4, wit ? C.WIT : C.WIT);
+      screen.fillRect(x + 7, l.ceilingY, 2, l.ceilingH - 4, schaduw);
+    }
   }
-  screen.fillRect(0, l.ceilingY + l.ceilingH - 4, WIDTH, 3, C.WIT);
-  screen.fillRect(0, l.ceilingY + l.ceilingH - 1, WIDTH, 1, C.ZANDGRIJS);
+  // The beam the ceiling lands on.
+  screen.fillRect(0, l.ceilingY + l.ceilingH - 5, WIDTH, 4, plank);
+  screen.fillRect(0, l.ceilingY + l.ceilingH - 5, WIDTH, 1, wit ? C.WIT : C.WIT);
+  screen.fillRect(0, l.ceilingY + l.ceilingH - 1, WIDTH, 1, schaduw);
+  if (ruimte === 'tvkamer') {
+    // What is left of the old ceiling line: a band of green above the paper.
+    screen.fillRect(0, l.ceilingY + l.ceilingH - 4, WIDTH, 3, C.MOSGROEN);
+    screen.ditherRect(0, l.ceilingY + l.ceilingH - 4, WIDTH, 3, C.MOSGROEN, C.DONKERSALIE);
+  }
 }
 
 /**
@@ -106,13 +130,20 @@ export function drawFloor(screen: Screen, l: RoomLayout, vloer: Vloer): void {
     screen.fillRect(0, l.floorY, WIDTH, l.floorH, C.LICHTHOUT);
     screen.ditherRect(0, l.floorY + 4, WIDTH, l.floorH - 4, C.LICHTHOUT, C.HOUT);
   } else {
+    // Mahogany strip parquet: short lengths, staggered, no two quite the
+    // same red. In the photos it is the floor that glows, not the walls.
     screen.fillRect(0, l.floorY, WIDTH, l.floorH, C.MAHONIE);
-    for (let i = 0, y = l.floorY + 4; y < l.floorY + l.floorH; i++, y += 7) {
-      screen.fillRect(0, y, WIDTH, 1, C.ROET);
-      screen.fillRect(0, y + 1, WIDTH, 1, C.DONKERROOD);
-      for (let jx = ((i % 3) + 1) * 37; jx < WIDTH; jx += 111) {
-        screen.fillRect(jx, y, 1, 7, C.ROET);
+    let seed = 5;
+    for (let i = 0, y = l.floorY + 4; y < l.floorY + l.floorH; i++, y += 4) {
+      for (let x = -((i * 13) % 22); x < WIDTH; x += 22) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        const toon = seed % 5;
+        if (toon === 0) screen.fillRect(x, y, 21, 3, C.TERRACOTTA);
+        else if (toon === 1) screen.ditherRect(x, y, 21, 3, C.MAHONIE, C.TERRACOTTA);
+        else if (toon === 2) screen.ditherRect(x, y, 21, 3, C.MAHONIE, C.DONKERROOD);
+        screen.fillRect(x + 21, y, 1, 4, C.DONKERROOD);
       }
+      screen.fillRect(0, y + 3, WIDTH, 1, C.DONKERROOD);
     }
   }
   screen.fillRect(0, l.floorY, WIDTH, 4, C.WIT);          // plint
@@ -133,8 +164,10 @@ export function drawWallGround(screen: Screen, l: RoomLayout, afwerking: Afwerki
       for (let x = 4; x < WIDTH; x += 24) screen.fillRect(x, l.wallY, 1, l.wallH, C.ZANDGRIJS);
       break;
     default:
-      screen.fillRect(0, l.wallY, WIDTH, l.wallH, C.KALK);
-      screen.ditherRect(0, l.wallY, WIDTH, 6, C.ZANDGRIJS, C.KALK);
+      // Warm cream, not grey: the plain walls in that house are nearly white.
+      screen.fillRect(0, l.wallY, WIDTH, l.wallH, C.WIT);
+      screen.ditherRect(0, l.wallY, WIDTH, l.wallH, C.WIT, C.KALK);
+      screen.ditherRect(0, l.wallY, WIDTH, 6, C.KALK, C.ZANDGRIJS);
   }
 }
 
@@ -237,9 +270,42 @@ export function drawProps(screen: Screen, l: RoomLayout, props: readonly Prop[],
       case 'tv': drawTv(screen, l, Math.min(WIDTH - 44, gridX1 + 6)); break;
       case 'aanrecht': drawWorktop(screen, l, Math.min(WIDTH - 46, gridX1 + 4)); break;
       case 'stofzuiger': drawVacuum(screen, l, Math.max(4, gridX0 - 30)); break;
-      case 'balk': break;
+      case 'balk': drawPaal(screen, l, Math.min(WIDTH - 11, gridX1 + 1)); break;
+      case 'gordijn-paars': drawGordijn(screen, l, 0, C.MAGENTA, C.DONKERROOD, C.TERRACOTTA); break;
+      case 'gordijn-rood': drawGordijn(screen, l, WIDTH - 11, C.TERRACOTTA, C.DONKERROOD, C.ROESTROOD); break;
     }
   }
+}
+
+/**
+ * The post in the middle of the woonkamer: a whole tree trunk, bark off,
+ * floor to ceiling. Nobody who has been in that room forgets it.
+ */
+function drawPaal(screen: Screen, l: RoomLayout, x: number): void {
+  const y = l.wallY - 1;
+  const h = l.floorY - y + 3;
+  screen.fillRect(x, y, 10, h, C.HOUT);
+  screen.fillRect(x, y, 2, h, C.DONKEROKER);
+  screen.fillRect(x + 7, y, 3, h, C.LICHTHOUT);
+  let seed = 3;
+  for (let n = 0; n < 9; n++) {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    const ky = y + 6 + (seed % Math.max(1, h - 12));
+    screen.fillRect(x + 2 + ((seed >> 4) % 5), ky, 2, 3 + ((seed >> 8) % 4), C.MAHONIE);
+  }
+  screen.fillRect(x - 1, y, 1, h, C.ROET);
+}
+
+/** A curtain hanging at the edge of the wall, pleated, in that room's cloth. */
+function drawGordijn(screen: Screen, l: RoomLayout, x: number, stof: number, plooi: number, licht: number): void {
+  const y = l.wallY;
+  const h = l.floorY - y;
+  screen.fillRect(x, y, 11, h, stof);
+  for (let px = x + 1; px < x + 11; px += 3) {
+    screen.fillRect(px, y, 1, h, plooi);
+    screen.fillRect(px + 1, y, 1, h, licht);
+  }
+  screen.fillRect(x, y, 11, 2, C.ROET);
 }
 
 /** The dark shelves, full of spines. Unmistakable in that room. */

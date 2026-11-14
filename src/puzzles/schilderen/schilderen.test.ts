@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buren, faults, isSolved, overlap, parseMuur, stars, teVerven } from './model.ts';
-import { solve } from './solver.ts';
+import { buren, faults, isSolved, magOp, overlap, parseMuur, stars, teVerven } from './model.ts';
+import { oplossingen, solve } from './solver.ts';
 import { SCHILDER_LEVELS } from './levels.ts';
 
 const klein = () => parseMuur(['X#', '##']);
@@ -81,4 +81,28 @@ test('stars are awarded against par', () => {
   assert.equal(stars(51, 51), 3);
   assert.equal(stars(54, 51), 2);
   assert.equal(stars(55, 51), 1);
+});
+
+test('every shipped wall has exactly one clean run', () => {
+  for (const level of SCHILDER_LEVELS) {
+    assert.ok((level.muur.punten ?? []).length >= 3, `${level.id}: a wall with no ladder on it is a snake`);
+    assert.equal(oplossingen(level.muur, 2).length, 1, `${level.id}: more than one way to do it cleanly`);
+  }
+});
+
+test('a ladder spot is shut until the ones before it have been passed', () => {
+  const m = { ...parseMuur(['X###', '####']), punten: [3, 1, 4] };
+  assert.equal(magOp(m, [0], 1), false, 'spot 2 before spot 1');
+  assert.equal(magOp(m, [0], 2), true, 'an ordinary square is always open');
+  assert.equal(magOp(m, [0, 4], 5), true);
+  assert.equal(magOp(m, [0], 4), false, 'the verfbak is the last square on the wall, not the second');
+  assert.ok(faults(m, [0, 1]).some((f) => f.kind === 'volgorde'));
+});
+
+test('the verfbak opens once everything else is under', () => {
+  const m = { ...parseMuur(['X###', '####']), punten: [3, 4] };
+  const run = [0, 1, 2, 3, 7, 6, 5];
+  assert.equal(magOp(m, run.slice(0, 4), 4), false);
+  assert.equal(magOp(m, run, 4), true);
+  assert.ok(isSolved(m, [...run, 4]));
 });

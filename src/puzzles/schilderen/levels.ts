@@ -22,22 +22,32 @@ export type SchilderLevel = {
 };
 
 const UITLEG_EERSTE = [
-  'SCHILDEREN. DE ROL BEGINT IN DE HOEK EN JE SLEEPT HEM OVER DE MUUR.',
-  'ALLES MOET ONDER, IN EEN KEER DOOR. DAT HEET DE NATTE RAND BIJHOUDEN.',
-  'TWEE KEER OVER HETZELFDE STUK MAG WEL, MAAR DAT ZIE JE TERUG. DUS LIEVER NIET.',
+  'SCHILDEREN. SLEEP DE ROL OVER DE MUUR. ALLES MOET ONDER, IN EEN KEER DOOR: DE NATTE RAND BIJHOUDEN.',
+  'DE GETALLEN ZIJN WAAR DE LADDER STAAT. DIE VERZET IK, DUS JE MOET ER IN VOLGORDE LANGS: EERST 1, DAN 2. HET LAATSTE GETAL IS DE VERFBAK. DAAR EINDIG JE.',
+  'TWEE KEER OVER HETZELFDE STUK MAG, MAAR DAT ZIE JE TERUG. ER IS PRECIES EEN MANIER OM HET IN EEN KEER GOED TE DOEN.',
 ];
 
 const UITLEG_LATER = [
-  'VOLGENDE WAND. TWEE RAMEN OM HEEN.',
-  'ZELFDE IDEE: ALLES ONDER, EN ZO MIN MOGELIJK OVER JE EIGEN VERF.',
+  'VOLGENDE WAND. RAMEN OM OMHEEN TE ROLLEN, EN DE LADDER STAAT WEER OVERAL.',
+  'IN VOLGORDE LANGS DE GETALLEN, EINDIGEN BIJ DE VERFBAK, EN NERGENS TWEE KEER.',
 ];
 
-function muurVan(surface: Surface, startX: number, startY: number): Muur {
+type Plek = readonly [number, number];
+
+/**
+ * The wall, where the roller starts, and where the ladder stands.
+ *
+ * The spots come out of tools/verf-zoek.ts, which keeps adding them until
+ * exactly one clean run is left. Do not move one by hand: the test suite
+ * counts the answers and will say so.
+ */
+function muurVan(surface: Surface, start: Plek, punten: readonly Plek[]): Muur {
   // Lintels get painted too; only the openings stay bare.
   const rows = surfaceToRows(surface).map((r) => r.replace(/B/g, '#'));
   const metStart = rows.map((row, y) =>
-    y === startY ? row.slice(0, startX) + 'X' + row.slice(startX + 1) : row);
-  return parseMuur(metStart);
+    y === start[1] ? row.slice(0, start[0]) + 'X' + row.slice(start[0] + 1) : row);
+  const muur = parseMuur(metStart);
+  return { ...muur, punten: punten.map(([x, y]) => y * muur.width + x) };
 }
 
 function surfaceVan(id: string): Surface {
@@ -51,19 +61,21 @@ export const SCHILDER_LEVELS: readonly SchilderLevel[] = [
     id: 'schilderen-tvkamer-kopgevel',
     ruimte: 'TV-KAMER',
     vlak: 'KOPGEVEL',
-    praatje: 'BEGIN IN DE HOEK. ALLES ONDER, IN EEN KEER.',
+    praatje: 'LANGS 1, 2, 3... EN EINDIGEN BIJ DE VERFBAK.',
     uitleg: UITLEG_EERSTE,
     surface: surfaceVan('tvkamer-kopgevel'),
-    muur: muurVan(surfaceVan('tvkamer-kopgevel'), 0, 0),
+    muur: muurVan(surfaceVan('tvkamer-kopgevel'), [7, 1],
+      [[7, 0], [7, 2], [4, 5], [3, 6], [2, 5], [7, 5], [4, 0], [1, 5]]),
   },
   {
     id: 'schilderen-woonkamer-tuinwand',
     ruimte: 'WOONKAMER',
     vlak: 'TUINWAND',
-    praatje: 'TWEE RAMEN. DAAR MOET JE OMHEEN.',
+    praatje: 'TWEE RAMEN, ZES LADDERPLEKKEN, EEN MANIER.',
     uitleg: UITLEG_LATER,
     surface: surfaceVan('woonkamer-tuinwand'),
-    muur: muurVan(surfaceVan('woonkamer-tuinwand'), 0, 0),
+    muur: muurVan(surfaceVan('woonkamer-tuinwand'), [9, 1],
+      [[8, 5], [7, 4], [0, 2], [6, 3], [11, 1], [7, 6]]),
   },
   {
     id: 'schilderen-tvkamer-tuinwand',
@@ -72,6 +84,7 @@ export const SCHILDER_LEVELS: readonly SchilderLevel[] = [
     praatje: 'DE LAATSTE WAND. EN DAN IS HET KLAAR.',
     uitleg: UITLEG_LATER,
     surface: surfaceVan('tvkamer-tuinwand'),
-    muur: muurVan(surfaceVan('tvkamer-tuinwand'), 0, 0),
+    muur: muurVan(surfaceVan('tvkamer-tuinwand'), [5, 5],
+      [[6, 5], [7, 0], [0, 2], [5, 1], [5, 2], [6, 1], [1, 3], [0, 4]]),
   },
 ];

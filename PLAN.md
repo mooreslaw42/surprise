@@ -424,6 +424,39 @@ Everything that was a design or a line in the plan and is now in the game:
 - **Meten**: the rolmaat, three times, before Isolatie, Dichtzetten and
   Vloeren. A gag rather than the mechanic in §4 — see `scenes/meten.ts`.
 
+## 9c. The difficulty pass, also 14 November
+
+Three stages could be finished without thinking, and three hints finished
+the level for you. Both fixed.
+
+- **Leeghalen** was six, eleven and twelve slides. It is twelve, twenty-one
+  and thirty: `tools/schuif-zoek.ts` takes the position furthest from solved
+  in a room's whole reachable set, and then hill-climbs on the furniture.
+- **Isolatie** was three plates and some strips. Each stack is now twelve
+  batts out of a book of fourteen shapes, the target is four tenths under the
+  best fill, and 2, 11 and 8 fills in the whole stack reach it
+  (`tools/wol-zoek.ts`).
+- **Schilderen** was a snake. The ladder now stands at numbered spots that
+  have to be passed in order, ending at the verfbak, and each wall is chosen
+  so that exactly one clean run exists (`tools/verf-zoek.ts`; the test suite
+  counts them).
+- **Hints** in Isolatie, Elektra, Vloeren and Schilderen used to lay the whole
+  answer. They give one batt, one cable, one course, five squares. Any hint
+  caps the level at two stars.
+
+Not touched, because they were reworked on Pim's own playtests and held up:
+Sloop, Elektra, Dichtzetten, Vloeren. Not touched and still a patience:
+the kanaalplannen. Par 59, 66 and 69 in a row is a lot of clicking.
+
+**The rooms, from the photos.** The woonkamer ceiling is one pale salie,
+beams and boards alike; the keuken's is white; the tv-kamer's is white with
+the old green band under it. Plain walls are cream, not grey. The floor is
+strip parquet. The tree-trunk post, the purple curtains and the terracotta
+ones are in. The bookcase wall is cream and the oker wall is the one beside
+it. What the photos also show and the data still has wrong: the oker wall is
+an outside wall with a tall steel window and a small arched one. Putting
+those in moves Sloop and Elektra levels, so it waits for the wall designs.
+
 ## 10. Waiting on the wall designs
 
 Deferred on purpose until the real wall drawings arrive, because they will

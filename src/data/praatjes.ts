@@ -141,7 +141,8 @@ export const METEN: Record<string, { readonly wat: string; readonly metingen: re
 
 /** The nudges the level wrapper shows. Short: they sit in one line. */
 export const WENK = {
-  hint: 'VAST? H = EEN HINT VAN PIM',
+  hint: 'VAST? H = EEN HINT VAN PIM (KOST EEN STER)',
   overslaan: 'DRIE KEER OPNIEUW. O = OVERSLAAN',
   zeker: 'ZEKER? NOG EEN KEER O',
+  metHint: 'MET EEN HINT: HOOGSTENS TWEE STERREN',
 } as const;

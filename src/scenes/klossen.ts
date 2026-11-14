@@ -131,7 +131,7 @@ export class KlosScene implements Scene {
   render(screen: Screen, ctx: SceneContext): void {
     const over = this.celAt(ctx);
     screen.clear(C.ZWART);
-    drawCeiling(screen, this.room);
+    drawCeiling(screen, this.room, this.level.surface.ruimte);
     drawWallGround(screen, this.room, this.level.surface.afwerking);
     this.drawBoard(screen);
     this.drawOpeningen(screen);

@@ -79,6 +79,7 @@ export class Klus implements Scene {
     this.inner = inner;
     this.opties = opties;
     this.tellerBijStart = opties.save.teller;
+    opties.save.plafond = 3;
     const pech = opties.pech ? PECH[opties.pech] : undefined;
     // Once per phase, ever. The second time it is not a joke, it is a bug.
     this.pech = pech && !opties.save.vlag(`pech-${opties.pech}`) ? pech : null;
@@ -93,6 +94,7 @@ export class Klus implements Scene {
   }
 
   exit(ctx: SceneContext): void {
+    this.opties.save.plafond = 3;
     this.inner.exit?.(ctx);
   }
 
@@ -125,6 +127,7 @@ export class Klus implements Scene {
       if (ctx.input.justPressed('KeyH')) {
         this.hintGebruikt = true;
         this.hintTot = -1;
+        this.opties.save.plafond = 2;
       }
       if (ctx.input.justPressed('KeyO') && this.magOverslaan) {
         if (this.time < this.zekerTot) {
@@ -199,7 +202,11 @@ export class Klus implements Scene {
   render(screen: Screen, ctx: SceneContext): void {
     this.inner.render(screen, ctx);
 
-    if (this.klaar) this.drawSnippers(screen);
+    if (this.klaar) {
+      this.drawSnippers(screen);
+      // The level's own panel counts three; say why the card will show two.
+      if (this.hintGebruikt) this.drawRegel(screen, WENK.metHint, C.ZANDGRIJS);
+    }
     else if (this.krak >= 0) this.drawPech(screen);
     else this.drawWenk(screen);
   }
@@ -238,6 +245,10 @@ export class Klus implements Scene {
       tekst = WENK.hint;
     }
     if (!tekst) return;
+    this.drawRegel(screen, tekst, kleur);
+  }
+
+  private drawRegel(screen: Screen, tekst: string, kleur: number): void {
     const w = tekst.length * 6 + 9;
     const x = Math.round((WIDTH - w) / 2);
     screen.fillRect(x, 17, w, 11, C.ZWART);

@@ -184,7 +184,7 @@ export class LevelScene implements Scene {
 
     // The room, back to front: outside, ceiling, wall, openings, floor, props.
     screen.clear(C.ZWART);
-    drawCeiling(screen, this.room);
+    drawCeiling(screen, this.room, this.surface.ruimte);
     drawWallGround(screen, this.room, this.surface.afwerking);
     this.drawWall(screen, shakeX, shakeY);
     this.drawOpenings(screen, shakeX, shakeY);

@@ -8,7 +8,7 @@ import { drawStar, STAR_W } from '../engine/ui.ts';
 import { Dialogue } from './dialogue.ts';
 import {
   type Streek,
-  buren, faults, isSolved, overlap, stars, teVerven, xy,
+  buren, faults, isSolved, magOp, overlap, stars, teVerven, xy,
 } from '../puzzles/schilderen/model.ts';
 import { solve } from '../puzzles/schilderen/solver.ts';
 import type { SchilderLevel } from '../puzzles/schilderen/levels.ts';
@@ -94,11 +94,7 @@ export class SchilderScene implements Scene {
     if (ctx.input.justPressed('Escape')) ctx.pop();
     if (ctx.input.justPressed('KeyU')) { this.uitleg = new Dialogue(this.level.uitleg); return; }
     if (ctx.input.justPressed('KeyR')) { this.streek = [this.level.muur.start]; return; }
-    if (ctx.input.justPressed('KeyH')) {
-      this.streek = solve(this.level.muur).streek;
-      this.check();
-      return;
-    }
+    if (ctx.input.justPressed('KeyH')) { this.hint(); this.check(); return; }
 
     if (ctx.input.mouseClicked) this.rolt = true;
     // A stroke can start and finish inside one step. The roller comes off at
@@ -114,6 +110,22 @@ export class SchilderScene implements Scene {
     }
   }
 
+  /**
+   * A stretch of the clean run, not the whole wall. If what is on the wall
+   * already follows it, the roller goes a few squares further; if it has
+   * wandered off, it is taken back to where it last agreed.
+   */
+  private hint(): void {
+    const goed = solve(this.level.muur).streek;
+    let gelijk = 0;
+    while (gelijk < this.streek.length && this.streek[gelijk] === goed[gelijk]) gelijk++;
+    if (gelijk < this.streek.length) {
+      this.streek = goed.slice(0, Math.max(1, gelijk));
+      return;
+    }
+    this.streek = goed.slice(0, Math.min(goed.length, gelijk + 5));
+  }
+
   /** Lay one square under the roller, or lift back off it. */
   private roll(cel: number): void {
     if (cel < 0 || !this.level.muur.verfbaar[cel]) return;
@@ -125,6 +137,8 @@ export class SchilderScene implements Scene {
       return;
     }
     if (!buren(this.level.muur, kop).includes(cel)) return;
+    // A ladder spot out of turn is shut, like a window, until it is its turn.
+    if (!magOp(this.level.muur, this.streek, cel)) return;
     this.streek.push(cel);
   }
 
@@ -139,7 +153,7 @@ export class SchilderScene implements Scene {
 
   render(screen: Screen, ctx: SceneContext): void {
     screen.clear(C.ZWART);
-    drawCeiling(screen, this.room);
+    drawCeiling(screen, this.room, this.level.surface.ruimte);
     drawWallGround(screen, this.room, this.level.surface.afwerking);
     this.drawMuur(screen);
     this.drawOpeningen(screen);
@@ -175,11 +189,45 @@ export class SchilderScene implements Scene {
         if (lagen > 1) screen.ditherRect(px, py, this.tile, this.tile, C.DONKEROKER, C.OKER);
       }
     }
+    this.drawPunten(screen);
     // The wet edge, where the roller is now.
     const kop = this.streek[this.streek.length - 1]!;
     const { x, y } = xy(m, kop);
     screen.strokeRect(this.originX + x * this.tile, this.originY + y * this.tile,
       this.tile, this.tile, C.WIT);
+  }
+
+  /**
+   * Where the ladder stands: a number on a tag, bright while it is still to
+   * come and faded once passed. The next one pulses. The last is the verfbak.
+   */
+  private drawPunten(screen: Screen): void {
+    const m = this.level.muur;
+    const punten = m.punten ?? [];
+    const gedaan = new Set(this.streek);
+    const volgende = punten.findIndex((cel) => !gedaan.has(cel));
+    punten.forEach((cel, i) => {
+      const { x, y } = xy(m, cel);
+      const px = this.originX + x * this.tile;
+      const py = this.originY + y * this.tile;
+      const cx = px + Math.floor(this.tile / 2);
+      const cy = py + Math.floor(this.tile / 2);
+      const langs = gedaan.has(cel);
+      const laatste = i === punten.length - 1;
+      const aan = i === volgende && Math.floor(this.time * 3) % 2 === 0;
+      if (laatste && !langs) {
+        // The tray: a trough with paint in it.
+        screen.fillRect(cx - 6, cy - 4, 13, 9, C.ASGRIJS);
+        screen.fillRect(cx - 5, cy - 3, 11, 5, C.OKER);
+        screen.strokeRect(cx - 6, cy - 4, 13, 9, aan ? C.WIT : C.ROET);
+        return;
+      }
+      const tekst = String(i + 1);
+      const w = tekst.length * 6 + 3;
+      screen.fillRect(cx - Math.floor(w / 2), cy - 5, w, 11, langs ? C.DONKEROKER : C.ZWART);
+      screen.strokeRect(cx - Math.floor(w / 2), cy - 5, w, 11, langs ? C.OKER : aan ? C.WIT : C.BOTERGEEL);
+      screen.text(tekst, cx - Math.floor(w / 2) + 2, cy - 3, langs ? C.OKER : C.BOTERGEEL);
+    });
   }
 
   private drawOpeningen(screen: Screen): void {

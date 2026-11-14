@@ -29,7 +29,9 @@ export type Achtergrond = 'tuin' | 'binnen';
 export type Afwerking = 'oker' | 'kalk' | 'behang';
 
 /** Things standing in the room that are not part of the puzzle. */
-export type Prop = 'boekenkast' | 'balk' | 'tv' | 'aanrecht' | 'stofzuiger' | 'lamp';
+export type Prop =
+  | 'boekenkast' | 'balk' | 'tv' | 'aanrecht' | 'stofzuiger' | 'lamp'
+  | 'gordijn-paars' | 'gordijn-rood';
 
 export type Surface = {
   readonly id: string;
@@ -62,7 +64,7 @@ export const SURFACES: readonly Surface[] = [
     id: 'woonkamer-tuinwand',
     achtergrond: 'tuin',
     afwerking: 'kalk',
-    props: ['boekenkast', 'lamp'],
+    props: ['balk', 'tv'],
     ruimte: 'woonkamer',
     naam: 'TUINWAND',
     bron: 'scan2 wand 1, x 6.00-11.35',
@@ -77,7 +79,7 @@ export const SURFACES: readonly Surface[] = [
     id: 'keuken-achterwand',
     achtergrond: 'tuin',
     afwerking: 'kalk',
-    props: ['aanrecht'],
+    props: ['aanrecht', 'gordijn-rood'],
     ruimte: 'keuken',
     naam: 'ACHTERWAND',
     bron: 'scan2 wand 2, x 5.00-11.25',
@@ -93,7 +95,7 @@ export const SURFACES: readonly Surface[] = [
     id: 'woonkamer-binnenmuur',
     achtergrond: 'binnen',
     afwerking: 'oker',
-    props: ['lamp'],
+    props: ['gordijn-paars', 'lamp', 'balk'],
     ruimte: 'woonkamer',
     naam: 'BINNENMUUR',
     bron: 'scan2 wand 3, x 0.00-4.20',
@@ -117,7 +119,7 @@ export const SURFACES: readonly Surface[] = [
     id: 'tvkamer-tuinwand',
     achtergrond: 'tuin',
     afwerking: 'behang',
-    props: ['tv'],
+    props: ['stofzuiger'],
     ruimte: 'tvkamer',
     naam: 'TUINWAND',
     bron: 'scan2 wand 1, x 3.60-8.00',
@@ -131,8 +133,8 @@ export const SURFACES: readonly Surface[] = [
   {
     id: 'woonkamer-haardwand',
     achtergrond: 'binnen',
-    afwerking: 'oker',
-    props: ['boekenkast', 'lamp'],
+    afwerking: 'kalk',
+    props: ['boekenkast', 'gordijn-paars'],
     ruimte: 'woonkamer',
     naam: 'HAARDWAND',
     bron: 'scan2 wand 3, x 4.20-8.60',
@@ -145,7 +147,7 @@ export const SURFACES: readonly Surface[] = [
     id: 'keuken-raamwand',
     achtergrond: 'tuin',
     afwerking: 'kalk',
-    props: ['aanrecht'],
+    props: ['gordijn-rood'],
     ruimte: 'keuken',
     naam: 'RAAMWAND',
     bron: 'scan2 wand 2, x 0.00-5.00',
@@ -161,7 +163,7 @@ export const SURFACES: readonly Surface[] = [
     id: 'tvkamer-zijwand',
     achtergrond: 'binnen',
     afwerking: 'behang',
-    props: ['tv', 'stofzuiger'],
+    props: ['stofzuiger', 'gordijn-rood'],
     ruimte: 'tvkamer',
     naam: 'ZIJWAND',
     bron: 'scan2 wand 5',
@@ -174,7 +176,7 @@ export const SURFACES: readonly Surface[] = [
     id: 'tvkamer-kopgevel',
     achtergrond: 'tuin',
     afwerking: 'behang',
-    props: ['tv', 'stofzuiger'],
+    props: ['stofzuiger'],
     ruimte: 'tvkamer',
     naam: 'KOPGEVEL',
     bron: 'scan2 wand 6',

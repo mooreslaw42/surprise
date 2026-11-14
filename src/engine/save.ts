@@ -43,6 +43,12 @@ export class Save {
    * this rather than asking eight different scenes whether they were won.
    */
   teller = 0;
+  /**
+   * The most stars the level being played can still earn. Three, until Pim
+   * has been asked for a hint: then two, because the third is for working it
+   * out. Set and reset by whatever wraps the level.
+   */
+  plafond = 3;
 
   constructor(storage: Storage | null) {
     this.storage = storage;
@@ -92,7 +98,8 @@ export class Save {
   }
 
   /** Keeps the best result, so replaying for stars can never lose you any. */
-  record(id: string, swings: number, stars: number): LevelRecord {
+  record(id: string, swings: number, verdiend: number): LevelRecord {
+    const stars = Math.min(verdiend, this.plafond);
     const previous = this.data.levels[id];
     const best: LevelRecord = previous && !previous.overgeslagen
       ? { ...previous, swings: Math.min(previous.swings, swings), stars: Math.max(previous.stars, stars) }

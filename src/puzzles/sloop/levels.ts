@@ -28,7 +28,7 @@ export type SloopLevel = {
 const PRAATJES: Record<string, string> = {
   'tvkamer-kopgevel': 'SLA DE ONDERSTE LAAG WEG EN KIJK WAT ER GEBEURT.',
   'keuken-zijwand': 'DE GASLEIDING. DAAR BLIJF JE VAN AF.',
-  'woonkamer-binnenmuur': 'ALLES ACHTER DE LEIDING BLIJFT STAAN. DUS DAAR MOET JE HEEN.',
+  'woonkamer-binnenmuur': 'ACHTER DE LEIDING BLIJFT ALLES STAAN. DAARHEEN.',
   'tvkamer-tuinwand': 'DE GASLEIDING ZIT IN DE HOEK. HANDIG, OF NIET.',
   'woonkamer-tuinwand': 'TWEE LATEIEN HOUDEN HUN EIGEN STUK MUUR OVEREIND.',
   'keuken-achterwand': 'DE GROOTSTE WAND. GAS EN KABEL ALLEBEI.',

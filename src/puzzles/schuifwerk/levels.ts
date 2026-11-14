@@ -10,6 +10,12 @@ import { parsePlan, type Plan } from './model.ts';
  * is a stapel dozen, rather than six identical rectangles.
  *
  * One room each, and nothing else can start until all three are empty.
+ *
+ * The rooms are found, not drawn: tools/schuif-zoek.ts fills a room, walks
+ * every position it can reach, and keeps the one furthest from having the
+ * door clear, then swaps furniture about for as long as that makes it
+ * worse. Twelve slides, twenty-one, thirty. The first versions were six,
+ * eleven and twelve, and could be done by shoving whatever was in front.
  */
 
 export type SchuifLevel = {
@@ -29,7 +35,7 @@ const UITLEG_EERSTE = [
 ];
 
 const UITLEG_LATER = [
-  'VOLGENDE KAMER. IETS VOLLER DAN DE VORIGE.',
+  'VOLGENDE KAMER. EEN STUK VOLLER DAN DE VORIGE.',
   'ZELFDE IDEE: HET DING MET DE GELE RAND NAAR DE DEUR, DE REST OPZIJ. HOE MINDER ZETTEN, HOE BETER.',
 ];
 
@@ -42,15 +48,15 @@ export const SCHUIF_LEVELS: readonly SchuifLevel[] = [
     praatje: 'DE BANK NAAR DE DEUR. DE REST STAAT IN DE WEG.',
     uitleg: UITLEG_EERSTE,
     plan: parsePlan([
-      '....B.',
-      'C...B.',
-      'CTT.D.',
-      '..E.D.',
-      '..EAA.',
-      '......',
+      '..GGGB',
+      '..E..B',
+      'TTE...',
+      'A.E.FF',
+      'A.DDC.',
+      '....C.',
     ], {
-      T: 'bank', B: 'boekenkast', C: 'kast',
-      D: 'eettafel', E: 'salontafel', A: 'dozen',
+      T: 'bank', E: 'boekenkast', G: 'eettafel', A: 'fauteuil',
+      B: 'kast', C: 'dozen', D: 'salontafel', F: 'tvmeubel',
     }),
   },
   {
@@ -58,18 +64,18 @@ export const SCHUIF_LEVELS: readonly SchuifLevel[] = [
     nummer: 2,
     ruimte: 'KEUKEN',
     titel: 'KEUKEN LEEGHALEN',
-    praatje: 'DE KOELKAST ERUIT. EN DE SCHOUW ZIT ER NOG.',
+    praatje: 'DE KOELKAST ERUIT. HET AANRECHT STAAT DWARS.',
     uitleg: UITLEG_LATER,
     plan: parsePlan([
-      '..D.#.',
-      '..D...',
-      'TTB...',
-      'C.B.A.',
-      'C.EEA.',
-      '......',
+      'A.....',
+      'ABBBG.',
+      'TT..GF',
+      '.IIEGF',
+      '..DECC',
+      'HHDE..',
     ], {
-      T: 'koelkast', B: 'aanrecht', C: 'kast',
-      D: 'fornuis', E: 'eettafel', A: 'dozen',
+      T: 'koelkast', B: 'aanrecht', G: 'kast', E: 'eettafel', A: 'fornuis',
+      F: 'dozen', I: 'dozen', C: 'dozen', D: 'kast', H: 'salontafel',
     }),
   },
   {
@@ -77,18 +83,19 @@ export const SCHUIF_LEVELS: readonly SchuifLevel[] = [
     nummer: 3,
     ruimte: 'TV-KAMER',
     titel: 'TV-KAMER LEEGHALEN',
-    praatje: 'DE VOLSTE KAMER. DE BANK MOET ERUIT.',
+    praatje: 'DE VOLSTE KAMER. DERTIG KEER SCHUIVEN.',
     uitleg: UITLEG_LATER,
     plan: parsePlan([
-      '..C...',
-      '..C.E.',
-      'TTA.E.',
-      'B.A.F.',
-      'B.DDF.',
-      '......',
+      '..CCCK',
+      '..IEEK',
+      'TTIF.K',
+      'J..FBB',
+      'J.HHAA',
+      'DDGGG.',
     ], {
-      T: 'bank', A: 'boekenkast', B: 'fauteuil',
-      C: 'kast', D: 'tvmeubel', E: 'salontafel', F: 'dozen',
+      T: 'bank', K: 'boekenkast', C: 'kast', G: 'tvmeubel', I: 'fauteuil',
+      J: 'fauteuil', E: 'salontafel', H: 'salontafel', F: 'dozen', B: 'dozen',
+      A: 'dozen', D: 'dozen',
     }),
   },
 ];

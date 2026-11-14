@@ -8,6 +8,13 @@
  *
  * Which makes the perfect run a Hamiltonian path over the wall, and par the
  * number of squares there are to cover.
+ *
+ * On an open wall that is a snake, up and down, and nobody has to think. So
+ * the ladder is in the way. It stands at numbered spots, and the roller has
+ * to pass them in order — the ladder goes along as you go — and finish at
+ * the last one, where the verfbak is. Each wall is chosen so that exactly
+ * one clean run does that, which turns rolling a wall into working out the
+ * only way round it.
  */
 
 export type Muur = {
@@ -17,7 +24,41 @@ export type Muur = {
   readonly verfbaar: boolean[];
   /** Where the painter starts, as a cell index. */
   readonly start: number;
+  /**
+   * Where the ladder stands, in the order it has to be passed. The last one
+   * is the verfbak: the run ends there. Left off, the wall is free.
+   */
+  readonly punten?: readonly number[];
 };
+
+/** Which ladder spot a cell is, counting from 0, or -1. */
+export function puntOp(m: Muur, cel: number): number {
+  return m.punten ? m.punten.indexOf(cel) : -1;
+}
+
+/**
+ * Whether the roller may go onto this square now.
+ *
+ * A ladder spot is shut until every spot before it has been passed, and the
+ * verfbak is shut until the rest of the wall is done. Shut rather than wrong:
+ * a run can then never be spoilt beyond repair, only made longer, which is
+ * what going over your own paint already costs.
+ */
+export function magOp(m: Muur, streek: Streek, cel: number): boolean {
+  if (!m.verfbaar[cel]) return false;
+  const punt = puntOp(m, cel);
+  if (punt < 0) return true;
+  const gedaan = new Set(streek);
+  if (gedaan.has(cel)) return true;
+  const punten = m.punten!;
+  for (let i = 0; i < punt; i++) if (!gedaan.has(punten[i]!)) return false;
+  if (punt === punten.length - 1) {
+    for (let i = 0; i < m.verfbaar.length; i++) {
+      if (m.verfbaar[i] && i !== cel && !gedaan.has(i)) return false;
+    }
+  }
+  return true;
+}
 
 export type Streek = number[];
 
@@ -50,6 +91,7 @@ export type Fault =
   | { kind: 'begin' }
   | { kind: 'sprong'; at: number }
   | { kind: 'raam'; at: number }
+  | { kind: 'volgorde'; at: number }
   | { kind: 'kaal'; at: number };
 
 export function faults(m: Muur, streek: Streek): Fault[] {
@@ -61,6 +103,10 @@ export function faults(m: Muur, streek: Streek): Fault[] {
     if (!m.verfbaar[cel]) { out.push({ kind: 'raam', at: cel }); break; }
     if (i > 0 && !buren(m, streek[i - 1]!).includes(cel)) {
       out.push({ kind: 'sprong', at: cel });
+      break;
+    }
+    if (!magOp(m, streek.slice(0, i), cel)) {
+      out.push({ kind: 'volgorde', at: cel });
       break;
     }
   }
