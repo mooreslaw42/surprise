@@ -1,3 +1,4 @@
+import { OPENING } from '../data/liedjes.ts';
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
@@ -13,14 +14,32 @@ const FOOTER_H = 14;
 const STRIPPED_X = 236;   // wallpaper gone from here right
 const PAPERED_X = 112;    // ochre wall up to here, wallpaper after it
 
+/** Where the voorhamer lands, which is where the hole opens. */
+const RAAK_X = 112;
+const RAAK_Y = 124;
+
+/**
+ * The swing, in seconds. Wind up, drive, hit — and then a beat before the
+ * house map, which is not padding: nothing may make a sound until the player
+ * has pressed something, so this press is the one that starts the riff, and
+ * leaving on the same frame would mean the title screen never gets to play
+ * its own music. So it swings instead. The screen did say to.
+ */
+const WINDOP = 0.22;
+const INSLAG = 0.42;
+const NAAR_KAART = 2.2;
+
 /**
  * Title screen: one wall of the house, caught mid-renovation. Finished ochre
  * on the left, the old check wallpaper in the middle, stripped back to studs
  * and wool on the right. The whole game in one picture.
  */
 export class TitleScene implements Scene {
+  readonly muziek = OPENING;
   private readonly save: Save;
   private time = 0;
+  /** Seconds since the hammer started moving. Negative while it is resting. */
+  private zwaai = -1;
 
   constructor(save: Save) {
     this.save = save;
@@ -28,25 +47,119 @@ export class TitleScene implements Scene {
 
   update(dt: number, ctx: SceneContext): void {
     this.time += dt;
-    if (ctx.input.confirmed() || ctx.input.mouseClicked) ctx.push(new HouseMapScene(this.save));
+
+    if (this.zwaai < 0) {
+      if (ctx.input.confirmed() || ctx.input.mouseClicked) this.zwaai = 0;
+      return;
+    }
+
+    this.zwaai += dt;
+    if (this.zwaai >= NAAR_KAART) {
+      // Reset before leaving, so coming back out of the house map finds the
+      // wall whole and the hammer up again.
+      this.zwaai = -1;
+      ctx.push(new HouseMapScene(this.save));
+    }
   }
 
   render(screen: Screen, _ctx: SceneContext): void {
     screen.clear(C.ZWART);
     this.drawCeiling(screen);
     this.drawWall(screen);
+    if (this.zwaai >= INSLAG) this.drawGat(screen);
     this.drawFloor(screen);
-    this.drawSledgehammer(screen, 100, 118);
+    const { dx, dy } = this.hamerStand();
+    this.drawSledgehammer(screen, 100 + dx, 118 + dy);
+    if (this.zwaai >= INSLAG) this.drawGruis(screen);
     this.drawTitle(screen);
 
-    if (Math.floor(this.time * 1.6) % 2 === 0) {
+    if (this.zwaai < 0 && Math.floor(this.time * 1.6) % 2 === 0) {
       screen.textCenteredShadow('DRUK OP ENTER OM TE SLOPEN', WIDTH / 2, 150, C.LICHTOKER, C.ZWART);
     }
 
     screen.fillRect(0, HEIGHT - FOOTER_H, WIDTH, FOOTER_H, C.ZWART);
     screen.fillRect(0, HEIGHT - FOOTER_H, WIDTH, 1, C.STEEN);
-    screen.text('S = SCANLINES   P = PALET   D = ONTWERP   F = SCHERM', 6, HEIGHT - 10, C.ASGRIJS);
+    screen.text('S=SCANLINES  M=MUZIEK  P=PALET  D=ONTWERP  F=SCHERM', 6, HEIGHT - 10, C.ASGRIJS);
     screen.text('V0.2', WIDTH - 29, HEIGHT - 10, C.STEEN);
+  }
+
+  /** Up and back, then down and through, then a short recoil. */
+  private hamerStand(): { dx: number; dy: number } {
+    const t = this.zwaai;
+    if (t < 0) return { dx: 0, dy: 0 };
+    if (t < WINDOP) {
+      const p = t / WINDOP;
+      return { dx: Math.round(-6 * p), dy: Math.round(-16 * p) };
+    }
+    if (t < INSLAG) {
+      const p = (t - WINDOP) / (INSLAG - WINDOP);
+      return { dx: Math.round(-6 + 14 * p), dy: Math.round(-16 + 25 * p) };
+    }
+    // Pulls back up out of its own work, so the hole is the thing you look at.
+    const p = Math.min(1, (t - INSLAG) / 0.3);
+    return { dx: Math.round(8 - 6 * p), dy: Math.round(9 - 12 * p) };
+  }
+
+  /**
+   * What a voorhamer actually leaves: board gone, the cavity behind it open,
+   * one stud still standing. The same wall section the stripped end of the
+   * screen is already showing, only this time you made it.
+   */
+  private drawGat(screen: Screen): void {
+    const groei = Math.min(1, (this.zwaai - INSLAG) / 0.12);
+    const w = Math.round(46 * groei);
+    const h = Math.round(38 * groei);
+    if (w < 6 || h < 6) return;
+    const x = RAAK_X - Math.round(w / 2);
+    const y = RAAK_Y - Math.round(h / 2);
+
+    // A hole has to read as a hole against cream wallpaper as well as against
+    // ochre, and the thing that makes it read is the dark: the cavity is the
+    // only place on this wall you can see into. So the rim stays wide and the
+    // wool behind it is in shadow, not the lit botergeel of the stripped end.
+    screen.fillRect(x, y, w, h, C.ROET);
+    screen.ditherRect(x + 6, y + 7, w - 12, h - 13, C.DONKEROKER, C.OKER);
+    screen.fillRect(x + 6, y + 7, w - 12, 2, C.ZWART);          // shadow under the lintel
+    screen.fillRect(x + 6, y + 7, 2, h - 13, C.ZWART);
+
+    const stud = x + Math.round(w / 2) + 4;
+    screen.fillRect(stud, y + 4, 5, h - 8, C.HOUT);
+    screen.fillRect(stud, y + 4, 1, h - 8, C.LICHTHOUT);
+    screen.fillRect(stud + 4, y + 4, 1, h - 8, C.ROET);
+
+    // The broken edge of the board, all the way round.
+    for (let ey = y; ey < y + h; ey += 3) {
+      const jag = ((ey * 7919) % 9) - 4;
+      screen.fillRect(x + jag - 3, ey, 4, 3, C.KALK);
+      screen.fillRect(x + w + jag - 1, ey, 4, 3, C.KALK);
+      screen.fillRect(x + jag - 3, ey, 1, 3, C.ZANDGRIJS);
+    }
+    for (let ex = x; ex < x + w; ex += 4) {
+      const jag = ((ex * 104729) % 7) - 3;
+      screen.fillRect(ex, y + jag - 2, 4, 3, C.KALK);
+      screen.fillRect(ex, y + h + jag - 1, 4, 3, C.KALK);
+    }
+
+    // Two frames of nothing but dust, at full size whatever the hole is doing.
+    if (this.zwaai - INSLAG < 0.07) {
+      screen.fillRect(RAAK_X - 29, RAAK_Y - 25, 58, 50, C.WIT);
+    }
+  }
+
+  /** Plaster thrown out of the hole, on its way to the floor. */
+  private drawGruis(screen: Screen): void {
+    const t = this.zwaai - INSLAG;
+    if (t > 1.2) return;
+    const KLEUR = [C.WIT, C.KALK, C.ZANDGRIJS, C.ASGRIJS];
+    for (let i = 0; i < 28; i++) {
+      const hoek = ((i * 7919) % 360) * (Math.PI / 180);
+      const snelheid = 45 + ((i * 104729) % 85);
+      const x = Math.round(RAAK_X + Math.cos(hoek) * snelheid * t);
+      const y = Math.round(RAAK_Y - (Math.abs(Math.sin(hoek)) * snelheid + 30) * t + 240 * t * t);
+      if (y > FLOOR_Y + 4 || x < 0 || x >= WIDTH) continue;
+      const maat = i % 4 === 0 ? 3 : i % 2 === 0 ? 2 : 1;
+      screen.fillRect(x, y, maat, maat, KLEUR[i % KLEUR.length]!);
+    }
   }
 
   /** Tongue-and-groove boards in salie, white beams across. The signature. */

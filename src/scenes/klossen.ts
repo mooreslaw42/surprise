@@ -1,3 +1,4 @@
+import { thema } from '../data/liedjes.ts';
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
@@ -30,6 +31,7 @@ const TAPE_W = 13;
  * where you have drilled. A hole is a hole, so it does not come back out.
  */
 export class KlosScene implements Scene {
+  readonly muziek = thema('klossen');
   private readonly level: KlosLevel;
   private readonly save: Save;
   private readonly room: RoomLayout;

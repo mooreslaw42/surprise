@@ -1,3 +1,4 @@
+import { thema } from '../data/liedjes.ts';
 import { C, luma } from '../engine/palette.ts';
 import { densify } from '../engine/input.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
@@ -24,6 +25,7 @@ const BOTTOM_H = 30;
 const DRAAD = [C.LICHTOKER, C.MAGENTA, C.SALIE, C.ROESTROOD] as const;
 
 export class ElektraScene implements Scene {
+  readonly muziek = thema('elektra');
   private readonly level: ElektraLevel;
   private readonly save: Save;
   private readonly surface: Surface;

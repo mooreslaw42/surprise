@@ -1,3 +1,4 @@
+import { thema } from '../data/liedjes.ts';
 import { C } from '../engine/palette.ts';
 import { densify } from '../engine/input.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
@@ -26,6 +27,7 @@ const BOTTOM_H = 30;
  * you have got and exactly which corner you have left bare.
  */
 export class SchilderScene implements Scene {
+  readonly muziek = thema('schilderen');
   private readonly level: SchilderLevel;
   private readonly save: Save;
   private readonly par: number;

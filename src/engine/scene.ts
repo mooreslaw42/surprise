@@ -1,4 +1,5 @@
 import type { Input } from './input.ts';
+import type { Muziekkeuze } from './muziek.ts';
 import type { Screen } from './screen.ts';
 
 export interface SceneContext {
@@ -20,4 +21,13 @@ export interface Scene {
   render(screen: Screen, ctx: SceneContext): void;
   /** When true, the scene below still renders underneath this one. */
   readonly transparent?: boolean;
+  /**
+   * What should be playing while this scene is on top. Declared rather than
+   * started, so push and pop both do the right thing without a scene having
+   * to remember to hand the music back.
+   *
+   * Left off means no opinion and whatever is underneath keeps playing, which
+   * is what an overlay wants; null means silence.
+   */
+  readonly muziek?: Muziekkeuze | null;
 }

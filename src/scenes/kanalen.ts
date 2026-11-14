@@ -1,3 +1,5 @@
+import { BAAS, thema } from '../data/liedjes.ts';
+import type { Muziekkeuze } from '../engine/muziek.ts';
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
@@ -22,6 +24,9 @@ const BOTTOM_H = 30;
  * doing the whole thing in one go at the end.
  */
 export class KanalenScene implements Scene {
+  /** The boss is the one that finally arrived, so it gets its own record. */
+  readonly muziek: Muziekkeuze;
+
   private readonly level: KanaalLevel;
   private readonly save: Save;
   private readonly par: number;
@@ -37,6 +42,7 @@ export class KanalenScene implements Scene {
   private uitleg: Dialogue | null;
 
   constructor(level: KanaalLevel, save: Save) {
+    this.muziek = level.baas ? BAAS : thema('kanalen');
     this.level = level;
     this.save = save;
     this.masks = [...level.bord.masks];

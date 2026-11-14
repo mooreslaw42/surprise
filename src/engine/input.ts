@@ -134,6 +134,15 @@ export class Input {
     return this.justPressed('Enter') || this.justPressed('Space') || this.justPressed('NumpadEnter');
   }
 
+  /**
+   * Anything at all this step. The browser will not let the audio context
+   * start until the player has acted, so the game loop watches for a first
+   * sign of life rather than making every scene remember to report one.
+   */
+  raakte(): boolean {
+    return this.pressed.size > 0 || this.mouseClicked;
+  }
+
   /** Called at the end of every frame. */
   endFrame(): void {
     this.pressed.clear();

@@ -1,3 +1,4 @@
+import { thema } from '../data/liedjes.ts';
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
@@ -24,6 +25,7 @@ const BOTTOM_H = 30;
 type Dust = { x: number; y: number; vx: number; vy: number; life: number; color: number };
 
 export class LevelScene implements Scene {
+  readonly muziek = thema('sloop');
   private readonly level: SloopLevel;
   private readonly save: Save;
   private readonly par: number;

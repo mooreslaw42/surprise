@@ -1,5 +1,6 @@
+import { Audio } from './engine/audio.ts';
 import { Input } from './engine/input.ts';
-import { PALETTE } from './engine/palette.ts';
+import { C, PALETTE } from './engine/palette.ts';
 import { Screen, WIDTH, HEIGHT } from './engine/screen.ts';
 import type { Scene, SceneContext } from './engine/scene.ts';
 import { Save } from './engine/save.ts';
@@ -13,10 +14,13 @@ const MAX_CATCHUP = 5;
 class Game implements SceneContext {
   readonly screen: Screen;
   readonly input: Input;
+  private readonly audio = new Audio();
   private readonly stack: Scene[] = [];
   private accumulator = 0;
   private last = 0;
   private showPalette = false;
+  /** Seconds left on the "muziek uit" notice, so M is not a silent mystery. */
+  private melding = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.screen = new Screen(canvas);
@@ -55,6 +59,10 @@ class Game implements SceneContext {
         steps++;
       }
 
+      // Once a frame, not once a step: the scheduler works in audio-clock
+      // seconds and does not care how many times the game caught up.
+      this.muziek();
+      this.audio.tik();
       this.render();
       requestAnimationFrame(frame);
     };
@@ -62,7 +70,16 @@ class Game implements SceneContext {
   }
 
   private step(dt: number): void {
+    // Nothing is allowed to make a sound until the player has touched
+    // something, so the first key or click is also what starts the music.
+    if (this.input.raakte()) this.audio.aan();
+    if (this.melding > 0) this.melding -= dt;
+
     if (this.input.justPressed('KeyS')) this.screen.scanlines = !this.screen.scanlines;
+    if (this.input.justPressed('KeyM')) {
+      this.audio.demp();
+      this.melding = 1.8;
+    }
     if (this.input.justPressed('KeyP')) this.showPalette = !this.showPalette;
     // Toggled here rather than inside the scene: if both ends handled the key,
     // the push and the pop would land on the same frame.
@@ -76,6 +93,17 @@ class Game implements SceneContext {
     this.input.endFrame();
   }
 
+  /**
+   * The topmost scene with an opinion picks the music. Walking down past the
+   * ones without one keeps an overlay — the design sheet, a dialogue — from
+   * cutting the level theme just by being on top.
+   */
+  private muziek(): void {
+    let i = this.stack.length - 1;
+    while (i > 0 && this.stack[i]?.muziek === undefined) i--;
+    this.audio.speel(this.stack[i]?.muziek ?? null);
+  }
+
   private render(): void {
     // Walk down to the lowest scene that still wants what is under it drawn.
     let base = this.stack.length - 1;
@@ -85,8 +113,21 @@ class Game implements SceneContext {
     }
 
     if (this.showPalette) this.renderPalette();
+    if (this.melding > 0) this.renderMelding();
     this.input.drawCursor();
     this.screen.present();
+  }
+
+  /** Briefly, after M, because silence that looks like a bug is a bug. */
+  private renderMelding(): void {
+    const w = 64;
+    const x = WIDTH - w - 2;
+    this.screen.fillRect(x, 2, w, 11, C.ZWART);
+    this.screen.strokeRect(x, 2, w, 11, C.STEEN);
+    this.screen.textCentered(
+      this.audio.gedempt ? 'MUZIEK UIT' : 'MUZIEK AAN',
+      x + w / 2, 5, this.audio.gedempt ? C.ASGRIJS : C.LICHTOKER,
+    );
   }
 
   /** Art-direction aid: every palette index with its number, toggled with P. */

@@ -1,3 +1,4 @@
+import { thema } from '../data/liedjes.ts';
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
@@ -29,6 +30,7 @@ function volPlan(v: Vloer): Legplan {
  * own width — the empty cells to either side are outside the room.
  */
 export class VloerScene implements Scene {
+  readonly muziek = thema('vloeren');
   private readonly level: VloerLevel;
   private readonly save: Save;
   private readonly par: number;

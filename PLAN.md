@@ -30,7 +30,7 @@ Pim is the pixel-art host in the text box at the bottom.
 | Wouter | the player. Meticulous. Measures ten times. |
 | Pim | host, narrator, hint-giver |
 | Moeder | asks, every stage, when she gets her kleiatelier back |
-| Zus | asks, every stage, for help with the tiny house |
+| Wiep | de zus. Asks, every stage, for help with the tiny house — until the asking stops and a trailer turns up on the drive |
 | Zwart & Dekker | the tools. They break. *Altijd dekking, nooit garantie.* |
 | Het ventilatiesysteem | planned forever, delivered never |
 
@@ -56,11 +56,26 @@ Sits outside the ladder. One planning level after most stages, six in total.
 stay inside the duct budget. Each is harder than the last. Each ends with a delivery notice.
 `WTW = Wachten Totdat 't Werkt.` It never arrives.
 
+### Het tuinhuis — the other running gag
+Also outside the ladder, and the counterweight to the one above: this one pays off, halfway,
+in a boss of its own. Wiep stops asking and arrives with a trailer, and the tiny house is
+finished in an afternoon while Wouter's own house is still somewhere in the wiring. Then
+kanaalplan 2 lands, with its delivery notice, and the unit is still on its way.
+
+Designed out in full in **[TUINHUIS.md](TUINHUIS.md)**: a section through a trailer, nine
+functions that have to be stacked under a road-legal four metres, and a tow-ball gauge that
+moves while you do it. It sits between Elektra and kanaalplan 2, behind the same gate as
+everything else — this once, he cannot put it off.
+
 ### Boss level — Oplevering
 The ventilation unit is delivered. One mega-level across all three rooms at once: ducts have to
 pass through the walls you already closed, around the wiring you already routed, under the floor
 you already laid. **Everything you built becomes an obstacle.** Two years of running gag, paid off
 in one level. Then the outro video plays.
+
+Designed out in full in **[BAAS.md](BAAS.md)**: two layers rather than one plan, three schachten
+the player has to site, and the one thing that has to be written to the save to make the obstacle
+genuinely his own work.
 
 ---
 
@@ -188,7 +203,7 @@ floor plan drops in later without touching puzzle code.
 | A hand-authored level is unsolvable | per-mechanic solvers in the test suite |
 | Difficulty mis-tuned for a physics nerd | per-level knob, hints, skip-after-three; tuned week 6 |
 | Eight mechanics is a lot | each is small and classic; two hardest first, in week 2 |
-| Music transcription eats time | audio is week 5, two days budgeted, game ships silent if needed |
+| Music transcription eats time | done, and early: arrangements rather than transcriptions, written as data |
 
 ---
 
@@ -266,7 +281,9 @@ system fills in as it comes right. The drawing sits on the house: the real
 footprint from the scan, walled, with the rooms named, so a rooster is in a
 room rather than at a coordinate. Two plans between phases, each covering
 one room, then the boss over the whole house — eighteen roosters, par 69. That one is the only
-one marked GELEVERD.
+one marked GELEVERD. That boss is a stand-in: the same rotation puzzle at
+full size, with nothing you built in the eight phases before it in the way. What it should be
+instead is BAAS.md.
 
 The sliding puzzle it replaced was good but wrong for ventilation, so it
 moved to Leeghalen — stage 1, shoving the furniture out through the door,
@@ -331,6 +348,52 @@ answer. There is a test that the rules never deduce a square the answer
 disagrees with, because a rule that oversteps would hand the player a hole.
 
 No plumbing stage. He did not do any worth the name.
+
+There is music. Three arrangements after his own records, written as text in
+`data/liedjes.ts` and played by five voices and one buffer of noise. Nothing
+is sampled and nothing is downloaded, so the whole soundtrack is a few
+kilobytes of notation and the chip does the rest. The riff opens the game
+and carries the work, the ballad is the menus, the boogie is the boss.
+
+Arrangements rather than transcriptions, and not only for the copyright.
+Three voices and a noise channel cannot play a Rolling Stones record, and
+trying would sound like a ringtone; what a chip can do is state the idea —
+the chug of the riff, the shuffle of the boogie, the slow modal fall of the
+ballad — and get out of the way. The boogie is on a grid of twelve steps a
+bar rather than sixteen, so a shuffled eighth is two steps and then one,
+which is the shuffle itself rather than an imitation of it.
+
+The riff is transposed per stage, which is what makes eight themes out of one
+loop, and for the kanaalplan it is four semitones down and slower, because
+that is what planning the ventilation for the fourth time feels like. Its
+lead runs eight bars over a two-bar rhythm section and then shuts up for half
+a bar, which is what lets it stay on while somebody measures a wall.
+
+Scenes do not start music, they declare it, and the loop asks whoever is on
+top. Push, pop and the design sheet all then do the right thing without a
+scene having to remember to hand the music back, and asking for what is
+already playing costs nothing — so the riff runs unbroken across the six
+walls of a stage instead of restarting on every one.
+
+Timing comes off the audio clock and not the game loop. Notes are booked a
+fifth of a second ahead, because a sixteenth at 150bpm is 130ms and a slow
+frame is 50. The rule that is not obvious is that a tab left in the
+background must never catch up: requestAnimationFrame stops and the audio
+clock does not, so coming back to a minute of missed music and playing it as
+fast as the loop can book it would be the worst noise this game could make.
+It skips to now. Both the notation and that decision are pure, and tested —
+a mistyped note throws by name the moment the songbook is imported, which
+means in the test suite rather than on 5 December.
+
+The title screen swings before it lets you through, and that is the music's
+fault rather than the art's. Nothing may make a sound until the player has
+pressed something, so the press that starts the riff is also the press that
+would leave — and the title would never get to play its own theme. So Enter
+puts the voorhamer through the wall: wind up, drive, a hole with the cavity
+behind it, plaster on its way to the floor, and two seconds of riff before
+the house map. The screen was already telling you to slopen.
+
+M mutes it.
 
 ## 10. Waiting on the wall designs
 

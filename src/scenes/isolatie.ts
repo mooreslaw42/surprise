@@ -1,3 +1,4 @@
+import { thema } from '../data/liedjes.ts';
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
@@ -21,6 +22,7 @@ const TRAY_H = 34;
  * pass until there is not one left.
  */
 export class IsolatieScene implements Scene {
+  readonly muziek = thema('isolatie');
   private readonly level: IsolatieLevel;
   private readonly save: Save;
   private readonly par: number;

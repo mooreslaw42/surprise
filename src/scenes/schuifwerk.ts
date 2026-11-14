@@ -1,3 +1,4 @@
+import { thema } from '../data/liedjes.ts';
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
@@ -36,6 +37,7 @@ export function vlakVan(plan: Plan): { tile: number; originX: number; originY: n
  * the room is empty.
  */
 export class SchuifScene implements Scene {
+  readonly muziek = thema('leeghalen');
   private readonly level: SchuifLevel;
   private readonly save: Save;
   private readonly par: number;

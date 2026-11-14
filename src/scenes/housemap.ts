@@ -1,3 +1,4 @@
+import { MENU } from '../data/liedjes.ts';
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
@@ -54,6 +55,7 @@ const SLOT = [
  * to start.
  */
 export class HouseMapScene implements Scene {
+  readonly muziek = MENU;
   private readonly save: Save;
   private selected = 0;
   private stage = 0;
