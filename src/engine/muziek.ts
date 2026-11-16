@@ -23,7 +23,7 @@
  * under an eight-bar riff and only the riff has to be written out.
  */
 
-export type StemNaam = 'puls' | 'zaag' | 'driehoek' | 'bas' | 'slagwerk';
+export type StemNaam = 'puls' | 'zaag' | 'driehoek' | 'bas' | 'gitaar' | 'schoon' | 'slagwerk';
 
 /** One-off sounds, played over the music rather than as part of it. */
 export type Effect = 'klaar' | 'kapot' | 'fout' | 'tik' | 'fanfare';
@@ -41,7 +41,7 @@ const TREDEN: Record<string, number> = {
 /** 4/4 throughout, so a bar is four beats and nothing here has to ask. */
 const SLAGEN_PER_MAAT = 4;
 
-/** Sixteenths. Twelve gives triplets, which is how the boogie shuffles. */
+/** Sixteenths. Twelve gives triplets, which is how the slow blues rolls. */
 const STAPPEN_PER_MAAT = 16;
 
 /** Under construction: the same shape as a Noot, before the holds are in. */

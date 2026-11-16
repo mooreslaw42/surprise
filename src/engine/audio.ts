@@ -6,7 +6,7 @@ import {
 /**
  * A small synth, and the clock that feeds it.
  *
- * Nothing is sampled and nothing is downloaded: five voices built out of
+ * Nothing is sampled and nothing is downloaded: seven voices built out of
  * oscillators and one buffer of noise, which is the whole point — the music
  * is a few kilobytes of text in liedjes.ts and the chip makes the sound.
  *
@@ -173,8 +173,84 @@ function bas(a: Aanslag): void {
   lp.connect(a.uit);
 }
 
-const STEMMEN: Record<Exclude<StemNaam, 'slagwerk'>, (a: Aanslag) => void> = {
-  puls, zaag, driehoek, bas,
+/**
+ * The curve an overdriven valve amp puts a string through: straight in the
+ * middle, flat at the ends. One table for everybody, it does not depend on
+ * the note.
+ */
+const KROMME = (() => {
+  const n = 1024;
+  const k = new Float32Array(n);
+  for (let i = 0; i < n; i++) k[i] = Math.tanh(((i / (n - 1)) * 2 - 1) * 3.2);
+  return k;
+})();
+
+/**
+ * Electric guitar with the amp turned up. The squares and saws above are a
+ * chip playing a tune; the two records this game is after are a guitar
+ * playing a riff, and no choice of notes gets from the one to the other.
+ *
+ * So: the envelope goes in front of the distortion rather than after it. A
+ * string that is dying away into a clipping amp does not get quieter, it
+ * gets cleaner, which is the sustain. Then the cabinet: no bottom, no top.
+ */
+function gitaar(a: Aanslag): void {
+  const { ctx, t, duur, hz } = a;
+  const tot = t + duur + 0.3;
+  const snaar = ctx.createGain();
+  omhullende(snaar.gain, t, duur, 0.9, 0.003, 0.22, 0.45, 0.07);
+  toon(ctx, 'sawtooth', hz, -5, t, tot).connect(snaar);
+  toon(ctx, 'sawtooth', hz, 5, t, tot).connect(snaar);
+
+  // The pick: the string is brightest in the first few hundredths.
+  const pluk = zeef(ctx, 'lowpass', 1, 0.8);
+  const top = Math.min(hz * 10 + 2500, ctx.sampleRate / 2 - 1000);
+  pluk.frequency.setValueAtTime(top, t);
+  pluk.frequency.exponentialRampToValueAtTime(Math.min(hz * 4 + 900, top), t + 0.12);
+
+  const versterker = ctx.createWaveShaper();
+  versterker.curve = KROMME;
+  versterker.oversample = '2x';
+
+  const kast = zeef(ctx, 'lowpass', 3600, 0.8);
+  const onder = zeef(ctx, 'highpass', 110, 0.7);
+  const uit = ctx.createGain();
+  uit.gain.value = a.vol * 0.42;
+  // The shaper turns silence into silence, so the level needs no envelope of
+  // its own; the gate is only there for the click at the very end.
+  uit.gain.setValueAtTime(a.vol * 0.42, t + Math.max(duur, 0.05) + 0.05);
+  uit.gain.linearRampToValueAtTime(0, t + Math.max(duur, 0.05) + 0.09);
+
+  snaar.connect(pluk).connect(versterker).connect(onder).connect(kast).connect(uit);
+  uit.connect(a.uit);
+  uit.connect(a.echo);
+}
+
+/**
+ * The same guitar with the amp turned down: a plucked string that falls away
+ * by itself. Chords, under a lead, where six clipped strings would be mud.
+ */
+function schoon(a: Aanslag): void {
+  const { ctx, t, duur, hz } = a;
+  const tot = t + duur + 0.4;
+  const g = ctx.createGain();
+  omhullende(g.gain, t, duur, a.vol * 0.5, 0.003, 0.4, 0.3, 0.14);
+  toon(ctx, 'triangle', hz, -3, t, tot).connect(g);
+  const rand = ctx.createGain();
+  rand.gain.value = 0.35;
+  toon(ctx, 'sawtooth', hz, 3, t, tot).connect(rand).connect(g);
+
+  const lp = zeef(ctx, 'lowpass', 1, 0.9);
+  const top = Math.min(hz * 8 + 1800, ctx.sampleRate / 2 - 1000);
+  lp.frequency.setValueAtTime(top, t);
+  lp.frequency.exponentialRampToValueAtTime(Math.min(hz * 3 + 600, top), t + 0.25);
+  g.connect(lp);
+  lp.connect(a.uit);
+  lp.connect(a.echo);
+}
+
+export const STEMMEN: Record<Exclude<StemNaam, 'slagwerk'>, (a: Aanslag) => void> = {
+  puls, zaag, driehoek, bas, gitaar, schoon,
 };
 
 /**

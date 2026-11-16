@@ -14,8 +14,7 @@ import { SPREKER_NAAM } from './portretten.ts';
  *
  * Five beats, each ended with Enter. The house and the score; Moeder
  * getting the last word; the gedicht, scrolling; the video message, if
- * there is one; and the credits over the boogie, which is the record about
- * going home.
+ * there is one; and the credits over the slow blues.
  *
  * The plan says no sentiment, and this keeps to it until the gedicht, which
  * is Pim's and can be as sentimental as he likes.

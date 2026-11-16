@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   alleTonen, boeken, hertz, lied, partij, stapDuur, stappenVan, toon, zelfdeKeuze,
 } from './muziek.ts';
-import { BAAS, BALLADE, BOOGIE, LIEDJES, MENU, OPENING, RIFF, thema } from '../data/liedjes.ts';
+import { BAAS, BALLADE, BLUES, LIEDJES, MENU, OPENING, RIFF, thema } from '../data/liedjes.ts';
 import { Save } from './save.ts';
 import { TitleScene } from '../scenes/title.ts';
 import { STAGES } from '../data/stages.ts';
@@ -97,7 +97,7 @@ test('a track that is not a whole number of bars is refused', () => {
 test('a sixteenth at 120 is an eighth of a second', () => {
   assert.equal(stapDuur(120, 16), 0.125);
   assert.equal(stapDuur(60, 16), 0.25);
-  // Twelve steps to the bar is how the boogie shuffles: two steps then one.
+  // Twelve steps to the bar is how a blues shuffles: two steps then one.
   assert.ok(Math.abs(stapDuur(150, 12) - 0.13333) < 1e-4);
 });
 
@@ -141,7 +141,7 @@ test('asking for the music already playing is free', () => {
 });
 
 test('the songbook is three distinct songs, all of them playable', () => {
-  assert.deepEqual(LIEDJES.map((l) => l.id), ['ballade', 'riff', 'boogie']);
+  assert.deepEqual(LIEDJES.map((l) => l.id), ['ballade', 'riff', 'blues']);
   for (const l of LIEDJES) {
     assert.ok(l.naar.length > 0, `${l.id} should credit the record it is after`);
     assert.ok(l.bpm >= 40 && l.bpm <= 220, `${l.id} at ${l.bpm}bpm`);
@@ -160,7 +160,7 @@ test('the shuffle comes from the grid, so nothing is shuffled twice', () => {
     }
     assert.ok(l.swing >= 0 && l.swing < 0.5, `${l.id} swings ${l.swing}`);
   }
-  assert.equal(BOOGIE.stappenPerMaat, 12, 'the boogie shuffles on triplets');
+  assert.equal(BLUES.stappenPerMaat, 12, 'the slow blues is in twelve-eight');
   assert.equal(BALLADE.swing, 0, 'a ballad does not swing');
 });
 
@@ -187,7 +187,7 @@ test('every stage has something to play', () => {
   assert.ok(LIEDJES.includes(MENU.lied));
   assert.ok(LIEDJES.includes(BAAS.lied));
   assert.ok(LIEDJES.includes(OPENING.lied));
-  assert.equal(BAAS.lied, BOOGIE, 'the boogie is the boss, which is the whole joke');
+  assert.equal(BAAS.lied, BLUES, 'the slow blues is the boss');
 });
 
 test('the game opens on the riff', () => {
@@ -198,24 +198,25 @@ test('the game opens on the riff', () => {
   assert.ok(zelfdeKeuze(OPENING, thema('sloop')));
 });
 
-test('the boogie is a twelve-bar blues and the riff breathes', () => {
-  const bas = BOOGIE.partijen.find((p) => p.stem === 'bas')!;
-  assert.equal(bas.stappen / BOOGIE.stappenPerMaat, 12);
+test('the slow blues is twelve bars and the riff breathes', () => {
+  for (const p of BLUES.partijen.filter((p) => p.stem !== 'slagwerk')) {
+    assert.equal(p.stappen / BLUES.stappenPerMaat, 12, `${p.stem} is not twelve bars`);
+  }
 
-  // The lead runs eight bars over a two-bar rhythm section, and stops for
-  // half of the last one, because it has to survive being on for twenty
-  // minutes while someone measures a wall.
-  const lead = RIFF.partijen.find((p) => p.stem === 'puls')!;
+  // Eight bars of guitar over eight of bass, and the guitar stops for the
+  // back half of the last one, because it has to survive being on for
+  // twenty minutes while someone measures a wall.
+  const lead = RIFF.partijen.find((p) => p.stem === 'gitaar')!;
   const ritme = RIFF.partijen.find((p) => p.stem === 'bas')!;
   assert.equal(lead.stappen / RIFF.stappenPerMaat, 8);
-  assert.equal(ritme.stappen / RIFF.stappenPerMaat, 2);
-  const laatsteMaat = lead.perStap.slice(-16);
-  assert.ok(laatsteMaat.filter((s) => s.length > 0).length <= 2, 'the riff should leave a gap');
+  assert.equal(ritme.stappen / RIFF.stappenPerMaat, 8);
+  const slot = lead.perStap.slice(-7);
+  assert.ok(slot.every((s) => s.length === 0), 'the riff should leave a gap');
 });
 
 test('the ballad is the quiet one: no drums anywhere in it', () => {
   assert.ok(!BALLADE.partijen.some((p) => p.stem === 'slagwerk'));
-  for (const l of [RIFF, BOOGIE]) {
+  for (const l of [RIFF, BLUES]) {
     assert.ok(l.partijen.some((p) => p.stem === 'slagwerk'), `${l.id} needs a kit`);
   }
 });

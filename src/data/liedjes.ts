@@ -2,15 +2,15 @@ import { lied, type Lied, type Muziekkeuze } from '../engine/muziek.ts';
 import type { StageKind } from './stages.ts';
 
 /**
- * The songbook: three arrangements after his own records, written as data for
- * the little synth in audio.ts.
+ * The songbook: three pieces after his own records, written as data for the
+ * little synth in audio.ts.
  *
- * Arrangements, not transcriptions. What carries across is the harmony and
- * the gesture — the chug of the riff, the shuffle of the boogie, the slow
- * modal fall of the ballad. Three voices and a noise channel cannot play a
- * Rolling Stones record anyway, and trying would sound like a ringtone; what
- * a chip can do is state the idea and get out of the way. All three are in
- * copyright, which is the other reason the URL stays unlisted.
+ * The ballad is an arrangement: the harmony and the fall of it, not the
+ * notes. The other two started that way as well and did not survive being
+ * played to anyone, so the riff and the slow blues now follow the records
+ * themselves, off guitar tabs, on a guitar voice that was built for them.
+ * A few bars each, looped. All three are in copyright, which is the reason
+ * the URL stays unlisted.
  */
 
 /**
@@ -62,112 +62,143 @@ export const BALLADE: Lied = lied({
 });
 
 /**
- * The title screen and every stage theme, after *Can't You Hear Me Knocking*.
+ * The title screen and every stage theme: *Can't You Hear Me Knocking*.
  *
- * A minor pentatonic, a chugging bass on the root, and off-beat stabs where
- * the rhythm guitar would be. Bass, stabs and drums loop every two bars; the
- * lead runs eight and ends by shutting up for half of one, because this has
- * to survive being on for twenty minutes while someone measures a wall.
- * Transposed per stage, which is what makes eight stages out of one riff.
+ * This one is the record's own opening riff, off a tab Pim sent, because the
+ * first version was a tune in the right mood and nobody recognised it. Open
+ * G tuning, in D: two strings at a time, pulled off from the tenth fret down
+ * to the seventh, and then the D chord worried at with one finger. Four bars
+ * of that, then four of the verse — D, down through C to G and home — so the
+ * riff comes back as an arrival rather than a loop.
+ *
+ * The bass leaves the second half of the bar empty, as it does on the
+ * record; the drums are what carry it. Transposed per stage, which is what
+ * makes eight stages out of one riff.
  */
 export const RIFF: Lied = lied({
   id: 'riff',
   naam: 'HOOR JE MIJ KLOPPEN',
   naar: "Can't You Hear Me Knocking",
-  bpm: 112,
-  swing: 0.12,
+  bpm: 80,
+  swing: 0.1,
   sporen: [
     {
+      stem: 'gitaar',
+      volume: 0.85,
+      noten: `
+        f4+c4! e4+b3 d4+a3*2 e4+b3 d4+a3*2 c4+f3! b3+e3 a3+d3*2 a3+d3 b3+d3*2 a3+d3*2 |
+        a3+d3!*2 a3+d3*2 b3+d3 a3+d3*2 c4+d3! b3+d3 a3+d3*2 a3+d3 b3+d3*2 a3+d3*2 |
+        f4+c4!*2 d4+a3*2 e4+b3 d4+a3*2 c4+f3! b3+e3 a3+d3*2 a3+d3 b3+d3 d4+a3*3 |
+        a3+d3!*2 a3+d3*2 b3+d3 a3+d3*2 c4+d3! b3+d3 a3+d3*2 a3+d3 .*4 |
+        d3+a3+d4!*2 . d3+a3+d4 d3+a3+d4*2 . d3+a3+d4 .*2 d3+a3+d4*2 .*4 |
+        f4+c4! e4+b3 d4+a3*2 e4+b3 d4+a3*2 c4+f3 b3+e3 .*3 c3+g3+c4!*2 c3+g3+c4*2 |
+        c3+g3+c4*2 . c3+g3+c4 c3+g3+c4*2 .*2 g2+d3+g3!*2 g2+d3+g3 . g2+d3+g3*2 .*2 |
+        d3+a3+d4!*3 . a3+d3 b3+d3*2 a3+d3*2 .*7
+      `,
+    },
+    {
       stem: 'bas',
+      volume: 0.7,
       noten: `
-        a1*3 a1*3 a1*2 g1*2 a1*2 .*2 e2*2 |
-        a1*3 a1*3 c2*2 d2*2 .*2 g1*2 a1*2
+        d2*2 a1 d2 d2 a1 d2*2 d2 a1*2 .*5 |
+        d2*2 . a1 d2*2 d2 . a1*2 d2*2 d2 a1*2 . |
+        d2*2 a1 d2 d2 a1 d2*2 d2 a1*2 .*5 |
+        d2*2 . a1 d2*2 d2 . a1*2 d2*2 d2 a1*2 . |
+        d2*2 a1 d2 d2 a1 d2*2 d2 a1*2 .*5 |
+        d2*2 a1 d2 d2 a1 d2*2 .*4 c2*2 c2*2 |
+        c2*2 g1 c2 c2*2 .*2 g1*2 g1 . g1*2 g1 a1 |
+        d2*3 . d2 a1 d2*2 .*4 a1*2 c2*2
       `,
     },
     {
-      // Power chords on the off-beat, low in the mix: the thing you would
-      // miss if it were gone but never listen to.
-      stem: 'zaag',
-      volume: 0.3,
-      noten: `
-        .*2 a2+e3*2 .*2 a2+e3*2 .*2 g2+d3*2 .*2 a2+e3*2 |
-        .*2 a2+e3*2 .*2 c3+g3*2 .*2 d3+a3*2 .*2 a2+e3*2
-      `,
-    },
-    {
-      stem: 'puls',
-      volume: 0.8,
-      noten: `
-        .*2 a3*2 c4*2 d4*3 .*1 c4*2 a3*4 | g3*3 a3*3 .*2 a3*2 g3*2 e3*4 |
-        .*2 e4*2 d4*2 c4*3 .*1 d4*2 c4*4 | a3*3 c4*3 .*2 d4*2 c4*2 a3*4 |
-        a3*2 c4*2 d4*2 e4*2 g4*4 e4*4    | d4*4 c4*2 a3*2 .*4 c4*2 d4*2 |
-        e4*3 d4*3 c4*2 a3*2 .*6          | .*8 g3*2 a3*2 .*4
-      `,
-    },
-    {
+      // Straight and behind the beat, nothing clever: the riff is syncopated
+      // enough for the whole band.
       stem: 'slagwerk',
       noten: `
-        k!+h! . h . s!+h . k+h . k+h! . h k  s!+h .  h  . |
-        k!+h! . h . s!+h . k+h . k+h! . h .  s!+h s  o! .
+        k!+h . h . s!+h . h k k+h . h . s!+h . h . |
+        k!+h . h k s!+h . h . k+h k h . s!+h . o .
       `,
     },
   ],
 });
 
-/**
- * The boogie bass figure: root, fifth, sixth, fifth, twice over, shuffled.
- * Written out by hand it is seventy-two tokens of the same four notes, and
- * one of them would be wrong, so the bar is generated and the form below
- * reads as the twelve-bar blues it is.
- */
-function boogieMaat(root: string, vijf: string, zes: string): string {
-  return `${root}*2 ${vijf} ${zes}*2 ${vijf} ${root}*2 ${vijf} ${zes}*2 ${vijf}`;
+/** The comping figure of the slow blues, for the bars that are all alike. */
+function kwartslag(akkoord: string, onder: string, staart = 'bb3 b3 c4'): string {
+  // The chord, the same shape a fret lower on the last triplet, and back on
+  // two; G on three; then the three notes that walk up into the next bar.
+  return `${akkoord}!*2 ${onder} ${akkoord}*3 g3*3 ${staart}`;
 }
 
-const E7 = boogieMaat('e2', 'b2', 'c#3');
-const A7 = boogieMaat('a2', 'e3', 'f#3');
-const B7 = boogieMaat('b2', 'f#3', 'g#3');
+const C7 = kwartslag('c3+g3+bb3+e4', 'b2+f#3+a3+eb4');
+const F9 = kwartslag('f3+a3+eb4+g4', 'e3+g#3+d4+g4');
+const G7 = kwartslag('g3+b3+f4+g4', 'f#3+a#3+e4+g4');
+/** C7 again, but the second half climbs the neck instead of walking. */
+const C7_OP = 'c3+g3+bb3+e4!*2 b2+f#3+a3+eb4 c3+g3+bb3+e4*3 c3+c4+e4+bb4*2 c4+f4+a4*2 f4*2';
+/** The bar after it: a trill on the third, and the walk-up back in. */
+const TRILLER = 'eb4 e4 eb4 e4*3 g3*3 bb3 b3 c4';
 
 /**
- * The boss, after *I'm Going Home*.
+ * The bosses and the credits: Ten Years After's *Slow Blues in C*.
  *
- * Twelve bars in E, fast, on a grid of twelve steps a bar rather than
- * sixteen — so a shuffled eighth is two steps long and then one, which is the
- * shuffle itself rather than an approximation of it. The licks leave whole
- * bars empty: the bass is the tune, and the ventilation unit has finally been
- * delivered, so the player has enough to think about.
+ * Pim's pick, off a tab, in place of a fast boogie that did not sound like
+ * anybody. Twelve bars in twelve-eight, so the grid is twelve steps and one
+ * step is one triplet. The rhythm guitar is the record's: a ninth chord slid
+ * down a fret and back, and a three-note walk-up at the end of every bar
+ * that makes the next one inevitable. The turnaround in bar eleven is the
+ * oldest one there is. The lead on top is the right scale in the right
+ * place on the neck and leaves the first two bars and the last two alone.
+ *
+ * Slow on purpose under a boss: these are the two levels where he will sit
+ * and think for a quarter of an hour.
  */
-export const BOOGIE: Lied = lied({
-  id: 'boogie',
-  naam: 'IK GA NAAR HUIS',
-  naar: "I'm Going Home",
-  bpm: 150,
+export const BLUES: Lied = lied({
+  id: 'blues',
+  naam: 'TRAGE BLUES IN C',
+  naar: 'Slow Blues in C',
+  bpm: 60,
   stappenPerMaat: 12,
   sporen: [
     {
-      stem: 'bas',
-      noten: [E7, E7, E7, E7, A7, A7, E7, E7, B7, A7, E7, B7].join(' | '),
+      stem: 'schoon',
+      volume: 0.9,
+      noten: [
+        C7, F9, C7_OP, TRILLER,
+        F9, F9, C7_OP, TRILLER,
+        G7, kwartslag('f3+a3+eb4+g4', 'e3+g#3+d4+g4', 'bb3 b3 eb4'),
+        'c4! c5 c5 bb3 c5 c5 a3 c5 c5 ab3 c5 g3',
+        'f4!*3 b3*3 g3*3 g2*3',
+      ].join(' | '),
     },
     {
-      stem: 'zaag',
-      volume: 0.8,
+      stem: 'gitaar',
+      volume: 0.9,
       noten: `
-        .*12                              | .*6 e4*2 g4 b4*2 a4              |
-        g4*2 e4 d4*2 b3 .*6               | .*12                             |
-        a4*2 c5 b4*2 a4 g4*2 e4 .*3       | .*3 g4*2 a4 g4*2 e4 d4*2 e4      |
-        b4*2 a4 g4*2 e4 .*6               | .*6 d4*2 e4 g4*2 a4              |
-        b4*2 d5 b4*2 a4 f#4*2 d#4 .*3     | a4*2 c5 a4*2 g4 e4*2 g4 e4*2 d4  |
-        e4*2 g4 b4*2 e5 d5*2 b4 g4*2 e4   | .*6 b4*2 a4 f#4*2 .
+        .*12                               | .*9 g4 bb4 c5                    |
+        eb5!*2 c5 bb4*3 g4*2 bb4 c5*3      | .*12                             |
+        a4 c5! c5 c5 c5 c5 a4 c5 c5 c5*3   | eb5!*2 f5 eb5*2 c5 bb4*3 .*3     |
+        g4 bb4 c5 eb5!*3 c5*2 bb4 g4*3     | .*6 f4 g4 bb4 c5*3               |
+        d5!*3 f5*2 d5 b4*3 g4*3            | eb5*2 c5 a4*3 f4*2 a4 c5*3       |
+        .*12                               | .*12
+      `,
+    },
+    {
+      stem: 'bas',
+      volume: 0.6,
+      noten: `
+        c2*3 e2*3 g2*3 a2*3    | f2*3 a2*3 c3*3 a2*3    | c2*3 e2*3 g2*3 a2*3  | c2*3 e2*3 g2*3 e2*3 |
+        f2*3 a2*3 c3*3 a2*3    | f2*3 a2*3 c3*3 a2*3    | c2*3 e2*3 g2*3 a2*3  | c2*3 e2*3 g2*3 e2*3 |
+        g2*3 b2*3 d3*3 b2*3    | f2*3 a2*3 c3*3 a2*3    | c2*3 bb1*3 a1*3 ab1*3 | g1*3 g1*3 g1*3 g1 a1 b1
       `,
     },
     {
       stem: 'slagwerk',
-      noten: 'k!+h! . h s!+h . h k+h! . h s!+h . h',
+      volume: 0.8,
+      noten: 'k!+h! h h s+h! h h k+h! h k s!+h! h h',
     },
   ],
 });
 
-export const LIEDJES: readonly Lied[] = [BALLADE, RIFF, BOOGIE];
+export const LIEDJES: readonly Lied[] = [BALLADE, RIFF, BLUES];
 
 /**
  * The riff, moved, once per stage. Small intervals, chosen so the bass stays
@@ -187,9 +218,9 @@ const THEMA: Record<StageKind, Muziekkeuze> = {
   vloeren: { lied: RIFF, halveTonen: 2 },
   schilderen: { lied: RIFF, halveTonen: 7 },
   kanalen: { lied: RIFF, halveTonen: -4, tempo: 0.88 },
-  // The two bosses play the boogie; these are only here to keep the table whole.
-  tuinhuis: { lied: BOOGIE },
-  oplevering: { lied: BOOGIE },
+  // The two bosses play the blues; these are only here to keep the table whole.
+  tuinhuis: { lied: BLUES },
+  oplevering: { lied: BLUES },
 };
 
 export function thema(kind: StageKind): Muziekkeuze {
@@ -206,4 +237,4 @@ export function thema(kind: StageKind): Muziekkeuze {
  */
 export const OPENING: Muziekkeuze = { lied: RIFF };
 export const MENU: Muziekkeuze = { lied: BALLADE };
-export const BAAS: Muziekkeuze = { lied: BOOGIE };
+export const BAAS: Muziekkeuze = { lied: BLUES };

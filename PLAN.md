@@ -139,7 +139,7 @@ after three failed attempts so the hard gate can never become a dead end.
 ### Audio
 Chiptune arrangements after his own records, written as data for a small WebAudio synth:
 - *Can't You Hear Me Knocking* — riff, level themes
-- *I'm Going Home* — boogie, the boss
+- *Slow Blues in C* (Ten Years After) — the bosses and the credits. Was *I'm Going Home*; Pim swapped it
 - *Blue in Green* — ballad, house map and menus
 
 All three are still in copyright, so the URL stays unlisted and unindexed. Private family gift.
@@ -349,19 +349,19 @@ disagrees with, because a rule that oversteps would hand the player a hole.
 
 No plumbing stage. He did not do any worth the name.
 
-There is music. Three arrangements after his own records, written as text in
-`data/liedjes.ts` and played by five voices and one buffer of noise. Nothing
+There is music. Three pieces after his own records, written as text in
+`data/liedjes.ts` and played by seven voices and one buffer of noise. Nothing
 is sampled and nothing is downloaded, so the whole soundtrack is a few
-kilobytes of notation and the chip does the rest. The riff opens the game
-and carries the work, the ballad is the menus, the boogie is the boss.
+kilobytes of notation and the synth does the rest. The riff opens the game
+and carries the work, the ballad is the menus, the slow blues is the bosses.
 
-Arrangements rather than transcriptions, and not only for the copyright.
-Three voices and a noise channel cannot play a Rolling Stones record, and
-trying would sound like a ringtone; what a chip can do is state the idea —
-the chug of the riff, the shuffle of the boogie, the slow modal fall of the
-ballad — and get out of the way. The boogie is on a grid of twelve steps a
-bar rather than sixteen, so a shuffled eighth is two steps and then one,
-which is the shuffle itself rather than an imitation of it.
+The ballad is an arrangement. The riff and the blues were too, at first, and
+Pim's verdict was that they sounded nothing like the Stones or Ten Years
+After. So those two now follow the records, off guitar tabs he sent: the
+open-G intro riff in D with its verse changes, and the slow blues' ninth-chord
+comping, walk-ups and turnaround on a twelve-step (12/8) grid. They play on
+two guitar voices added for the purpose, one overdriven and one clean. Nobody
+has checked the result by ear yet except Pim.
 
 The riff is transposed per stage, which is what makes eight themes out of one
 loop, and for the kanaalplan it is four semitones down and slower, because
