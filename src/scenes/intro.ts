@@ -11,8 +11,9 @@ import { Dialogue } from './dialogue.ts';
  * under it: a poem read over a guitar riff is a poem nobody reads. When the
  * last strofe is done the house map opens, and its music starts there.
  *
- * Once only: it is a surprise, and the second time it is a delay. Escape
- * goes straight through for whoever has heard it.
+ * Until the first level is done: whoever comes back with nothing played yet
+ * hears it again, because Pim asked for "no saved progress", not "never
+ * heard it". After that it is a delay, and Escape skips it anyway.
  */
 export class IntroScene implements Scene {
   /** The title stays on screen underneath. */
@@ -35,7 +36,7 @@ export class IntroScene implements Scene {
   }
 
   static nodig(save: Save): boolean {
-    return !save.vlag('intro') && strofen(INTRO).length > 0;
+    return !save.begonnen && strofen(INTRO).length > 0;
   }
 
   private maak(): Dialogue | null {

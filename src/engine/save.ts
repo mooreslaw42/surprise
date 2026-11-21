@@ -140,6 +140,11 @@ export class Save {
     this.flush();
   }
 
+  /** Whether anything has been played: a level finished or let past. */
+  get begonnen(): boolean {
+    return Object.keys(this.data.levels).length > 0;
+  }
+
   totalStars(): number {
     return Object.values(this.data.levels).reduce((n, r) => n + r.stars, 0);
   }

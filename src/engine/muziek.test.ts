@@ -195,9 +195,9 @@ test('every stage has something to play', () => {
 test('the game opens on the riff', () => {
   // The title screen is the hook, so it gets the riff rather than the ballad
   // — and untransposed, which makes it the same request as the sloop theme.
-  // Once the poem has been heard. Before that the title is silent: see below.
+  // Once something has been played. Before that the title is silent: see below.
   const gehoord = new Save(null);
-  gehoord.zetVlag('intro');
+  gehoord.record('leeghalen-woonkamer', 20, 3);
   assert.equal(new TitleScene(gehoord).muziek?.lied, RIFF);
   assert.equal(OPENING.halveTonen ?? 0, 0);
   assert.ok(zelfdeKeuze(OPENING, thema('sloop')));
@@ -233,4 +233,8 @@ test('a first visit is quiet until the poem is over', () => {
   assert.equal(new TitleScene(nieuw).muziek, null);
   assert.equal(new IntroScene(nieuw, () => new HouseMapScene(nieuw)).muziek, null);
   assert.equal(new HouseMapScene(nieuw).muziek, MENU);
+  // Having heard the poem is not progress: come back with nothing played and
+  // it is quiet again.
+  nieuw.zetVlag('intro');
+  assert.equal(new TitleScene(nieuw).muziek, null);
 });

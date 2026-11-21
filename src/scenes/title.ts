@@ -47,7 +47,7 @@ export class TitleScene implements Scene {
   }
 
   /**
-   * Someone who has not heard Pim's poem yet: they land on a quiet title, and
+   * Someone with nothing played yet: they land on a quiet title, and
    * the first press goes straight into the poem, still quiet. The music only
    * starts on the house map after it, so the first thing the game ever plays
    * is the start of the job. Everyone else gets the riff here, as before.
