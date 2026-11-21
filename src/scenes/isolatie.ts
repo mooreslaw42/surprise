@@ -5,6 +5,8 @@ import type { Scene, SceneContext } from '../engine/scene.ts';
 import type { Save } from '../engine/save.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import { Dialogue } from './dialogue.ts';
+import { drawCeiling, drawFloor, drawWallGround, drawWindow, type RoomLayout } from './room.ts';
+import { openingCells } from '../puzzles/sloop/generate.ts';
 import {
   type Plaatsing, type Vorm,
   draaiVorm, faults, isSolved, periode, stars, totaalRc,
@@ -15,6 +17,9 @@ import type { IsolatieLevel } from '../puzzles/isolatie/levels.ts';
 const TOP_H = 16;
 const BOTTOM_H = 30;
 const TRAY_H = 34;
+/** Height of the strip of ceiling over the wall, and of floor under it. */
+const PLAFOND = 14;
+const VLOER = 6;
 
 /**
  * The stud cavity, and the stack of wool beside it. Pick a batt up, turn it,
@@ -45,13 +50,15 @@ export class IsolatieScene implements Scene {
     this.uitleg = new Dialogue(level.uitleg);
 
     const muur = level.muur;
-    const ruimte = HEIGHT - TOP_H - BOTTOM_H - TRAY_H - 8;
+    // Room above and below the wall for a strip of ceiling and of floor, so
+    // it reads as a wall in a room and not a grid on a black page.
+    const ruimte = HEIGHT - TOP_H - BOTTOM_H - TRAY_H - PLAFOND - VLOER;
     this.tile = Math.max(8, Math.min(
       Math.floor(ruimte / muur.height),
       Math.floor((WIDTH - 40) / muur.width),
     ));
     this.originX = Math.round((WIDTH - muur.width * this.tile) / 2);
-    this.originY = TOP_H + Math.round((ruimte - muur.height * this.tile) / 2) + 4;
+    this.originY = TOP_H + PLAFOND + Math.round((ruimte - muur.height * this.tile) / 2);
   }
 
   private get trayY(): number {
@@ -179,6 +186,7 @@ export class IsolatieScene implements Scene {
 
   render(screen: Screen, ctx: SceneContext): void {
     screen.clear(C.ROET);
+    this.drawKamer(screen);
     this.drawCavity(screen);
     this.drawGeplaatst(screen);
     this.drawTray(screen, ctx);
@@ -189,25 +197,51 @@ export class IsolatieScene implements Scene {
     if (this.uitleg) this.uitleg.render(screen, this.time);
   }
 
-  /** Studs either side, the bare cavity between them. */
+  /**
+   * The room the wall stands in: its ceiling, its finish either side, the
+   * concrete floor, and the windows and the door in the wall itself, drawn
+   * whole. The cavity is the part of the wall that has been opened up.
+   */
+  private drawKamer(screen: Screen): void {
+    const muur = this.level.muur;
+    const onder = this.originY + muur.height * this.tile;
+    const l: RoomLayout = {
+      ceilingY: TOP_H,
+      ceilingH: this.originY - TOP_H,
+      wallY: this.originY,
+      wallH: muur.height * this.tile,
+      floorY: onder,
+      floorH: this.trayY - onder,
+    };
+    drawWallGround(screen, l, this.level.surface.afwerking);
+    drawCeiling(screen, l, this.level.surface.ruimte);
+    drawFloor(screen, l, 'beton');
+
+    const band = { x: this.originX, y: this.originY, w: muur.width * this.tile, h: muur.height * this.tile };
+    for (const opening of this.level.surface.openings) {
+      const cells = openingCells(this.level.surface, opening, this.level.cel);
+      if (!cells) continue;
+      drawWindow(screen,
+        this.originX + cells.c0 * this.tile, this.originY + cells.r0 * this.tile,
+        (cells.c1 - cells.c0 + 1) * this.tile, (cells.r1 - cells.r0 + 1) * this.tile,
+        opening, band);
+    }
+  }
+
+  /** The opened-up wall: bare cavity, with the studs showing through it. */
   private drawCavity(screen: Screen): void {
     const muur = this.level.muur;
     for (let y = 0; y < muur.height; y++) {
       for (let x = 0; x < muur.width; x++) {
+        if (!muur.doel[y * muur.width + x]) continue;
         const px = this.originX + x * this.tile;
         const py = this.originY + y * this.tile;
-        if (muur.doel[y * muur.width + x]) {
-          screen.fillRect(px, py, this.tile, this.tile, C.ROET);
-          screen.ditherRect(px + 1, py + 1, this.tile - 2, this.tile - 2, C.STEEN, C.ROET);
-        } else {
-          screen.fillRect(px, py, this.tile, this.tile, C.HOUT);
-          screen.fillRect(px, py, this.tile, 1, C.LICHTHOUT);
-          screen.fillRect(px, py + this.tile - 1, this.tile, 1, C.STEEN);
-        }
+        screen.fillRect(px, py, this.tile, this.tile, C.ROET);
+        screen.ditherRect(px + 1, py + 1, this.tile - 2, this.tile - 2, C.STEEN, C.ROET);
+        // A stud every other cell, sixty centimetres or near enough.
+        if (x % 2 === 0) screen.fillRect(px, py, 2, this.tile, C.HOUT);
       }
     }
-    screen.strokeRect(this.originX - 1, this.originY - 1,
-      muur.width * this.tile + 2, muur.height * this.tile + 2, C.LICHTHOUT);
   }
 
   private woolColour(i: number): { body: number; edge: number; schaduw: number } {

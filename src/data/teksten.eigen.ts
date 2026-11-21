@@ -119,7 +119,7 @@ export const EIGEN: Record<string, string[]> = {
     "PLAN GOEDGEKEURD. ONDERDELEN OP DE BESTELLIJST.",
     "NU MAAR HOPEN DAT HET GOED UITKOMT MET DE MUURISOLATIE!"
   ],
-  "uitleg.isolatie-keuken": [
+  "uitleg.isolatie-woonkamer": [
     "VOLGENDE VLAK. GROTER, EN ER ZIT EEN OPENING IN.",
     "ZELFDE EIS: HELEMAAL VOL. ZORG DAT ER GEEN GAATJES OF KOUDEBRUGGEN ONSTAAN!"
   ],
@@ -372,8 +372,8 @@ export const NAGEKEKEN: string[] = [
   "uitleg.elektra-woonkamer-okerwand",
   "uitleg.elektra-tvkamer-zijwand",
   "uitleg.elektra-woonkamer-tuinwand",
-  "uitleg.isolatie-keuken",
   "uitleg.isolatie-woonkamer",
+  "uitleg.isolatie-tvkamer",
   "uitleg.kanalen-1",
   "uitleg.kanalen-2",
   "uitleg.kanalen-3",
