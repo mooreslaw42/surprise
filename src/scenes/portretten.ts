@@ -3,14 +3,15 @@ import type { PixelBuffer } from '../engine/pixelbuffer.ts';
 import { drawPim, PIM_W, PIM_H } from './pim.ts';
 
 /**
- * Everyone who gets a word in. Pim has a file to himself because he was
- * drawn from a photo; Moeder and Wiep are drawn from a description, to the
- * same frame and the same light, so the three sit in one box without the
- * text jumping about.
+ * Everyone who gets a word in. All three are drawn from photographs Pim
+ * sent, to the same frame and the same light, so they sit in one box without
+ * the text jumping about.
  *
- * PROVISIONAL likenesses: nobody has seen a photo of either. What carries
- * them is what they are in the story — clay on an apron, a tape measure
- * and a ponytail — and the hair and clothes are one line each to change.
+ * Drawn, not traced, for the reason given in pim.ts: at forty pixels a
+ * likeness is the three or four things that survive being tiny. For Wiep
+ * that is the copper bowl cut, the blue over the eyes, the red mouth and the
+ * red shirt. For Moeder it is fair hair pinned up and escaping, thin
+ * glasses, a white blouse and a smile.
  */
 
 export type Spreker = 'pim' | 'moeder' | 'wiep';
@@ -68,99 +69,129 @@ function ogen(screen: PixelBuffer, cx: number, y: number, streng: boolean): void
   }
 }
 
-function mond(screen: PixelBuffer, cx: number, y: number, talking: boolean, kleur: number): void {
+/** A mouth that is mostly smile: lips, and teeth between them. */
+function lach(screen: PixelBuffer, cx: number, y: number, talking: boolean, lip: number): void {
   const my = y + 26;
   if (talking) {
-    screen.fillEllipse(cx, my, 3, 2, C.STEEN);
-    screen.fillEllipse(cx, my, 2, 1, C.DONKERROOD);
-  } else {
-    screen.fillRect(cx - 3, my, 7, 1, kleur);
-    screen.set(cx - 4, my - 1, kleur);
-    screen.set(cx + 4, my - 1, kleur);
+    screen.fillEllipse(cx, my, 4, 3, lip);
+    screen.fillEllipse(cx, my, 3, 2, C.DONKERROOD);
+    screen.fillRect(cx - 2, my - 2, 5, 1, C.WIT);
+    return;
   }
+  screen.fillRect(cx - 4, my - 1, 9, 1, lip);
+  screen.fillRect(cx - 3, my, 7, 1, C.WIT);
+  screen.fillRect(cx - 3, my + 1, 7, 1, lip);
+  screen.set(cx - 5, my - 2, lip);
+  screen.set(cx + 5, my - 2, lip);
 }
 
 /**
- * Moeder. Silver bob, a terracotta apron with a thumbprint of clay on it,
- * and the look of someone who has asked this before.
+ * Moeder. Fair hair pinned up on top with half of it come loose, thin
+ * glasses, a white blouse open at the neck, and smiling: she is asking
+ * about the kleiatelier, but she is asking nicely. The thumbprint of clay
+ * stays, on the blouse now.
  */
 export function drawMoeder(screen: PixelBuffer, x: number, y: number, talking = false): void {
   const cx = x + 20;
-  schouders(screen, cx, y, C.SALIE, C.DONKERSALIE, C.LICHTSALIE);
-  // The apron bib, and what is on it.
-  screen.fillRect(cx - 8, y + 39, 17, 7, C.TERRACOTTA);
-  screen.fillRect(cx - 8, y + 39, 17, 1, C.ROESTROOD);
-  screen.fillRect(cx - 8, y + 36, 2, 4, C.TERRACOTTA);
-  screen.fillRect(cx + 7, y + 36, 2, 4, C.TERRACOTTA);
-  screen.fillRect(cx + 2, y + 42, 4, 2, C.ZANDGRIJS);
-  screen.set(cx - 4, y + 43, C.ZANDGRIJS);
+  schouders(screen, cx, y, C.WIT, C.KALK, C.WIT);
+  // The open neck of the blouse, and its edge.
+  for (let i = 0; i < 6; i++) {
+    screen.fillRect(cx - (5 - i), y + 37 + i, (5 - i) * 2 + 1, 1, C.LICHTHOUT);
+    screen.set(cx - (5 - i) - 1, y + 37 + i, C.ZANDGRIJS);
+    screen.set(cx + (5 - i) + 1, y + 37 + i, C.ZANDGRIJS);
+  }
+  screen.fillRect(cx, y + 43, 1, 3, C.ZANDGRIJS);
+  screen.fillRect(cx + 8, y + 42, 3, 2, C.ASGRIJS);
+  screen.set(cx + 9, y + 44, C.ZANDGRIJS);
 
-  // Hair behind the face first, so the bob frames it.
-  screen.fillEllipse(cx, y + 15, 14, 13, C.ROET);
-  screen.fillEllipse(cx, y + 15, 13, 12, C.ZANDGRIJS);
-  screen.fillRect(cx - 13, y + 15, 27, 13, C.ZANDGRIJS);
-  screen.fillRect(cx - 14, y + 16, 1, 12, C.ROET);
-  screen.fillRect(cx + 14, y + 16, 1, 12, C.ROET);
-  screen.fillRect(cx - 13, y + 28, 5, 1, C.ROET);
-  screen.fillRect(cx + 9, y + 28, 5, 1, C.ROET);
+  // Pinned up: a knot on top, behind everything. Fair going grey, so it is
+  // kept a clear step paler than the skin or the two run together.
+  screen.fillEllipse(cx + 4, y + 3, 6, 4, C.ROET);
+  screen.fillEllipse(cx + 4, y + 3, 5, 3, C.KALK);
+  screen.fillEllipse(cx + 5, y + 2, 3, 1, C.BOTERGEEL);
+
+  screen.fillEllipse(cx, y + 14, 13, 12, C.ROET);
+  screen.fillEllipse(cx, y + 14, 12, 11, C.KALK);
+  // The strands that got away, down either side of the face.
+  screen.fillRect(cx - 13, y + 15, 3, 14, C.KALK);
+  screen.fillRect(cx + 11, y + 15, 3, 12, C.KALK);
+  screen.fillRect(cx - 14, y + 16, 1, 13, C.ROET);
+  screen.fillRect(cx + 14, y + 16, 1, 11, C.ROET);
+  screen.ditherRect(cx - 13, y + 18, 2, 10, C.KALK, C.LICHTOKER);
+  screen.ditherRect(cx + 12, y + 18, 2, 8, C.KALK, C.ZANDGRIJS);
 
   gezicht(screen, cx, y);
 
-  // Fringe, swept to one side, and the light on top of it.
-  screen.fillEllipse(cx - 2, y + 9, 11, 5, C.ZANDGRIJS);
-  screen.fillEllipse(cx + 6, y + 10, 6, 4, C.ZANDGRIJS);
-  screen.fillEllipse(cx + 1, y + 6, 8, 3, C.KALK);
-  screen.fillEllipse(cx + 4, y + 5, 4, 2, C.WIT);
-  screen.ditherRect(cx - 13, y + 17, 3, 10, C.ASGRIJS, C.ZANDGRIJS);
+  // A thin fringe, parted, with the forehead showing through it.
+  screen.fillEllipse(cx - 4, y + 9, 8, 4, C.KALK);
+  screen.fillEllipse(cx + 6, y + 10, 5, 3, C.KALK);
+  screen.fillEllipse(cx, y + 6, 8, 3, C.BOTERGEEL);
+  screen.fillEllipse(cx + 2, y + 5, 4, 1, C.WIT);
+  screen.fillRect(cx + 1, y + 10, 1, 3, C.BOTERGEEL);
+  screen.fillRect(cx - 5, y + 11, 1, 2, C.BOTERGEEL);
 
-  ogen(screen, cx, y, true);
-  // Reading glasses, pushed down the nose.
-  screen.strokeRect(cx - 8, y + 19, 6, 4, C.DONKERROOD);
-  screen.strokeRect(cx + 3, y + 19, 6, 4, C.DONKERROOD);
-  screen.fillRect(cx - 2, y + 20, 5, 1, C.DONKERROOD);
-  screen.set(cx - 11, y + 24, C.BOTERGEEL);
-  screen.set(cx + 11, y + 24, C.BOTERGEEL);
-  mond(screen, cx, y, talking, C.TERRACOTTA);
+  ogen(screen, cx, y, false);
+  // Thin frames, nearly not there.
+  screen.strokeRect(cx - 8, y + 15, 7, 5, C.ZANDGRIJS);
+  screen.strokeRect(cx + 2, y + 15, 7, 5, C.ZANDGRIJS);
+  screen.fillRect(cx - 1, y + 17, 3, 1, C.ZANDGRIJS);
+  lach(screen, cx, y, talking, C.TERRACOTTA);
 }
 
 /**
- * Wiep. Dark hair tied up, a work jacket, a pencil behind the ear: someone
- * who is going to build a house whether or not anybody helps.
+ * Wiep. A copper bowl cut with a blunt fringe and a bit left long at the
+ * neck, blue over the eyes, a red mouth, a red shirt buttoned to the collar
+ * and one small earring. Laughing, because she usually is, and because she
+ * is about to ask for help with a tiny house.
  */
 export function drawWiep(screen: PixelBuffer, x: number, y: number, talking = false): void {
   const cx = x + 20;
-  schouders(screen, cx, y, C.DIEPBLAUW, C.ROET, C.LUCHTBLAUW);
-  // Collar and a zip.
-  screen.fillRect(cx - 7, y + 37, 15, 3, C.DIEPBLAUW);
-  screen.fillRect(cx - 7, y + 37, 15, 1, C.LUCHTBLAUW);
-  screen.fillRect(cx, y + 39, 1, 7, C.ZANDGRIJS);
+  schouders(screen, cx, y, C.ROESTROOD, C.TERRACOTTA, C.ROESTROOD);
+  // The collar, two points, and the buttons under it.
+  screen.fillRect(cx - 9, y + 37, 7, 3, C.ROESTROOD);
+  screen.fillRect(cx + 3, y + 37, 7, 3, C.ROESTROOD);
+  screen.fillRect(cx - 9, y + 40, 6, 1, C.TERRACOTTA);
+  screen.fillRect(cx + 4, y + 40, 6, 1, C.TERRACOTTA);
+  screen.set(cx - 3, y + 41, C.TERRACOTTA);
+  screen.set(cx + 3, y + 41, C.TERRACOTTA);
+  screen.fillRect(cx, y + 40, 1, 6, C.TERRACOTTA);
+  screen.set(cx + 1, y + 42, C.LICHTOKER);
+  screen.set(cx + 1, y + 45, C.LICHTOKER);
 
-  // The ponytail, off to one side, behind everything.
-  screen.fillEllipse(cx + 13, y + 12, 5, 6, C.ROET);
-  screen.fillEllipse(cx + 13, y + 12, 4, 5, C.MAHONIE);
-  screen.fillEllipse(cx + 15, y + 20, 3, 7, C.MAHONIE);
-  screen.fillRect(cx + 10, y + 9, 2, 3, C.BOTERGEEL);
-
-  screen.fillEllipse(cx, y + 12, 12, 10, C.ROET);
-  screen.fillEllipse(cx, y + 12, 11, 9, C.MAHONIE);
-  screen.fillRect(cx - 11, y + 13, 3, 9, C.MAHONIE);
-  screen.fillRect(cx + 9, y + 13, 3, 7, C.MAHONIE);
+  // The bowl, behind the face, and the longer bit at the nape on one side.
+  screen.fillEllipse(cx, y + 13, 14, 12, C.ROET);
+  screen.fillEllipse(cx, y + 13, 13, 11, C.TERRACOTTA);
+  screen.fillRect(cx - 13, y + 13, 4, 16, C.TERRACOTTA);
+  screen.fillRect(cx - 14, y + 14, 1, 15, C.ROET);
+  screen.fillRect(cx - 12, y + 29, 3, 3, C.MAHONIE);
+  screen.fillRect(cx + 10, y + 13, 4, 10, C.TERRACOTTA);
+  screen.fillRect(cx + 14, y + 14, 1, 9, C.ROET);
+  screen.ditherRect(cx - 13, y + 18, 3, 11, C.TERRACOTTA, C.MAHONIE);
 
   gezicht(screen, cx, y);
 
-  // Pulled back tight off the forehead, with a parting.
-  screen.fillEllipse(cx, y + 9, 10, 4, C.MAHONIE);
-  screen.fillEllipse(cx - 6, y + 11, 5, 4, C.MAHONIE);
-  screen.fillEllipse(cx + 7, y + 11, 4, 4, C.MAHONIE);
-  screen.fillEllipse(cx + 2, y + 6, 6, 2, C.TERRACOTTA);
-  screen.fillRect(cx - 2, y + 5, 1, 6, C.DONKERROOD);
+  // Blue over the eyes, then the eyes; no brows, the fringe has them.
+  for (const side of [-1, 1] as const) {
+    const ex = cx + side * 5;
+    screen.fillRect(ex - 2, y + 15, 5, 1, C.DIEPBLAUW);
+    screen.fillRect(ex - 2, y + 16, 4, 1, C.LUCHTBLAUW);
+    screen.fillRect(ex - 2, y + 17, 4, 2, C.WIT);
+    screen.fillRect(ex - 1, y + 17, 2, 2, C.ROET);
+  }
 
-  ogen(screen, cx, y, false);
-  // Freckles, and the pencil.
+  // The fringe: cut dead straight, heavy, down to the eyes.
+  screen.fillEllipse(cx, y + 8, 11, 6, C.TERRACOTTA);
+  screen.fillRect(cx - 10, y + 9, 21, 5, C.TERRACOTTA);
+  screen.fillRect(cx - 10, y + 14, 21, 1, C.MAHONIE);
+  for (let px = cx - 9; px <= cx + 9; px += 3) screen.fillRect(px, y + 10, 1, 4, C.MAHONIE);
+  screen.fillEllipse(cx + 2, y + 5, 7, 2, C.ROESTROOD);
+  screen.fillEllipse(cx + 3, y + 4, 3, 1, C.LICHTOKER);
+
+  // Freckles, and the earring.
   screen.set(cx - 5, y + 22, C.HOUT);
   screen.set(cx - 7, y + 21, C.HOUT);
   screen.set(cx + 6, y + 22, C.HOUT);
-  screen.line(cx - 13, y + 12, cx - 8, y + 19, C.BOTERGEEL);
-  screen.set(cx - 13, y + 12, C.ROET);
-  mond(screen, cx, y, talking, C.DONKERROOD);
+  screen.set(cx + 4, y + 21, C.HOUT);
+  screen.fillRect(cx - 10, y + 24, 1, 2, C.KALK);
+  lach(screen, cx, y, talking, C.ROESTROOD);
 }

@@ -1,4 +1,6 @@
-import { type Legplan, type Vloer, nadenBotsen, planken, restant, totaalPlanken } from './model.ts';
+import {
+  type Legplan, type Vloer, nadenBijPaal, nadenBotsen, planken, restant, totaalPlanken,
+} from './model.ts';
 
 /**
  * The tidiest floor: fewest planks opened.
@@ -25,6 +27,8 @@ export function solve(v: Vloer): SolveResult {
 
   for (let r = R - 1; r >= 0; r--) {
     for (let e = 1; e <= keuzes(r); e++) {
+      // A start that puts a joint against a post is no start at all.
+      if (nadenBijPaal(v, r, e).length > 0) continue;
       if (r === R - 1) {
         kosten[r]![e] = 0;
         continue;

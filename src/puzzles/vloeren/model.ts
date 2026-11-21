@@ -32,7 +32,17 @@ export type Vloer = {
   readonly plank: number;
   /** How far an end joint must sit from one in the row above. */
   readonly versprong: number;
+  /**
+   * Things standing on the floor that it is laid around: the tree-trunk post
+   * in the woonkamer. A board is notched to fit, and a notched board with an
+   * end joint right beside the notch is two short bits that will not stay
+   * down, so joints keep the same distance from a post as from each other.
+   */
+  readonly palen?: readonly Paal[];
 };
+
+/** A post: which course it stands in, and the cell it takes up. */
+export type Paal = { readonly rij: number; readonly x: number };
 
 /** The length of the first plank in each row, in cells. */
 export type Legplan = number[];
@@ -70,6 +80,15 @@ export function planken(v: Vloer, r: number, eerste: number, aangereikt: number)
   return eerste === aangereikt && aangereikt > 0 ? stukken - 1 : stukken;
 }
 
+/** The end joints of course `r` that fall too near a post standing in it. */
+export function nadenBijPaal(v: Vloer, r: number, eerste: number): number[] {
+  const palen = (v.palen ?? []).filter((p) => p.rij === r);
+  if (palen.length === 0) return [];
+  // A post fills the cell from x to x + 1; measure from whichever edge is nearer.
+  return naden(v, r, eerste).filter((naad) =>
+    palen.some((p) => Math.min(Math.abs(naad - p.x), Math.abs(naad - p.x - 1)) < v.versprong));
+}
+
 /** Do the end joints of two stacked courses sit too close together? */
 export function nadenBotsen(v: Vloer, boven: number, eBoven: number, onder: number, eOnder: number): boolean {
   for (const a of naden(v, onder, eOnder)) {
@@ -93,6 +112,7 @@ export function faults(v: Vloer, plan: Legplan): Fault[] {
       out.push({ kind: 'buiten', rij: r });
       continue;
     }
+    for (const naad of nadenBijPaal(v, r, eerste)) out.push({ kind: 'naad', rij: r, x: naad });
     if (r === 0) continue;
     const boven = plan[r - 1];
     if (boven === undefined) continue;

@@ -172,6 +172,16 @@ export class VloerScene implements Scene {
 
       aangereikt = rest;
     }
+
+    // The post, standing on the floor: a square of trunk the boards go round.
+    for (const paal of v.palen ?? []) {
+      const px = this.originX + paal.x * this.tile;
+      const py = this.originY + paal.rij * this.tile;
+      screen.fillRect(px, py, this.tile, this.tile, C.ROET);
+      screen.fillRect(px + 1, py + 1, this.tile - 2, this.tile - 2, C.HOUT);
+      screen.fillRect(px + 1, py + 1, this.tile - 2, 2, C.LICHTHOUT);
+      screen.strokeRect(px + 3, py + 3, this.tile - 6, this.tile - 6, C.DONKEROKER);
+    }
   }
 
   private drawTopBar(screen: Screen): void {

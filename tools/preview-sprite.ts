@@ -7,12 +7,17 @@ import { writeFileSync } from 'node:fs';
 import { PixelBuffer } from '../src/engine/pixelbuffer.ts';
 import { PALETTE, C } from '../src/engine/palette.ts';
 import { drawPim, PIM_W, PIM_H } from '../src/scenes/pim.ts';
+import { drawMoeder, drawWiep } from '../src/scenes/portretten.ts';
 
 const scale = Number(process.argv[3] ?? 7);
 const pad = 4;
-const buf = new PixelBuffer(PIM_W + pad * 2, PIM_H + pad * 2 + 14);
+// Everyone who speaks, side by side, mouth shut above and talking below.
+const buf = new PixelBuffer((PIM_W + pad) * 3 + pad, (PIM_H + pad) * 2 + pad);
 buf.clear(C.ZWART);
-drawPim(buf, pad, pad);
+[drawPim, drawMoeder, drawWiep].forEach((teken, i) => {
+  teken(buf, pad + i * (PIM_W + pad), pad, false);
+  teken(buf, pad + i * (PIM_W + pad), pad * 2 + PIM_H, true);
+});
 
 const rgb = PALETTE.map((hex) => [
   parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16),

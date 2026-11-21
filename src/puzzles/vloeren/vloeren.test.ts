@@ -96,6 +96,13 @@ test('par beats laying every row the same way', () => {
   }
 });
 
+test('a joint right beside the post is refused, and the solver knows', () => {
+  const v: Vloer = { vorm: [{ links: 0, breedte: 12 }], plank: 5, versprong: 2, palen: [{ rij: 0, x: 5 }] };
+  assert.ok(faults(v, [5]).some((f) => f.kind === 'naad'), 'a joint at the post');
+  assert.deepEqual(faults(v, [3]), [], 'joints at 3 and 8 are clear of it');
+  assert.ok(faults(v, solve(v).plan).length === 0);
+});
+
 test('the floors are the rooms on the plan', () => {
   // A cell is 25 cm along the course and a course is 50 cm of floor.
   const maat = (id: string): [number, number] => {
@@ -106,11 +113,17 @@ test('the floors are the rooms on the plan', () => {
   assert.deepEqual(maat('vloeren-tvkamer'), [4.5, 3]);
   // The keuken is 3 m wide, less the half metre the units stand on.
   assert.deepEqual(maat('vloeren-keuken'), [2.5, 5.5]);
-  // And the only step anywhere is the pier in the keuken's garden wall.
-  for (const level of VLOER_LEVELS) {
-    const maten = new Set(level.vloer.vorm.map((r) => `${r.links},${r.breedte}`));
-    assert.equal(maten.size, level.id === 'vloeren-keuken' ? 2 : 1, `${level.id} has a step the house does not`);
-  }
+  // The steps are the ones Pim listed and no others: the pier in the keuken,
+  // two boxed-out corners in the tv-kamer, and the post in the woonkamer.
+  const stappen = (id: string): number => {
+    const v = VLOER_LEVELS.find((l) => l.id === id)!.vloer;
+    return new Set(v.vorm.map((r) => `${r.links},${r.breedte}`)).size;
+  };
+  assert.equal(stappen('vloeren-keuken'), 2);
+  assert.equal(stappen('vloeren-tvkamer'), 3);
+  assert.equal(stappen('vloeren-woonkamer'), 1);
+  const woon = VLOER_LEVELS.find((l) => l.id === 'vloeren-woonkamer')!.vloer;
+  assert.deepEqual(woon.palen, [{ rij: 6, x: 6 }], 'a third in from the left, a third up from the bottom');
 });
 
 test('a floor whose rules cannot be met says so', () => {
@@ -134,9 +147,11 @@ test('reuse actually happens in the best plan', () => {
   assert.ok(hergebruik > 0, 'the cheapest floor should be using its off-cuts');
 });
 
-test('the floors get bigger as they go', () => {
-  const cellen = VLOER_LEVELS.map((l) => l.vloer.vorm.reduce((s, r) => s + r.breedte, 0));
-  assert.deepEqual(cellen, [...cellen].sort((a, b) => a - b), `areas go ${cellen.join(', ')}`);
+test('the floors get dearer as they go', () => {
+  // By planks, not by area: the tv-kamer is a few squares smaller than the
+  // keuken once its corners are out, and still the bigger job.
+  const pars = VLOER_LEVELS.map((l) => solve(l.vloer).par);
+  assert.deepEqual(pars, [...pars].sort((a, b) => a - b), `pars go ${pars.join(', ')}`);
 });
 
 test('breedte spans the widest course', () => {

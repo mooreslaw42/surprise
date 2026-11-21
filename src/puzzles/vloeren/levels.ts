@@ -8,7 +8,8 @@ import type { Vloer } from './model.ts';
  * woonkamer 4,5 by 5 m. They are rectangles, near enough. The keuken loses
  * half a metre along one side to the units, which the floor stops against,
  * and two of its courses are a cell short where the pier stands out of the
- * garden wall. Nothing else steps in or out.
+ * garden wall. The tv-kamer has a square boxed out of two opposite corners,
+ * and the woonkamer has its post. That is all: Pim listed them.
  *
  * A rectangle laid om-en-om would be no puzzle at all, so the plank and the
  * joint spacing are picked per room by tools/vloer-zoek.ts so that the
@@ -38,7 +39,7 @@ const UITLEG_EERSTE = [
 
 const UITLEG_LATER = [
   'VOLGENDE VLOER. LET OP DE NADEN: TE DICHT ONDER ELKAAR EN HET WORDT EEN STREEP.',
-  'EEN RECHTE KAMER, DUS HET GAAT ALLEEN NOG OM HET RESTSTUK. WELK BEGIN LEVERT EEN STUK OP DAT JE DAARNA OOK KWIJT KUNT?',
+  'WAAR IETS IN DE VLOER STAAT, EEN PAAL OF EEN HOEK, MAG ER GEEN NAAD VLAK NAAST. EN WELK BEGIN LEVERT EEN RESTSTUK OP DAT JE DAARNA OOK KWIJT KUNT?',
   'SOMS IS HET GOEDKOPE BEGIN NET HET BEGIN DAT NIET MAG. DAN ZAAG JE TOCH MAAR EEN NIEUWE AAN.',
 ];
 
@@ -61,18 +62,25 @@ export const VLOER_LEVELS: readonly VloerLevel[] = [
     id: 'vloeren-tvkamer',
     ruimte: 'TV-KAMER',
     titel: 'VLOER TV-KAMER',
-    praatje: 'BREED EN ONDIEP. KORTE PLANKEN.',
+    praatje: 'TWEE HOEKEN ERUIT. KORTE PLANKEN.',
     uitleg: UITLEG_LATER,
-    // 4,5 m wide, 3 m deep.
-    vloer: { plank: 5, versprong: 2, vorm: recht(18, 6) },
+    // 4,5 m wide, 3 m deep, with a square half a metre across boxed out of
+    // two opposite corners: top left and bottom right.
+    vloer: {
+      plank: 5,
+      versprong: 2,
+      vorm: recht(18, 6).map((rij, r) =>
+        (r === 0 ? { links: 2, breedte: 16 } : r === 5 ? { links: 0, breedte: 16 } : rij)),
+    },
   },
   {
     id: 'vloeren-woonkamer',
     ruimte: 'WOONKAMER',
     titel: 'VLOER WOONKAMER',
-    praatje: 'DE GROOTSTE. TIEN RIJEN, LANGE PLANKEN.',
+    praatje: 'DE GROOTSTE. EN OM DE PAAL HEEN.',
     uitleg: UITLEG_LATER,
-    // 4,5 m wide, 5 m deep.
-    vloer: { plank: 7, versprong: 3, vorm: recht(18, 10) },
+    // 4,5 m wide, 5 m deep, and the tree-trunk post standing in it a third
+    // of the way in from the left and a third of the way up from the bottom.
+    vloer: { plank: 7, versprong: 3, vorm: recht(18, 10), palen: [{ rij: 6, x: 6 }] },
   },
 ];
