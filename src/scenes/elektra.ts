@@ -236,7 +236,7 @@ export class ElektraScene implements Scene {
     this.drawWall(screen);
     this.drawOpenings(screen);
     this.drawBlokkade(screen);
-    drawFloor(screen, this.room, 'ondervloer');
+    drawFloor(screen, this.room, 'beton');
     drawProps(screen, this.room, this.surface.props,
       this.originX, this.originX + this.level.board.width * this.tile);
 

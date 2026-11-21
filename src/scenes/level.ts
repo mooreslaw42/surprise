@@ -188,7 +188,7 @@ export class LevelScene implements Scene {
     drawWallGround(screen, this.room, this.surface.afwerking);
     this.drawWall(screen, shakeX, shakeY);
     this.drawOpenings(screen, shakeX, shakeY);
-    drawFloor(screen, this.room, 'marmer');
+    drawFloor(screen, this.room, 'beton');
     drawProps(screen, this.room, this.surface.props,
       this.originX, this.originX + this.grid.width * this.tile);
 

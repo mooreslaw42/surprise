@@ -94,11 +94,13 @@ export function drawCeiling(screen: Screen, l: RoomLayout, ruimte: RoomId = 'woo
 }
 
 /**
- * The floor, which changes with the stage. White marble is what was there
- * before the sledgehammers came out; the mahogany boards only arrive at the
- * Vloeren stage, near the end.
+ * The floor, which changes with the job. Three of them, in Pim's words:
+ * white marble tiles before anything started, bare concrete all the while
+ * the walls were open, and dark wood once it was laid. So marble is only
+ * ever seen while the rooms are being emptied, and the wood only arrives at
+ * Vloeren, near the end.
  */
-export type Vloer = 'marmer' | 'mahonie' | 'ondervloer';
+export type Vloer = 'marmer' | 'beton' | 'mahonie';
 
 export function drawFloor(screen: Screen, l: RoomLayout, vloer: Vloer): void {
   if (vloer === 'marmer') {
@@ -117,9 +119,24 @@ export function drawFloor(screen: Screen, l: RoomLayout, vloer: Vloer): void {
       const vy = l.floorY + 5 + ((seed >> 7) % Math.max(1, l.floorH - 6));
       screen.fillRect(vx, vy, 3 + ((seed >> 3) % 4), 1, C.KALK);
     }
-  } else if (vloer === 'ondervloer') {
-    screen.fillRect(0, l.floorY, WIDTH, l.floorH, C.LICHTHOUT);
-    screen.ditherRect(0, l.floorY + 4, WIDTH, l.floorH - 4, C.LICHTHOUT, C.HOUT);
+  } else if (vloer === 'beton') {
+    // Poured, grey, never quite one colour, with the odd crack and the dust
+    // of everything that came off the walls.
+    screen.fillRect(0, l.floorY, WIDTH, l.floorH, C.ZANDGRIJS);
+    let seed = 41;
+    for (let n = 0; n < 40; n++) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      const x = seed % WIDTH;
+      const y = l.floorY + 4 + ((seed >> 9) % Math.max(1, l.floorH - 6));
+      const w = 8 + ((seed >> 4) % 26);
+      screen.ditherRect(x, y, w, 2 + ((seed >> 13) % 3), C.ZANDGRIJS, n % 4 === 0 ? C.ASGRIJS : C.KALK);
+    }
+    for (let n = 0; n < 5; n++) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      const x = seed % WIDTH;
+      const y = l.floorY + 6 + ((seed >> 9) % Math.max(1, l.floorH - 10));
+      screen.line(x, y, x + 9 + ((seed >> 5) % 12), y + ((seed >> 3) % 5) - 2, C.ASGRIJS);
+    }
   } else {
     // Mahogany strip parquet: short lengths, staggered, no two quite the
     // same red. In the photos it is the floor that glows, not the walls.

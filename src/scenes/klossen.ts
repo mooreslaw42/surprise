@@ -137,7 +137,7 @@ export class KlosScene implements Scene {
     this.drawOpeningen(screen);
     this.drawDingen(screen);
     this.drawMerken(screen, over);
-    drawFloor(screen, this.room, 'ondervloer');
+    drawFloor(screen, this.room, 'beton');
     // Props first: the tape is the one thing on this wall that must stay
     // readable, and a bookcase standing in front of it is still a bookcase.
     drawProps(screen, this.room, this.level.surface.props,

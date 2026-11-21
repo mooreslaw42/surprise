@@ -6,10 +6,18 @@
  * from having the bank out of the door. That one is the puzzle. The same
  * trick the published Rush Hour sets were made with.
  *
- *   node --experimental-strip-types tools/schuif-zoek.ts [van] [tot] [pogingen] [stukken]
+ *   node --experimental-strip-types tools/schuif-zoek.ts <van> <tot> <pogingen> <stukken> [zaad] [breed] [diep] [deurrij]
+ *
+ * The room is as wide and as deep as the real one, at three quarters of a
+ * metre a square, with the door in the right-hand wall.
  */
-const N = 6;
-const RIJ = 2;
+const W = Number(process.argv[7] ?? 6);
+const H = Number(process.argv[8] ?? 6);
+const RIJ = Number(process.argv[9] ?? 2);
+/** Rooms with more reachable positions than this are skipped: too slow to walk. */
+const GRENS = Number(process.argv[10] ?? 12000);
+/** How far a piece lying this way can slide: the room's length along it. */
+const lengte = (hor: boolean): number => (hor ? W : H);
 
 type P = { len: number; hor: boolean; vast: number };   // vast: the row or column it lives in
 
@@ -19,9 +27,9 @@ function rng(seed: number): () => number {
 }
 
 function bezet(ps: P[], pos: number[]): Uint8Array {
-  const b = new Uint8Array(N * N);
+  const b = new Uint8Array(W * H);
   ps.forEach((p, i) => {
-    for (let k = 0; k < p.len; k++) b[p.hor ? p.vast * N + pos[i]! + k : (pos[i]! + k) * N + p.vast] = 1;
+    for (let k = 0; k < p.len; k++) b[p.hor ? p.vast * W + pos[i]! + k : (pos[i]! + k) * W + p.vast] = 1;
   });
   return b;
 }
@@ -30,25 +38,26 @@ function buren(ps: P[], pos: number[]): number[][] {
   const b = bezet(ps, pos);
   const out: number[][] = [];
   ps.forEach((p, i) => {
-    const cel = (a: number) => (p.hor ? p.vast * N + a : a * N + p.vast);
+    const cel = (a: number) => (p.hor ? p.vast * W + a : a * W + p.vast);
     for (let a = pos[i]! - 1; a >= 0 && !b[cel(a)]; a--) { const q = [...pos]; q[i] = a; out.push(q); }
-    for (let a = pos[i]! + 1; a + p.len <= N && !b[cel(a + p.len - 1)]; a++) { const q = [...pos]; q[i] = a; out.push(q); }
+    for (let a = pos[i]! + 1; a + p.len <= lengte(p.hor) && !b[cel(a + p.len - 1)]; a++) { const q = [...pos]; q[i] = a; out.push(q); }
   });
   return out;
 }
 
 function maak(next: () => number, aantal: number): { ps: P[]; pos: number[] } | null {
   const ps: P[] = [{ len: 2, hor: true, vast: RIJ }];
-  const pos = [Math.floor(next() * 3)];
-  for (let t = 0; t < 200 && ps.length < aantal; t++) {
+  const pos = [Math.floor(next() * Math.max(1, W - 3))];
+  for (let t = 0; t < 2000 && ps.length < aantal; t++) {
     const len = next() < 0.3 ? 3 : 2;
     const hor = next() < 0.45;
-    const vast = Math.floor(next() * N);
+    const vast = Math.floor(next() * (hor ? H : W));
     if (hor && vast === RIJ) continue;                // nothing else lies in the door's row
-    const a = Math.floor(next() * (N - len + 1));
+    if (len > lengte(hor)) continue;
+    const a = Math.floor(next() * (lengte(hor) - len + 1));
     const b = bezet(ps, pos);
     let vrij = true;
-    for (let k = 0; k < len; k++) if (b[hor ? vast * N + a + k : (a + k) * N + vast]) vrij = false;
+    for (let k = 0; k < len; k++) if (b[hor ? vast * W + a + k : (a + k) * W + vast]) vrij = false;
     if (!vrij) continue;
     ps.push({ len, hor, vast });
     pos.push(a);
@@ -62,7 +71,7 @@ function verste(ps: P[], start: number[]): { pos: number[]; par: number } | null
   const alle = new Map<string, number[]>([[key(start), start]]);
   const rij = [start];
   while (rij.length) {
-    if (alle.size > 12000) return null;
+    if (alle.size > GRENS) return null;
     const p = rij.pop()!;
     for (const q of buren(ps, p)) {
       const k = key(q);
@@ -71,7 +80,7 @@ function verste(ps: P[], start: number[]): { pos: number[]; par: number } | null
   }
   const afstand = new Map<string, number>();
   let laag: number[][] = [];
-  for (const [k, p] of alle) if (p[0]! + 2 === N) { afstand.set(k, 0); laag.push(p); }
+  for (const [k, p] of alle) if (p[0]! + 2 === W) { afstand.set(k, 0); laag.push(p); }
   if (laag.length === 0) return null;
   let d = 0;
   let laatste = laag;
@@ -91,7 +100,7 @@ function verste(ps: P[], start: number[]): { pos: number[]; par: number } | null
 }
 
 function teken(ps: P[], pos: number[]): string[] {
-  const rows = Array.from({ length: N }, () => Array<string>(N).fill('.'));
+  const rows = Array.from({ length: H }, () => Array<string>(W).fill('.'));
   const letters = 'TABCDEFGHIJKLMNOP';
   ps.forEach((p, i) => {
     for (let k = 0; k < p.len; k++) {
@@ -113,12 +122,13 @@ function verbouw(ps: P[], pos: number[]): { ps: P[]; pos: number[] } | null {
   for (let t = 0; t < 60; t++) {
     const len = next() < 0.35 ? 3 : 2;
     const hor = next() < 0.45;
-    const vast = Math.floor(next() * N);
+    const vast = Math.floor(next() * (hor ? H : W));
     if (hor && vast === RIJ) continue;
-    const a = Math.floor(next() * (N - len + 1));
+    if (len > lengte(hor)) continue;
+    const a = Math.floor(next() * (lengte(hor) - len + 1));
     const b = bezet(ps2, pos2);
     let vrij = true;
-    for (let k = 0; k < len; k++) if (b[hor ? vast * N + a + k : (a + k) * N + vast]) vrij = false;
+    for (let k = 0; k < len; k++) if (b[hor ? vast * W + a + k : (a + k) * W + vast]) vrij = false;
     if (!vrij) continue;
     return { ps: [...ps2, { len, hor, vast }], pos: [...pos2, a] };
   }

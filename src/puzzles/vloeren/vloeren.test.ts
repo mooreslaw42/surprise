@@ -66,18 +66,22 @@ test('every floor can be laid, and par is the fewest planks', () => {
   }
 });
 
-test('no om-en-om rhythm can walk a ragged floor', () => {
-  // The old square rooms fell to any two first-plank lengths alternated down
-  // the floor. On these rooms there is no such pair — you have to plan.
+test('an om-en-om rhythm never reaches par, and costs a star', () => {
+  // The rooms are the real ones, so they are rectangles, and any floor can
+  // be laid by alternating two first-plank lengths. What stops that being
+  // the answer is the price: on every room the best rhythm is more than the
+  // two planks over par that still earn a second star.
   for (const level of VLOER_LEVELS) {
     const v = level.vloer;
+    const { par } = solve(v);
+    let ritme = Infinity;
     for (let a = 1; a <= v.plank; a++) {
       for (let b = 1; b <= v.plank; b++) {
         const plan: Legplan = v.vorm.map((_, r) => (r % 2 === 0 ? a : b));
-        assert.ok(!isSolved(v, plan),
-          `${level.id}: alternating ${a}/${b} solves it, so it is still trivial`);
+        if (isSolved(v, plan)) ritme = Math.min(ritme, totaalPlanken(v, plan));
       }
     }
+    assert.ok(ritme >= par + 2, `${level.id}: alternating reaches ${ritme} against par ${par}`);
   }
 });
 
@@ -92,14 +96,21 @@ test('par beats laying every row the same way', () => {
   }
 });
 
-test('the rooms are not rectangles', () => {
+test('the floors are the rooms on the plan', () => {
+  // A cell is 25 cm along the course and a course is 50 cm of floor.
+  const maat = (id: string): [number, number] => {
+    const v = VLOER_LEVELS.find((l) => l.id === id)!.vloer;
+    return [Math.max(...v.vorm.map((r) => r.breedte)) / 4, v.vorm.length / 2];
+  };
+  assert.deepEqual(maat('vloeren-woonkamer'), [4.5, 5]);
+  assert.deepEqual(maat('vloeren-tvkamer'), [4.5, 3]);
+  // The keuken is 3 m wide, less the half metre the units stand on.
+  assert.deepEqual(maat('vloeren-keuken'), [2.5, 5.5]);
+  // And the only step anywhere is the pier in the keuken's garden wall.
   for (const level of VLOER_LEVELS) {
-    const shapes = new Set(level.vloer.vorm.map((r) => `${r.links},${r.breedte}`));
-    assert.ok(shapes.size > 1, `${level.id}: every course is the same, so it is still a box`);
+    const maten = new Set(level.vloer.vorm.map((r) => `${r.links},${r.breedte}`));
+    assert.equal(maten.size, level.id === 'vloeren-keuken' ? 2 : 1, `${level.id} has a step the house does not`);
   }
-  // At least one room has an inset course — a real corner to lay around.
-  assert.ok(VLOER_LEVELS.some((l) => l.vloer.vorm.some((r) => r.links > 0)),
-    'none of the floors has a nook');
 });
 
 test('a floor whose rules cannot be met says so', () => {
