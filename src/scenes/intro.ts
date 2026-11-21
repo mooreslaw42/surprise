@@ -7,15 +7,18 @@ import { Dialogue } from './dialogue.ts';
 
 /**
  * The gedicht, before anything else. Pim says it, a strofe at a time, over
- * the title screen with its fresh hole in the wall, and Enter brings the
- * next one. When the last is read the house map opens.
+ * the title screen, and Enter or a click brings the next one. Nothing plays
+ * under it: a poem read over a guitar riff is a poem nobody reads. When the
+ * last strofe is done the house map opens, and its music starts there.
  *
  * Once only: it is a surprise, and the second time it is a delay. Escape
  * goes straight through for whoever has heard it.
  */
 export class IntroScene implements Scene {
-  /** The title stays on screen underneath, and keeps playing its riff. */
+  /** The title stays on screen underneath. */
   readonly transparent = true;
+  /** Silence, said outright, so the scene under this one cannot start a song. */
+  readonly muziek = null;
 
   private readonly save: Save;
   private readonly daarna: () => Scene;

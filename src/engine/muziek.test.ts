@@ -6,6 +6,8 @@ import {
 import { BAAS, BALLADE, BLUES, LIEDJES, MENU, OPENING, RIFF, thema } from '../data/liedjes.ts';
 import { Save } from './save.ts';
 import { TitleScene } from '../scenes/title.ts';
+import { IntroScene } from '../scenes/intro.ts';
+import { HouseMapScene } from '../scenes/housemap.ts';
 import { STAGES } from '../data/stages.ts';
 
 test('note names land on the right pitch', () => {
@@ -193,7 +195,10 @@ test('every stage has something to play', () => {
 test('the game opens on the riff', () => {
   // The title screen is the hook, so it gets the riff rather than the ballad
   // — and untransposed, which makes it the same request as the sloop theme.
-  assert.equal(new TitleScene(new Save(null)).muziek.lied, RIFF);
+  // Once the poem has been heard. Before that the title is silent: see below.
+  const gehoord = new Save(null);
+  gehoord.zetVlag('intro');
+  assert.equal(new TitleScene(gehoord).muziek?.lied, RIFF);
   assert.equal(OPENING.halveTonen ?? 0, 0);
   assert.ok(zelfdeKeuze(OPENING, thema('sloop')));
 });
@@ -219,4 +224,13 @@ test('the ballad is the quiet one: no drums anywhere in it', () => {
   for (const l of [RIFF, BLUES]) {
     assert.ok(l.partijen.some((p) => p.stem === 'slagwerk'), `${l.id} needs a kit`);
   }
+});
+
+test('a first visit is quiet until the poem is over', () => {
+  // No save: the title and the poem play nothing, and the house map after
+  // them is where the music starts.
+  const nieuw = new Save(null);
+  assert.equal(new TitleScene(nieuw).muziek, null);
+  assert.equal(new IntroScene(nieuw, () => new HouseMapScene(nieuw)).muziek, null);
+  assert.equal(new HouseMapScene(nieuw).muziek, MENU);
 });

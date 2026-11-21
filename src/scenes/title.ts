@@ -1,6 +1,7 @@
 import { OPENING } from '../data/liedjes.ts';
 import { C } from '../engine/palette.ts';
 import { WIDTH, HEIGHT, type Screen } from '../engine/screen.ts';
+import type { Muziekkeuze } from '../engine/muziek.ts';
 import type { Scene, SceneContext } from '../engine/scene.ts';
 import type { Save } from '../engine/save.ts';
 import { HouseMapScene } from './housemap.ts';
@@ -36,7 +37,6 @@ const NAAR_KAART = 2.2;
  * and wool on the right. The whole game in one picture.
  */
 export class TitleScene implements Scene {
-  readonly muziek = OPENING;
   private readonly save: Save;
   private time = 0;
   /** Seconds since the hammer started moving. Negative while it is resting. */
@@ -46,11 +46,32 @@ export class TitleScene implements Scene {
     this.save = save;
   }
 
+  /**
+   * Someone who has not heard Pim's poem yet: they land on a quiet title, and
+   * the first press goes straight into the poem, still quiet. The music only
+   * starts on the house map after it, so the first thing the game ever plays
+   * is the start of the job. Everyone else gets the riff here, as before.
+   */
+  private get nieuw(): boolean {
+    return IntroScene.nodig(this.save);
+  }
+
+  get muziek(): Muziekkeuze | null {
+    return this.nieuw ? null : OPENING;
+  }
+
   update(dt: number, ctx: SceneContext): void {
     this.time += dt;
 
     if (this.zwaai < 0) {
-      if (ctx.input.confirmed() || ctx.input.mouseClicked) this.zwaai = 0;
+      if (!ctx.input.confirmed() && !ctx.input.mouseClicked) return;
+      if (this.nieuw) {
+        // No swing to wait for: the swing is there to let the title play its
+        // riff, and this time there is no riff.
+        ctx.push(new IntroScene(this.save, () => new HouseMapScene(this.save)));
+        return;
+      }
+      this.zwaai = 0;
       return;
     }
 
@@ -59,9 +80,7 @@ export class TitleScene implements Scene {
       // Reset before leaving, so coming back out of the house map finds the
       // wall whole and the hammer up again.
       this.zwaai = -1;
-      // The first time through, Pim has something to say first.
-      const kaart = (): HouseMapScene => new HouseMapScene(this.save);
-      ctx.push(IntroScene.nodig(this.save) ? new IntroScene(this.save, kaart) : kaart());
+      ctx.push(new HouseMapScene(this.save));
     }
   }
 
