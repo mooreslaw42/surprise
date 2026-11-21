@@ -41,11 +41,16 @@ export const WEIGERING: Record<Weigering, string> = {
 
 const TOP_H = 16;
 const BOTTOM_H = 30;
-const TILE = 16;
+/**
+ * Both sheets side by side, which the house only allows at twelve pixels a
+ * cell: it is fourteen cells long on its side, and two of it at sixteen were
+ * wider than the screen and drew one sheet over the other.
+ */
+const TILE = 12;
 const PLAN_W = BREEDTE * TILE;
 const PLAN_H = HOOGTE * TILE;
-const PLAN_Y = 40;
-const PLAN_X = [20, WIDTH - 20 - PLAN_W] as const;
+const PLAN_Y = 52;
+const PLAN_X = [14, WIDTH - 14 - PLAN_W] as const;
 const KOP = ['ONDER DE VLOER', 'BOVEN HET PLAFOND'] as const;
 
 /**
@@ -277,15 +282,16 @@ export class OpleveringScene implements Scene {
       screen.strokeRect(ox + ruimte.x * TILE, PLAN_Y + ruimte.y * TILE,
         ruimte.w * TILE, ruimte.h * TILE, C.LUCHTBLAUW);
     }
-    // The corner of the sheet that is not house: say whose room is whose
-    // there, once, rather than over the duct.
+    // The hall under the keuken is not part of the job and has no duct in
+    // it, so the labels go there rather than over a pipe.
+    const hal = PLATTEGROND.ruimtes.find((r) => r.naam === 'KEUKEN')!;
+    const hx = ox + hal.x * TILE + (hal.w * TILE) / 2;
+    const hy = PLAN_Y + 3 * TILE + 3;
     if (laag === 0) {
-      screen.text('WOONK.', ox + 2, PLAN_Y + 4 * TILE + 5, C.LUCHTBLAUW);
-      screen.text('KEUKEN: BOVEN', ox + 2, PLAN_Y + 4 * TILE + 14, C.LUCHTBLAUW);
-      screen.text('TV: RECHTSONDER', ox - 4, PLAN_Y + 4 * TILE + 23, C.LUCHTBLAUW);
+      screen.textCentered('DE HAL', hx, hy + 5, C.ASGRIJS);
     } else {
-      screen.text('GEEN KANAAL', ox + 2, PLAN_Y + 4 * TILE + 6, C.ASGRIJS);
-      screen.text('DOOR EEN MUUR', ox, PLAN_Y + 4 * TILE + 15, C.ASGRIJS);
+      screen.textCentered('GEEN KANAAL', hx, hy, C.ASGRIJS);
+      screen.textCentered('DOOR MUREN', hx, hy + 11, C.ASGRIJS);
     }
   }
 

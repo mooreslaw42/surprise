@@ -11,16 +11,19 @@ import { parsePlan, type Plan } from './model.ts';
  *
  * One room each, and nothing else can start until all three are empty.
  *
- * The rooms are the real rooms, in proportion: the woonkamer 5 by 4,5 m, the
- * keuken 5,5 by 3 m, the tv-kamer 3 by 4,5 m, each turned so its way out is
- * the right-hand wall. A square is half a metre in the keuken and tv-kamer
- * and a little over that in the woonkamer, which at half a metre is too big
- * a board for the search to finish.
+ * The rooms are the real rooms, drawn the same way up as Pim's floor plans
+ * and the Vloeren levels, with the way out in the right-hand wall. What is
+ * fixed in the room is fixed here ('#'): the tree-trunk post in the
+ * woonkamer, a third in and a third up; the kitchen units along the whole
+ * left wall of the keuken and the pier in its garden wall; the two boxed-out
+ * corners of the tv-kamer. A square is half a metre, except in the
+ * woonkamer, where at half a metre the board is too big for the search to
+ * finish and a square is nearer two thirds.
  *
- * The furniture is found, not drawn: tools/schuif-zoek.ts fills a room, walks
- * every position it can reach, and keeps the one furthest from having the
- * door clear, then swaps furniture about for as long as that makes it
- * worse. Fifteen slides, twenty-one, twenty-eight.
+ * The furniture is found, not drawn: tools/schuif-zoek.ts fills a room
+ * around the fixed cells, walks every position it can reach, and keeps the
+ * one furthest from having the door clear, then swaps furniture about for as
+ * long as that makes it worse. Twenty-two slides, twenty-two, thirty-two.
  */
 
 export type SchuifLevel = {
@@ -53,17 +56,17 @@ export const SCHUIF_LEVELS: readonly SchuifLevel[] = [
     praatje: 'DE BANK NAAR DE DEUR. DE REST STAAT IN DE WEG.',
     uitleg: UITLEG_EERSTE,
     plan: parsePlan([
-      '.KBBBE..',
-      '.KDD.EHH',
-      '...G.E.I',
-      'LTTG...I',
-      'LAFCCCJJ',
-      'LAF.....',
-      '.AFMMM..',
+      'I..K...',
+      'IFFKAAA',
+      'LL.JJC.',
+      '..TT.C.',
+      '.BBB.G.',
+      '..#DDG.',
+      '...E...',
+      '...EHHH',
     ], {
-      T: 'bank', B: 'boekenkast', E: 'boekenkast', L: 'kast', A: 'kast', C: 'eettafel',
-      M: 'tvmeubel', K: 'fauteuil', G: 'fauteuil', D: 'salontafel', J: 'salontafel',
-      F: 'dozen', H: 'dozen', I: 'dozen',
+      T: 'bank', A: 'boekenkast', B: 'eettafel', H: 'tvmeubel', I: 'fauteuil', K: 'fauteuil',
+      F: 'salontafel', C: 'kast', G: 'kast', L: 'dozen', J: 'dozen', D: 'dozen', E: 'dozen',
     }),
   },
   {
@@ -74,15 +77,20 @@ export const SCHUIF_LEVELS: readonly SchuifLevel[] = [
     praatje: 'DE KOELKAST ERUIT. HET AANRECHT STAAT DWARS.',
     uitleg: UITLEG_LATER,
     plan: parsePlan([
-      '..FHHHI....',
-      '..F.GDI....',
-      '.TT.GDA....',
-      '....CBA....',
-      '..E.CBA....',
-      '..E.CBKKJJJ',
+      '#.....',
+      '#.....',
+      '#HHH..',
+      '#FFG..',
+      '#A.G.#',
+      '#ACC.#',
+      '#A.DEE',
+      '#TTD.B',
+      '#I...B',
+      '#I.JJB',
+      '#.....',
     ], {
-      T: 'koelkast', H: 'aanrecht', J: 'aanrecht', A: 'kast', C: 'kast', B: 'eettafel',
-      I: 'fornuis', E: 'salontafel', F: 'dozen', G: 'dozen', D: 'dozen', K: 'dozen',
+      T: 'koelkast', H: 'aanrecht', A: 'kast', B: 'kast', C: 'eettafel', D: 'fornuis',
+      I: 'salontafel', F: 'dozen', G: 'dozen', E: 'dozen', J: 'dozen',
     }),
   },
   {
@@ -90,21 +98,18 @@ export const SCHUIF_LEVELS: readonly SchuifLevel[] = [
     nummer: 3,
     ruimte: 'TV-KAMER',
     titel: 'TV-KAMER LEEGHALEN',
-    praatje: 'DE VOLSTE KAMER. BIJNA DERTIG KEER SCHUIVEN.',
+    praatje: 'DE VOLSTE KAMER. RUIM DERTIG KEER SCHUIVEN.',
     uitleg: UITLEG_LATER,
     plan: parsePlan([
-      '....F.',
-      '.CAAF.',
-      '.C..F.',
-      '.CDDD.',
-      '.TTE..',
-      '.IIEH.',
-      '.JJEH.',
-      '...BGG',
-      '...B..',
+      '#.H......',
+      '..H.DGGA.',
+      'TTI.DC.A.',
+      '..IFFC.A.',
+      '.BBBE....',
+      '....EJJJ#',
     ], {
-      T: 'bank', F: 'boekenkast', C: 'kast', E: 'kast', D: 'tvmeubel', A: 'salontafel',
-      I: 'fauteuil', J: 'fauteuil', H: 'dozen', B: 'dozen', G: 'dozen',
+      T: 'bank', A: 'boekenkast', B: 'tvmeubel', C: 'kast', J: 'kast', G: 'salontafel',
+      H: 'fauteuil', D: 'fauteuil', I: 'dozen', F: 'dozen', E: 'dozen',
     }),
   },
 ];

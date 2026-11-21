@@ -204,12 +204,17 @@ export class SchuifScene implements Scene {
       screen.line(vx, vy, vx + len, vy + ((seed >> 3) % 3) - 1, C.ZANDGRIJS);
     }
 
+    // What does not move, in what it is: the tree-trunk post in the
+    // woonkamer, the kitchen units and the pier in the keuken, the boxed-out
+    // corners of the tv-kamer.
+    const [vlak, rand] = this.level.ruimte === 'WOONKAMER' ? [C.HOUT, C.MAHONIE]
+      : this.level.ruimte === 'KEUKEN' ? [C.WIT, C.ZANDGRIJS] : [C.ZANDGRIJS, C.ASGRIJS];
     for (const v of plan.vast) {
       const px = this.originX + v.x * this.tile;
       const py = this.originY + v.y * this.tile;
-      screen.fillRect(px, py, this.tile, this.tile, C.ROET);
-      screen.ditherRect(px + 2, py + 2, this.tile - 4, this.tile - 4, C.TERRACOTTA, C.ROET);
-      screen.strokeRect(px, py, this.tile, this.tile, C.ZWART);
+      screen.fillRect(px, py, this.tile, this.tile, vlak);
+      screen.ditherRect(px + 2, py + 2, this.tile - 4, this.tile - 4, vlak, rand);
+      screen.strokeRect(px, py, this.tile, this.tile, C.ROET);
     }
 
     this.drawDeur(screen);
