@@ -324,7 +324,7 @@ export class LevelScene implements Scene {
         this.originY + cells.r0 * this.tile + sy,
         (cells.c1 - cells.c0 + 1) * this.tile,
         (cells.r1 - cells.r0 + 1) * this.tile,
-        opening.kind,
+        opening,
         this.band(),
       );
     }

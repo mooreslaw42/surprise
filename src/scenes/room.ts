@@ -1,6 +1,6 @@
 import { C } from '../engine/palette.ts';
 import { WIDTH, type Screen } from '../engine/screen.ts';
-import type { Afwerking, Prop, RoomId, Surface } from '../data/house.ts';
+import type { Afwerking, Opening, Prop, RoomId, Surface } from '../data/house.ts';
 
 /**
  * The room around the puzzle.
@@ -66,40 +66,31 @@ export function layout(topBar: number, bottomBar: number, screenH: number): Room
 /**
  * The ceiling, which is the first thing that says which room this is.
  *
- * From the photos, not from memory of them. The woonkamer is tongue-and-
- * groove boards and beams painted one pale salie, beam and board alike, and
- * the beam along the wall is that colour too — there is no white cornice.
- * The keuken is the same carpentry painted white. The tv-kamer, the room
- * still being worked on, has white boards and a strip of old green showing
- * where the ceiling used to meet the wall.
+ * From Pim's walk-through video. The woonkamer is plain plaster, white, with
+ * a soft cove where it meets the wall. The keuken is the one with the
+ * carpentry: white boards between beams painted a grey sage. The tv-kamer
+ * has the same boards and beams, all white.
  */
 export function drawCeiling(screen: Screen, l: RoomLayout, ruimte: RoomId = 'woonkamer'): void {
-  const wit = ruimte !== 'woonkamer';
-  const plank = wit ? C.WIT : C.LICHTSALIE;
-  const groef = wit ? C.KALK : C.SALIE;
-  const schaduw = wit ? C.ZANDGRIJS : C.DONKERSALIE;
-
-  screen.fillRect(0, l.ceilingY, WIDTH, l.ceilingH, plank);
-  for (let y = l.ceilingY + 2; y < l.ceilingY + l.ceilingH - 4; y += 3) {
-    screen.fillRect(0, y, WIDTH, 1, groef);
+  screen.fillRect(0, l.ceilingY, WIDTH, l.ceilingH, C.WIT);
+  if (ruimte === 'woonkamer') {
+    // The cove: the plaster rolls over into the wall instead of meeting it.
+    screen.ditherRect(0, l.ceilingY + l.ceilingH - 7, WIDTH, 4, C.WIT, C.KALK);
+    screen.fillRect(0, l.ceilingY + l.ceilingH - 3, WIDTH, 3, C.KALK);
+    return;
   }
-  if (ruimte !== 'tvkamer') {
-    // Beams across, the same paint as the boards, told apart by their shadow.
-    for (let x = 14; x < WIDTH; x += 58) {
-      screen.fillRect(x, l.ceilingY, 8, l.ceilingH - 4, plank);
-      screen.fillRect(x, l.ceilingY, 1, l.ceilingH - 4, wit ? C.WIT : C.WIT);
-      screen.fillRect(x + 7, l.ceilingY, 2, l.ceilingH - 4, schaduw);
-    }
+  const balk = ruimte === 'keuken' ? C.SALIE : C.WIT;
+  const schaduw = ruimte === 'keuken' ? C.DONKERSALIE : C.ZANDGRIJS;
+  for (let y = l.ceilingY + 2; y < l.ceilingY + l.ceilingH - 4; y += 3) {
+    screen.fillRect(0, y, WIDTH, 1, C.KALK);
+  }
+  for (let x = 14; x < WIDTH; x += 58) {
+    screen.fillRect(x, l.ceilingY, 8, l.ceilingH - 4, balk);
+    screen.fillRect(x + 7, l.ceilingY, 2, l.ceilingH - 4, schaduw);
   }
   // The beam the ceiling lands on.
-  screen.fillRect(0, l.ceilingY + l.ceilingH - 5, WIDTH, 4, plank);
-  screen.fillRect(0, l.ceilingY + l.ceilingH - 5, WIDTH, 1, wit ? C.WIT : C.WIT);
+  screen.fillRect(0, l.ceilingY + l.ceilingH - 5, WIDTH, 4, balk);
   screen.fillRect(0, l.ceilingY + l.ceilingH - 1, WIDTH, 1, schaduw);
-  if (ruimte === 'tvkamer') {
-    // What is left of the old ceiling line: a band of green above the paper.
-    screen.fillRect(0, l.ceilingY + l.ceilingH - 4, WIDTH, 3, C.MOSGROEN);
-    screen.ditherRect(0, l.ceilingY + l.ceilingH - 4, WIDTH, 3, C.MOSGROEN, C.DONKERSALIE);
-  }
 }
 
 /**
@@ -159,10 +150,28 @@ export function drawWallGround(screen: Screen, l: RoomLayout, afwerking: Afwerki
       break;
     case 'behang':
       screen.fillRect(0, l.wallY, WIDTH, l.wallH, C.KALK);
-      for (let x = 0; x < WIDTH; x += 8) screen.fillRect(x, l.wallY, 1, l.wallH, C.LICHTOKER);
-      for (let y = l.wallY; y < l.wallY + l.wallH; y += 8) screen.fillRect(0, y, WIDTH, 1, C.LICHTOKER);
-      for (let x = 4; x < WIDTH; x += 24) screen.fillRect(x, l.wallY, 1, l.wallH, C.ZANDGRIJS);
+      // Yellow check on cream, with a thin blue line every third square.
+      for (let x = 0; x < WIDTH; x += 8) screen.fillRect(x, l.wallY, 2, l.wallH, C.BOTERGEEL);
+      for (let y = l.wallY; y < l.wallY + l.wallH; y += 8) screen.fillRect(0, y, WIDTH, 2, C.BOTERGEEL);
+      for (let x = 5; x < WIDTH; x += 24) screen.fillRect(x, l.wallY, 1, l.wallH, C.DIEPBLAUW);
+      for (let y = l.wallY + 5; y < l.wallY + l.wallH; y += 24) screen.fillRect(0, y, WIDTH, 1, C.DIEPBLAUW);
       break;
+    case 'kaal': {
+      // Stripped back to the old green plaster, patched and stained, with
+      // the filler still showing where the paper came off.
+      screen.fillRect(0, l.wallY, WIDTH, l.wallH, C.LICHTSALIE);
+      let seed = 23;
+      for (let n = 0; n < 34; n++) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        const x = seed % WIDTH;
+        const y = l.wallY + ((seed >> 9) % Math.max(1, l.wallH - 8));
+        const w = 6 + ((seed >> 4) % 18);
+        const h = 3 + ((seed >> 14) % 7);
+        screen.ditherRect(x, y, w, h, C.LICHTSALIE, n % 3 === 0 ? C.ZANDGRIJS : C.KALK);
+      }
+      screen.ditherRect(0, l.wallY + l.wallH - 5, WIDTH, 5, C.LICHTSALIE, C.ASGRIJS);
+      break;
+    }
     default:
       // Warm cream, not grey: the plain walls in that house are nearly white.
       screen.fillRect(0, l.wallY, WIDTH, l.wallH, C.WIT);
@@ -226,28 +235,75 @@ export function drawOutside(screen: Screen, x: number, y: number, w: number, h: 
 }
 
 /**
- * A real window: deep white frame, glazing bars, a sill that oversails, and
- * the garden beyond. Drawn as one object rather than per tile, which is what
- * stops it reading as a hole in a grid.
+ * A real window: frame, glazing bars, a sill that oversails, and the garden
+ * beyond. Drawn as one object rather than per tile, which is what stops it
+ * reading as a hole in a grid.
+ *
+ * The house has five kinds and they are most of what tells the walls apart,
+ * so the opening says which it is: the black steel grid, the little arch
+ * beside it, the hopper-topped ones, the cross, and the plain pair.
  */
 export function drawWindow(
-  screen: Screen, x: number, y: number, w: number, h: number, kind: 'raam' | 'deur',
+  screen: Screen, x: number, y: number, w: number, h: number,
+  opening: Pick<Opening, 'kind' | 'stijl'>,
   band?: { x: number; y: number; w: number; h: number },
 ): void {
+  const { kind, stijl } = opening;
+  if (stijl === 'gordijn') {
+    drawDeurgordijn(screen, x, y, w, h);
+    return;
+  }
   const b = band ?? { x, y, w, h };
   drawOutsideSlice(screen, x, y, w, h, b.x, b.y, b.w, b.h);
 
-  // Glazing bars: tall openings get a transom, wide ones a mullion.
-  const bars = Math.max(1, Math.round(w / 34));
-  for (let i = 1; i <= bars; i++) {
-    const bx = x + Math.round((w * i) / (bars + 1));
+  if (stijl === 'staal' || stijl === 'boog') {
+    // Steel: thin and black, no timber anywhere, the bars a single pixel.
+    const kolommen = stijl === 'staal' ? 3 : 2;
+    const rijen = stijl === 'staal' ? 3 : 2;
+    for (let i = 1; i < kolommen; i++) screen.fillRect(x + Math.round((w * i) / kolommen), y, 1, h, C.ROET);
+    for (let j = 1; j < rijen; j++) screen.fillRect(x, y + Math.round((h * j) / rijen), w, 1, C.ROET);
+    if (stijl === 'boog') {
+      // Round the head off by giving the corners back to the ochre wall.
+      const r = Math.max(2, Math.floor(w / 3));
+      for (let dy = 0; dy < r; dy++) {
+        const inspring = r - Math.round(Math.sqrt(r * r - (r - dy) * (r - dy)));
+        screen.fillRect(x, y + dy, inspring, 1, C.OKER);
+        screen.fillRect(x + w - inspring, y + dy, inspring, 1, C.OKER);
+      }
+    }
+    screen.strokeRect(x - 1, y - 1, w + 2, h + 2, C.ROET);
+    screen.strokeRect(x, y, w, h, C.ROET);
+    screen.fillRect(x - 3, y + h + 1, w + 6, 2, C.KALK);
+    screen.fillRect(x - 3, y + h + 3, w + 6, 1, C.DONKEROKER);
+    return;
+  }
+
+  const staand = (bx: number): void => {
     screen.fillRect(bx - 1, y, 3, h, C.WIT);
     screen.fillRect(bx + 1, y, 1, h, C.ZANDGRIJS);
-  }
-  if (kind === 'deur' && h > 40) {
-    const ty = y + Math.round(h * 0.22);
+  };
+  const liggend = (ty: number): void => {
     screen.fillRect(x, ty, w, 3, C.WIT);
     screen.fillRect(x, ty + 2, w, 1, C.ZANDGRIJS);
+  };
+
+  if (kind === 'deur') {
+    // The back door: small panes above, a solid panel below.
+    const paneel = y + Math.round(h * 0.62);
+    screen.fillRect(x, paneel, w, y + h - paneel, C.WIT);
+    screen.strokeRect(x + 3, paneel + 3, w - 6, y + h - paneel - 6, C.KALK);
+    staand(x + Math.round(w / 2));
+    liggend(y + Math.round((paneel - y) / 3));
+    liggend(y + Math.round(((paneel - y) * 2) / 3));
+    screen.fillRect(x + w - 5, paneel - 4, 3, 2, C.ASGRIJS);
+  } else if (stijl === 'bovenlicht') {
+    liggend(y + Math.round(h * 0.28));
+  } else if (stijl === 'kruis') {
+    staand(x + Math.round(w / 2));
+    liggend(y + Math.round(h * 0.42));
+  } else {
+    const bars = Math.max(1, Math.round(w / 40));
+    for (let i = 1; i <= bars; i++) staand(x + Math.round((w * i) / (bars + 1)));
   }
 
   // Frame.
@@ -257,9 +313,28 @@ export function drawWindow(
   screen.fillRect(x - 3, y - 3, 3, h + 6, C.WIT);
   screen.fillRect(x + w, y - 3, 3, h + 6, C.WIT);
 
+  if (kind === 'deur') return;
   // Sill, oversailing both sides.
   screen.fillRect(x - 5, y + h + 2, w + 10, 3, C.WIT);
   screen.fillRect(x - 5, y + h + 5, w + 10, 1, C.ZANDGRIJS);
+}
+
+/**
+ * The doorway between the keuken and the tv-kamer: no door in it, just the
+ * orange curtain on its rings, inside a white architrave.
+ */
+function drawDeurgordijn(screen: Screen, x: number, y: number, w: number, h: number): void {
+  screen.fillRect(x, y, w, h, C.TERRACOTTA);
+  for (let px = x + 1; px < x + w - 1; px += 4) {
+    screen.fillRect(px, y + 3, 1, h - 3, C.DONKERROOD);
+    screen.fillRect(px + 1, y + 3, 1, h - 3, C.ROESTROOD);
+  }
+  screen.fillRect(x, y, w, 2, C.ROET);
+  for (let px = x + 2; px < x + w - 2; px += 4) screen.set(px, y + 2, C.KALK);
+  screen.fillRect(x - 3, y - 3, w + 6, 3, C.WIT);
+  screen.fillRect(x - 3, y - 3, 3, h + 3, C.WIT);
+  screen.fillRect(x + w, y - 3, 3, h + 3, C.WIT);
+  screen.strokeRect(x - 1, y - 1, w + 2, h + 1, C.ZANDGRIJS);
 }
 
 export function drawProps(screen: Screen, l: RoomLayout, props: readonly Prop[], gridX0: number, gridX1: number): void {

@@ -20,11 +20,13 @@ import {
 const cel = (x: number, y: number): number => y * BREEDTE + x;
 
 /**
- * The four inside walls, and the cells of the plan that stand against each.
+ * The four walls a schacht can stand against, and the cells of the plan that
+ * lie along each.
  *
- * PROVISIONAL in the same way house.ts is: which named wall is which line on
- * the plan rides on the room layout. It is these four entries and nothing
- * else.
+ * The plan is on its side — north to the left, the garden along the top — so
+ * a north wall is a column of cells and a west wall is a row. Cells are
+ * listed in the order the wall's own columns run when you stand in the room
+ * facing it, because that is the order Elektra and Klossen number them in.
  */
 export type Wand = {
   /** The surface in house.ts, which is also what Elektra and Klossen call it. */
@@ -32,15 +34,15 @@ export type Wand = {
   readonly naam: string;
   /** Plan cells along the wall, in the order the wall's columns run. */
   readonly cellen: readonly number[];
-  /** The big ochre wall. Painted in phase 7, and a schacht goes through it. */
+  /** The big ochre wall. Fresh paint, and a schacht goes through it. */
   readonly geschilderd: boolean;
 };
 
 export const WANDEN: readonly Wand[] = [
-  { surface: 'woonkamer-binnenmuur', naam: 'BINNENMUUR', cellen: [cel(4, 0), cel(4, 1)], geschilderd: true },
-  { surface: 'woonkamer-haardwand', naam: 'HAARDWAND', cellen: [cel(4, 2), cel(4, 3)], geschilderd: false },
-  { surface: 'keuken-zijwand', naam: 'KEUKEN ZIJWAND', cellen: [cel(5, 2), cel(6, 2), cel(7, 2), cel(8, 2)], geschilderd: false },
-  { surface: 'tvkamer-zijwand', naam: 'TV-KAMER ZIJWAND', cellen: [cel(6, 3), cel(7, 3), cel(8, 3), cel(9, 3)], geschilderd: false },
+  { surface: 'woonkamer-okerwand', naam: 'OKERWAND', cellen: [cel(0, 3), cel(0, 2), cel(0, 1)], geschilderd: true },
+  { surface: 'keuken-zijwand', naam: 'KEUKEN ZIJWAND', cellen: [cel(9, 2), cel(8, 2), cel(7, 2), cel(6, 2)], geschilderd: false },
+  { surface: 'tvkamer-deurwand', naam: 'TV-KAMER DEURWAND', cellen: [cel(11, 2), cel(11, 1), cel(11, 0)], geschilderd: false },
+  { surface: 'tvkamer-zijwand', naam: 'TV-KAMER ZIJWAND', cellen: [cel(13, 4), cel(12, 4), cel(11, 4)], geschilderd: false },
 ];
 
 /** What is already in one wall: the columns his cables and klossen sit in. */

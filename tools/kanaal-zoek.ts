@@ -1,7 +1,7 @@
 /**
  * Kanaalplannen with exactly one answer.
  *
- *   node --experimental-strip-types tools/kanaal-zoek.ts <ruimtes,> <toe> <af|-> <kruisingen min> <par van> <par tot> [pogingen]
+ *   node --experimental-strip-types tools/kanaal-zoek.ts <ruimtes,> <toe> <af|-> <kruisingen min> <par van> <par tot> [pogingen] [kruisingen max]
  *
  * With af "-" the plan is one system, like the first one always was. Either
  * way a seed is only kept when the counter finds a single arrangement.
@@ -10,7 +10,9 @@ import { gebiedVan, maakDubbel, maakPlan, alsBron, dubbelAlsBron } from '../src/
 import { periode, draai, type Bord } from '../src/puzzles/kanalen/model.ts';
 import { solve, tel } from '../src/puzzles/kanalen/solver.ts';
 
-const [ruimtes, toeArg, afArg, kruisArg, vanArg, totArg, pogingenArg] = process.argv.slice(2);
+const [ruimtes, toeArg, afArg, kruisArg, vanArg, totArg, pogingenArg, kruisMaxArg] = process.argv.slice(2);
+// The explanation in the game names the number of kruisingen, so it can be pinned.
+const kruisMax = Number(kruisMaxArg ?? 99);
 const gebied = gebiedVan(ruimtes!.split(','));
 const toe = Number(toeArg);
 let beste: { bord: Bord; par: number; seed: number } | null = null;
@@ -32,6 +34,7 @@ for (let seed = 1; seed <= Number(pogingenArg ?? 400); seed++) {
   }
   if (!bord) continue;
   if ((bord.kruisingen ?? []).length < Number(kruisArg)) continue;
+  if ((bord.kruisingen ?? []).length > kruisMax) continue;
   if (afArg !== '-') {
     const af = (bord.afRoosters ?? []).length;
     if (af < 2 || bord.roosters.length - af < 2) continue;
@@ -45,7 +48,7 @@ for (let seed = 1; seed <= Number(pogingenArg ?? 400); seed++) {
   } catch { continue; }
   if (par < Number(vanArg) || par > Number(totArg)) continue;
   if (!beste || (bord.kruisingen ?? []).length > (beste.bord.kruisingen ?? []).length) beste = { bord, par, seed };
-  if ((beste.bord.kruisingen ?? []).length >= Number(kruisArg) + 1 || afArg === '-') break;
+  if ((beste.bord.kruisingen ?? []).length >= Math.min(kruisMax, Number(kruisArg) + 1) || afArg === '-') break;
 }
 if (!beste) console.log('niets');
 else {

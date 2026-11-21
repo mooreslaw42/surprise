@@ -3,7 +3,7 @@ import { surfaceToRows } from '../sloop/generate.ts';
 import { parseMuur, type Muur } from './model.ts';
 
 /**
- * Schilderniveaus, on the measured walls. Paint goes on the wall and over the
+ * Schilderniveaus, on the walls of the house. Paint goes on the wall and over the
  * lintels; the openings stay bare.
  *
  * The walls with big door openings are left out: there is no way to cover
@@ -64,18 +64,18 @@ export const SCHILDER_LEVELS: readonly SchilderLevel[] = [
     praatje: 'LANGS 1, 2, 3... EN EINDIGEN BIJ DE VERFBAK.',
     uitleg: UITLEG_EERSTE,
     surface: surfaceVan('tvkamer-kopgevel'),
-    muur: muurVan(surfaceVan('tvkamer-kopgevel'), [7, 1],
-      [[7, 0], [7, 2], [4, 5], [3, 6], [2, 5], [7, 5], [4, 0], [1, 5]]),
+    muur: muurVan(surfaceVan('tvkamer-kopgevel'), [1, 5],
+      [[7, 5], [6, 0], [0, 4]]),
   },
   {
     id: 'schilderen-woonkamer-tuinwand',
     ruimte: 'WOONKAMER',
     vlak: 'TUINWAND',
-    praatje: 'TWEE RAMEN, ZES LADDERPLEKKEN, EEN MANIER.',
+    praatje: 'TWEE RAMEN, VIJF LADDERPLEKKEN, EEN MANIER.',
     uitleg: UITLEG_LATER,
     surface: surfaceVan('woonkamer-tuinwand'),
-    muur: muurVan(surfaceVan('woonkamer-tuinwand'), [9, 1],
-      [[8, 5], [7, 4], [0, 2], [6, 3], [11, 1], [7, 6]]),
+    muur: muurVan(surfaceVan('woonkamer-tuinwand'), [8, 2],
+      [[2, 6], [7, 4], [10, 5], [8, 0], [9, 2]]),
   },
   {
     id: 'schilderen-tvkamer-tuinwand',
@@ -84,7 +84,8 @@ export const SCHILDER_LEVELS: readonly SchilderLevel[] = [
     praatje: 'DE LAATSTE WAND. EN DAN IS HET KLAAR.',
     uitleg: UITLEG_LATER,
     surface: surfaceVan('tvkamer-tuinwand'),
-    muur: muurVan(surfaceVan('tvkamer-tuinwand'), [5, 5],
-      [[6, 5], [7, 0], [0, 2], [5, 1], [5, 2], [6, 1], [1, 3], [0, 4]]),
+    muur: muurVan(surfaceVan('tvkamer-tuinwand'), [11, 5],
+      [[9, 5], [3, 1], [6, 2], [1, 1], [2, 1], [4, 4], [2, 4], [5, 3], [7, 2], [7, 1], [7, 5], [7, 4],
+        [1, 5], [0, 4]]),
   },
 ];

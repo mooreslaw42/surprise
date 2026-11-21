@@ -299,7 +299,7 @@ export class ElektraScene implements Scene {
       drawWindow(screen,
         this.originX + cells.c0 * this.tile, this.originY + cells.r0 * this.tile,
         (cells.c1 - cells.c0 + 1) * this.tile, (cells.r1 - cells.r0 + 1) * this.tile,
-        opening.kind, band);
+        opening, band);
     }
   }
 

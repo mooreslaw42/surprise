@@ -251,7 +251,7 @@ test('the later levels ask more than the first', () => {
 });
 
 test('a wisselschakelaar is a three-link chain to the lichtgroep', () => {
-  const level = ELEKTRA_LEVELS.find((l) => l.id === 'elektra-woonkamer-haardwand')!;
+  const level = ELEKTRA_LEVELS.find((l) => l.id === 'elektra-tvkamer-deurwand')!;
   const board = level.board;
 
   const lamp = 0;
@@ -269,7 +269,7 @@ test('a wisselschakelaar is a three-link chain to the lichtgroep', () => {
 });
 
 test('the lamp stays dark until the whole chain is finished', () => {
-  const level = ELEKTRA_LEVELS.find((l) => l.id === 'elektra-woonkamer-haardwand')!;
+  const level = ELEKTRA_LEVELS.find((l) => l.id === 'elektra-tvkamer-deurwand')!;
   const { routes } = solve(level.board);
   assert.ok(groepVoor(level.board, routes, 0) >= 0, 'solved: the lamp has a groep');
 
@@ -294,7 +294,7 @@ test('a chain that loops back on itself does not hang', () => {
 test('the hardest walls are harder than the first ones', () => {
   const byId = new Map(ELEKTRA_LEVELS.map((l) => [l.id, l]));
   const easy = byId.get('elektra-woonkamer-tuinwand')!;
-  for (const id of ['elektra-woonkamer-haardwand', 'elektra-keuken-raamwand', 'elektra-tvkamer-zijwand']) {
+  for (const id of ['elektra-tvkamer-zijwand', 'elektra-tvkamer-deurwand']) {
     const hard = byId.get(id)!;
     assert.ok(hard.board.devices.length > easy.board.devices.length, `${id} has no more runs`);
     assert.ok(hard.board.groepen.length > easy.board.groepen.length, `${id} has no more groepen`);

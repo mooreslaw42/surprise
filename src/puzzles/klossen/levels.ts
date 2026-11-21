@@ -3,8 +3,8 @@ import { genereer } from './generate.ts';
 import type { Wand } from './model.ts';
 
 /**
- * Klosniveaus, on the measured walls. The openings are the real openings, so
- * the tv-kamer wall has the end window in it and the woonkamer wall has both
+ * Klosniveaus, on the walls of the house. The openings are the real openings,
+ * so the tv-kamer wall has the cross window in it and the woonkamer wall has both
  * garden windows — and those are squares you get for free, because there is
  * nothing behind a window to screw into.
  *
@@ -63,7 +63,7 @@ export const KLOS_LEVELS: readonly KlosLevel[] = [
     praatje: 'ZES DINGEN, ZES KLOSSEN. BEGIN BIJ EEN NUL.',
     uitleg: UITLEG_EERSTE,
     surface: surfaceVan('keuken-zijwand'),
-    wand: wandVan('keuken-zijwand', 6, 586),
+    wand: wandVan('keuken-zijwand', 6, 4),
   },
   {
     id: 'klossen-tvkamer-kopgevel',
@@ -72,7 +72,7 @@ export const KLOS_LEVELS: readonly KlosLevel[] = [
     praatje: 'DE TV MOET ERGENS AAN. HET RAAM HELPT JE.',
     uitleg: UITLEG_RAAM,
     surface: surfaceVan('tvkamer-kopgevel'),
-    wand: wandVan('tvkamer-kopgevel', 9, 1507),
+    wand: wandVan('tvkamer-kopgevel', 9, 67),
   },
   {
     id: 'klossen-woonkamer-tuinwand',
@@ -81,6 +81,6 @@ export const KLOS_LEVELS: readonly KlosLevel[] = [
     praatje: 'TWAALF KLOSSEN EN TWEE RAMEN. RUSTIG AAN.',
     uitleg: UITLEG_LAATSTE,
     surface: surfaceVan('woonkamer-tuinwand'),
-    wand: wandVan('woonkamer-tuinwand', 12, 1540),
+    wand: wandVan('woonkamer-tuinwand', 12, 157),
   },
 ];

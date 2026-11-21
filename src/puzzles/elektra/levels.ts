@@ -5,7 +5,7 @@ import {
 } from './model.ts';
 
 /**
- * Elektra levels on the same measured walls as Sloop. Windows, doors and
+ * Elektra levels on the same walls as Sloop. Windows, doors and
  * lintels are what you route around, so the real geometry is the puzzle.
  *
  * The set escalates: sockets to the meterkast, then a lamp that has to reach
@@ -70,92 +70,84 @@ const LICHT_EN_WCD = (x: number, yTop: number) => [
 ];
 
 /**
- * Hand-placed: where a socket or a switch goes is a decision about the room,
- * not something to derive.
+ * Where everything sits. These came out of tools/elektra-zoek.ts, which
+ * scatters a wall's devices over the cells cable can reach and keeps a
+ * scatter the solver can wire with a good deal of detour. A door runs floor
+ * to lintel and cable does not cross it, so on a wall with a door everything
+ * is on the meterkast's side.
  */
 const PLACEMENTS: Record<string, Placement> = {
   'woonkamer-tuinwand': {
-    groepen: TWEE_WCD(0, 5),
-    devices: [stopcontact(14, 3, 10), stopcontact(7, 2, 6), stopcontact(11, 0, 4)],
+    groepen: TWEE_WCD(0, 4),
+    devices: [stopcontact(3, 5, 10), stopcontact(11, 6, 6), stopcontact(13, 2, 4)],
     praatje: 'SAMEN 20A. EEN GROEP TREKT ER 16.',
   },
   'keuken-achterwand': {
-    groepen: TWEE_WCD(6, 5),
-    devices: [stopcontact(11, 2, 8), stopcontact(8, 0, 8), stopcontact(11, 6, 6)],
+    groepen: TWEE_WCD(0, 4),
+    devices: [stopcontact(5, 3, 8), stopcontact(7, 6, 8), stopcontact(4, 4, 6)],
     praatje: 'DE OVEN ALLEEN OP EEN GROEP.',
   },
-  'woonkamer-binnenmuur': {
-    groepen: LICHT_EN_WCD(0, 4),
+  'woonkamer-okerwand': {
+    groepen: LICHT_EN_WCD(0, 3),
     devices: [
-      lamp(6, 0, 6), schakelaar(10, 3),
-      stopcontact(11, 6, 10), stopcontact(2, 2, 8),
+      lamp(12, 0, 6), schakelaar(3, 2),
+      stopcontact(2, 6, 10), stopcontact(11, 3, 8),
     ],
     praatje: 'LICHT OP DE LICHTGROEP. STOPCONTACTEN NIET.',
   },
   'keuken-zijwand': {
-    groepen: LICHT_EN_WCD(0, 4),
+    groepen: LICHT_EN_WCD(0, 3),
     devices: [
-      lamp(6, 0, 6), schakelaar(7, 2),
-      stopcontact(8, 5, 10), stopcontact(2, 1, 8),
+      lamp(14, 0, 6), schakelaar(14, 2),
+      stopcontact(14, 6, 10), stopcontact(11, 4, 8),
     ],
     // The waterleiding was there first.
-    blokkade: [{ x: 4, y: 1 }, { x: 4, y: 2 }, { x: 4, y: 3 }],
+    blokkade: [{ x: 5, y: 1 }, { x: 5, y: 2 }, { x: 5, y: 3 }],
     praatje: 'DE WATERLEIDING ZAT ER AL. ERLANGS.',
   },
   'tvkamer-tuinwand': {
-    groepen: LICHT_EN_WCD(0, 4),
+    groepen: LICHT_EN_WCD(0, 3),
     devices: [
-      lamp(1, 0, 4), lamp(6, 0, 4), schakelaar(6, 2),
-      stopcontact(12, 3, 10), stopcontact(4, 4, 8),
+      lamp(3, 0, 4), lamp(6, 0, 4), schakelaar(8, 3),
+      stopcontact(4, 3, 10), stopcontact(9, 6, 8),
     ],
     praatje: 'TWEE LAMPEN, EEN SCHAKELAAR, EEN LICHTGROEP.',
   },
-  // The three hardest walls. Each has a lamp switched from two places, so the
-  // run goes lamp -> schakelaar -> schakelaar -> lichtgroep, and only the far
-  // switch may touch the groep.
-  'woonkamer-haardwand': {
-    groepen: LICHT_EN_WCD(0, 4),
-    devices: [
-      lampNaar(6, 0, 6, 1),       // 0: lamp, to the near switch
-      wissel(3, 2, 2),            // 1: near switch, to the far one
-      wissel(10, 2),              // 2: far switch, to LICHT
-      stopcontact(12, 5, 10),     // 3
-      stopcontact(6, 6, 8),       // 4
-    ],
-    praatje: 'EEN LAMP, TWEE SCHAKELAARS. WISSELSCHAKELING.',
-  },
-  'keuken-raamwand': {
-    groepen: LICHT_EN_WCD(0, 4),
-    devices: [
-      lampNaar(1, 0, 4, 1),
-      wissel(5, 2, 2),
-      wissel(12, 2),
-      stopcontact(3, 4, 8),
-      stopcontact(13, 5, 10),
-      stopcontact(0, 2, 6),
-    ],
-    praatje: 'ALLES MOET LANGS DE RAMEN. ZES DRADEN.',
-  },
-  'tvkamer-zijwand': {
-    groepen: LICHT_EN_WCD(0, 4),
-    devices: [
-      lampNaar(3, 0, 4, 2),
-      lampNaar(8, 0, 4, 2),
-      wissel(5, 2, 3),
-      wissel(10, 4),
-      stopcontact(10, 6, 10),
-      stopcontact(1, 5, 8),
-    ],
-    blokkade: [{ x: 7, y: 4 }, { x: 7, y: 5 }, { x: 7, y: 6 }],
-    praatje: 'TWEE LAMPEN, EEN WISSELSCHAKELING, EEN LEIDING.',
-  },
   'tvkamer-kopgevel': {
-    groepen: LICHT_EN_WCD(0, 4),
+    groepen: LICHT_EN_WCD(0, 3),
     devices: [
-      lamp(8, 0, 6), schakelaar(7, 2),
-      stopcontact(1, 2, 8), stopcontact(8, 4, 10),
+      lamp(0, 0, 6), schakelaar(7, 3),
+      stopcontact(4, 6, 10), stopcontact(8, 2, 8),
     ],
     praatje: 'KOPGEVEL. DRIE GROEPEN, WEINIG MUUR.',
+  },
+  // The two hardest walls. Each has a lamp switched from two places, so the
+  // run goes lamp -> schakelaar -> schakelaar -> lichtgroep, and only the far
+  // switch may touch the groep.
+  'tvkamer-zijwand': {
+    groepen: LICHT_EN_WCD(0, 3),
+    devices: [
+      lampNaar(7, 0, 4, 2),       // 0: lamp, to the near switch
+      lampNaar(3, 0, 4, 2),       // 1: and the other lamp, to the same one
+      wissel(3, 2, 3),            // 2: near switch, to the far one
+      wissel(5, 3),               // 3: far switch, to LICHT
+      stopcontact(8, 4, 10),
+      stopcontact(6, 6, 8),
+    ],
+    blokkade: [{ x: 4, y: 4 }, { x: 4, y: 5 }, { x: 4, y: 6 }],
+    praatje: 'TWEE LAMPEN, EEN WISSELSCHAKELING, EEN LEIDING.',
+  },
+  'tvkamer-deurwand': {
+    groepen: LICHT_EN_WCD(0, 3),
+    devices: [
+      lampNaar(1, 0, 4, 1),
+      wissel(2, 2, 2),
+      wissel(6, 2),
+      stopcontact(4, 6, 8),
+      stopcontact(7, 6, 10),
+      stopcontact(5, 5, 6),
+    ],
+    praatje: 'ALLES AAN DEZE KANT VAN DE DEUR. ZES DRADEN.',
   },
 };
 

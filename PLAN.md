@@ -487,3 +487,27 @@ The data is all in `data/`, so both are data edits rather than rewrites.
 - Pim's read-through of `data/praatjes.ts`
 - What Moeder and Wiep actually look like (`scenes/portretten.ts` is a guess)
 - Box art and poster; og:image; CRT vignette
+
+
+## 9d. The house, from Pim's own floor plan
+
+The walls and the footprint are no longer the lidar guess. Pim drew the plan
+(woonkamer 4,5 x 5, keuken 3 x 5,5, tv-kamer 4,5 x 3, in a row north to
+south), sketched walls I to V, sent photos and a walk-through video, and
+corrected a schematic of how they were read. `data/house.ts` now holds eight
+walls: I okerwand and II tuinwand in the woonkamer, III achterwand and the
+kitchen-unit zijwand in the keuken, IV kopgevel, V tuinwand, the wallpaper
+zijwand and the deurwand in the tv-kamer. He said to leave out four: both
+other woonkamer walls and both end walls of the keuken.
+
+What was rebuilt on them: Sloop (six walls, services re-swept), Elektra
+(eight walls, placements from the new `tools/elektra-zoek.ts`), Klossen (new
+seeds), Schilderen (new ladder spots), all five kanaalplannen and the end
+boss (new 14 x 5 footprint, the plan laid on its side). Windows are drawn by
+kind: the steel grid, the arch, hopper-topped, cross, and the doorway with
+the orange curtain. The tv-kamer is shown as it is now, stripped plaster and
+check wallpaper.
+
+Not rebuilt, because they never used the wall data: Leeghalen (a 6 x 6
+sliding board), Isolatie (stud cavities), Vloeren (course shapes, still
+invented and not the real rectangles), and the tuinhuis.

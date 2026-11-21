@@ -15,9 +15,10 @@ import { PLATTEGROND } from '../../data/plattegrond.ts';
  * one is carried over the other. That is what stopped this being a patience.
  *
  * Every board is the whole footprint, with duct only in the rooms that plan
- * covers; the rest of the house is drawn around it. The shape is the real one
- * from the scan, which is what makes it awkward: an L with a corner missing
- * leaves far less room to route than a rectangle would.
+ * covers; the rest of the house is drawn around it. The shape is Pim's floor
+ * plan on its side, which is what makes it awkward: the keuken is a narrow
+ * neck between two wider rooms, and everything for the far end goes through
+ * it.
  */
 const { width, height } = PLATTEGROND;
 
@@ -76,11 +77,12 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     uitleg: UITLEG_EERSTE,
     bord: {
       width, height,
-      masks: [0, 0, 0, 0, 0, 8, 13, 1, 12, 4, 0, 0, 0, 0, 0, 12, 15, 13, 14, 1,
-        0, 0, 0, 0, 0, 8, 8, 6, 5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      masks: [0, 0, 0, 0, 0, 1, 13, 2, 12, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 12,
+        15, 13, 3, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 8, 12, 5, 13, 3, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       wtw: 5,
-      roosters: [7, 9, 19, 25, 26, 29],
+      roosters: [7, 10, 23, 24, 33, 34],
     },
   },
   {
@@ -94,35 +96,37 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     uitleg: UITLEG_TWEE,
     bord: {
       width, height,
-      masks: [1, 6, 4, 12, 6, 0, 0, 0, 0, 0, 2, 6, 15, 7, 2, 0, 0, 0, 0, 0,
-        7, 5, 13, 12, 9, 0, 0, 0, 0, 0, 8, 4, 13, 2, 1, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      masks: [1, 10, 7, 8, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 11, 10, 11, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 2, 14, 15, 6, 4, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 3, 6, 10, 7, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 10, 12, 3,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       wtw: 0,
-      roosters: [2, 14, 30, 31, 33, 34],
-      afvoer: 10,
-      afRoosters: [2, 30, 31, 33],
-      kruisingen: [12],
+      roosters: [3, 4, 28, 32, 46, 56, 60],
+      afvoer: 14,
+      afRoosters: [28, 46, 60],
+      kruisingen: [30],
     },
   },
   {
     id: 'kanalen-3',
     nummer: 3,
     titel: 'KANAALPLAN 3',
-    praatje: 'DE HELE BOVENKANT VAN HET HUIS IN EEN PLAN.',
+    praatje: 'WOONKAMER EN KEUKEN IN EEN PLAN.',
     levering: 'LEVERING VERWACHT: WEEK 31',
     baas: false,
     dekking: 'WOONKAMER + KEUKEN',
     uitleg: UITLEG_GROOT,
     bord: {
       width, height,
-      masks: [2, 13, 13, 5, 12, 3, 5, 7, 8, 8, 1, 3, 11, 4, 14, 15, 6, 6, 13, 12,
-        2, 5, 15, 10, 15, 3, 2, 8, 14, 8, 8, 5, 14, 2, 1, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      masks: [4, 13, 10, 9, 1, 3, 10, 1, 6, 10, 8, 0, 0, 0, 1, 9, 2, 15, 3, 14,
+        13, 9, 5, 4, 2, 0, 0, 0, 8, 9, 7, 14, 6, 12, 1, 12, 14, 7, 12, 0,
+        0, 0, 3, 15, 15, 15, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 6, 2, 9,
+        2, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       wtw: 4,
-      roosters: [0, 8, 9, 10, 13, 20, 26, 27, 29, 30, 33, 34],
+      roosters: [0, 7, 10, 14, 16, 23, 24, 28, 34, 56, 58, 60],
       afvoer: 5,
-      afRoosters: [8, 9, 20, 27, 29],
-      kruisingen: [15, 22, 24],
+      afRoosters: [7, 10, 23, 24, 28, 34],
+      kruisingen: [43, 44, 45],
     },
   },
   {
@@ -132,18 +136,19 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     praatje: 'HET PLAN IS INMIDDELS BETER DAN HET HUIS.',
     levering: 'LEVERING VERWACHT: WEEK 47',
     baas: false,
-    dekking: 'WOONKAMER + TV-KAMER',
+    dekking: 'KEUKEN + TV-KAMER',
     uitleg: UITLEG_VIER,
     bord: {
       width, height,
-      masks: [4, 10, 6, 12, 3, 0, 0, 0, 0, 0, 4, 1, 5, 5, 8, 0, 0, 0, 0, 0,
-        9, 11, 12, 14, 9, 0, 0, 0, 0, 0, 1, 14, 5, 5, 11, 12, 1, 13, 9, 1,
-        0, 0, 0, 0, 0, 11, 10, 15, 15, 14, 0, 0, 0, 0, 0, 8, 1, 3, 8, 2],
-      wtw: 59,
-      roosters: [0, 10, 11, 14, 30, 36, 39, 55, 56],
-      afvoer: 58,
-      afRoosters: [36, 56],
-      kruisingen: [47, 48],
+      masks: [0, 0, 0, 0, 0, 8, 3, 1, 1, 9, 4, 1, 10, 3, 0, 0, 0, 0, 0, 3,
+        15, 7, 10, 7, 14, 9, 9, 12, 0, 0, 0, 0, 0, 2, 9, 10, 5, 10, 10, 15,
+        14, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 12, 10, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 8, 3, 4],
+      wtw: 69,
+      roosters: [5, 7, 8, 10, 11, 33, 67],
+      afvoer: 68,
+      afRoosters: [7, 8, 10, 33, 67],
+      kruisingen: [20, 39],
     },
   },
   {
@@ -157,14 +162,15 @@ export const KANAAL_LEVELS: readonly KanaalLevel[] = [
     uitleg: UITLEG_VIJF,
     bord: {
       width, height,
-      masks: [4, 11, 5, 5, 11, 2, 4, 9, 2, 4, 8, 15, 14, 5, 15, 6, 11, 6, 8, 13,
-        8, 15, 7, 1, 1, 12, 15, 14, 13, 12, 8, 7, 10, 5, 5, 6, 10, 1, 11, 4,
-        0, 0, 0, 0, 0, 11, 15, 7, 15, 3, 0, 0, 0, 0, 0, 2, 4, 1, 4, 2],
+      masks: [8, 13, 5, 7, 10, 14, 10, 10, 12, 6, 14, 3, 8, 1, 9, 15, 10, 15, 5, 15,
+        10, 5, 15, 12, 5, 14, 15, 14, 5, 11, 2, 12, 2, 9, 10, 8, 9, 8, 8, 4,
+        5, 4, 11, 15, 6, 6, 2, 0, 0, 0, 0, 0, 0, 4, 15, 12, 2, 4, 6, 14,
+        4, 0, 0, 0, 0, 0, 0, 4, 3, 4],
       wtw: 0,
-      roosters: [5, 6, 8, 9, 18, 20, 23, 24, 30, 37, 39, 55, 56, 57, 58, 59],
-      afvoer: 10,
-      afRoosters: [6, 8, 9, 18, 20, 23, 37, 39, 56, 58],
-      kruisingen: [11, 14, 21, 46, 48],
+      roosters: [12, 13, 30, 32, 35, 37, 38, 39, 41, 46, 53, 56, 57, 60, 67, 69],
+      afvoer: 14,
+      afRoosters: [12, 13, 38, 39, 41, 46, 53, 56, 60, 67, 69],
+      kruisingen: [15, 17, 19, 22, 43],
     },
   },
 ];

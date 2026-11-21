@@ -62,7 +62,9 @@ function vanOnderaf(grid: Grid): number {
   return steenCount(g) === 0 ? n : 99;
 }
 
-const DOELWANDEN = process.argv.slice(2);
+/** `--breed` tries far more layouts, for a wall the quick sweep finds nothing on. */
+const BREED = process.argv.includes('--breed');
+const DOELWANDEN = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 for (const id of DOELWANDEN) {
   const surface = SURFACES.find((s) => s.id === id)!;
   const basis = surfaceToRows(surface);
@@ -70,14 +72,17 @@ for (const id of DOELWANDEN) {
   let beste: { score: number; par: number; g: number; o: number; l: Leidingen } | null = null;
 
   for (const gasKolom of [-1, ...Array.from({ length: breedte }, (_, i) => i)]) {
-    for (const gasH of [4, 5, 6]) {
-      for (const kabelRij of [-1, 3, 4, 5]) {
-        for (const kabelVan of [1, 3, Math.floor(breedte / 2), breedte - 9]) {
+    for (const gasH of BREED ? [2, 3, 4, 5, 6] : [4, 5, 6]) {
+      for (const kabelRij of BREED ? [-1, 2, 3, 4, 5, 6] : [-1, 3, 4, 5]) {
+        for (const kabelVan of BREED
+          ? Array.from({ length: breedte - 2 }, (_, i) => i)
+          : [1, 3, Math.floor(breedte / 2), breedte - 9]) {
           if (kabelVan < 0) continue;
+          for (const lang of BREED ? [2, 4, 7] : [7]) {
           const l: Leidingen = {
             ...(gasKolom >= 0 ? { gas: { kolom: gasKolom, hoogte: gasH } } : {}),
             ...(kabelRij >= 0
-              ? { kabel: { rij: kabelRij, van: kabelVan, tot: Math.min(breedte - 2, kabelVan + 7) } }
+              ? { kabel: { rij: kabelRij, van: kabelVan, tot: Math.min(breedte - 2, kabelVan + lang) } }
               : {}),
           };
           const grid = parseGrid(metLeidingen(basis, l));
@@ -86,10 +91,12 @@ for (const id of DOELWANDEN) {
           if (par < 6 || par > 13) continue;
           const g = gulzig(grid);
           const o = vanOnderaf(grid);
-          if (g === 99 || o === 99) continue;
+          // Greed reaching par is the one thing the test suite will not have.
+          if (g === 99 || o === 99 || g <= par) continue;
           const score = (g - par) + (o - par);
           if (!beste || score > beste.score || (score === beste.score && par > beste.par)) {
             beste = { score, par, g, o, l };
+          }
           }
         }
       }

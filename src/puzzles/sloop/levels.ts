@@ -13,8 +13,8 @@ import { parseGrid, type Grid } from './model.ts';
  *
  * In order of par, so the stage gets harder as it goes.
  *
- * PROVISIONAL: where the gas and the cable actually run is a guess until he
- * tells me. The walls they run through are measured.
+ * Where the gas and the cable run is invented: it is what makes the puzzle,
+ * and nobody alive knows where they really ran. The walls are his.
  */
 export type SloopLevel = {
   readonly id: string;
@@ -27,30 +27,30 @@ export type SloopLevel = {
 
 const PRAATJES: Record<string, string> = {
   'tvkamer-kopgevel': 'SLA DE ONDERSTE LAAG WEG EN KIJK WAT ER GEBEURT.',
-  'keuken-zijwand': 'DE GASLEIDING. DAAR BLIJF JE VAN AF.',
-  'woonkamer-binnenmuur': 'ACHTER DE LEIDING BLIJFT ALLES STAAN. DAARHEEN.',
-  'tvkamer-tuinwand': 'DE GASLEIDING ZIT IN DE HOEK. HANDIG, OF NIET.',
+  'woonkamer-okerwand': 'ACHTER DE LEIDING BLIJFT ALLES STAAN. DAARHEEN.',
   'woonkamer-tuinwand': 'TWEE LATEIEN HOUDEN HUN EIGEN STUK MUUR OVEREIND.',
+  'tvkamer-tuinwand': 'DE GASLEIDING ZIT IN DE WEG. HANDIG, OF NIET.',
+  'keuken-zijwand': 'DE GASLEIDING. DAAR BLIJF JE VAN AF.',
   'keuken-achterwand': 'DE GROOTSTE WAND. GAS EN KABEL ALLEBEI.',
 };
 
 /** Where the services run. One line per wall, swept rather than guessed. */
 const LEIDINGEN: Record<string, Leidingen> = {
-  'tvkamer-kopgevel': { val: { kolom: 6, tot: 5 } },
-  'keuken-zijwand': { gas: { kolom: 4, hoogte: 6 } },
-  'woonkamer-binnenmuur': { gas: { kolom: 7, hoogte: 6 } },
-  'tvkamer-tuinwand': { gas: { kolom: 0, hoogte: 5 } },
-  'woonkamer-tuinwand': { kabel: { rij: 5, van: 7, tot: 13 } },
-  'keuken-achterwand': { gas: { kolom: 9, hoogte: 6 }, kabel: { rij: 3, van: 1, tot: 8 } },
+  'tvkamer-kopgevel': { val: { kolom: 8, tot: 4 } },
+  'woonkamer-okerwand': { gas: { kolom: 12, hoogte: 4 }, kabel: { rij: 5, van: 2, tot: 4 } },
+  'woonkamer-tuinwand': { gas: { kolom: 1, hoogte: 4 }, kabel: { rij: 3, van: 1, tot: 8 } },
+  'tvkamer-tuinwand': { gas: { kolom: 3, hoogte: 6 }, kabel: { rij: 3, van: 6, tot: 11 } },
+  'keuken-zijwand': { gas: { kolom: 3, hoogte: 6 }, kabel: { rij: 3, van: 8, tot: 14 } },
+  'keuken-achterwand': { gas: { kolom: 5, hoogte: 6 }, kabel: { rij: 5, van: 8, tot: 14 } },
 };
 
 /** The order they are played in: easiest wall first. */
 const VOLGORDE = [
   'tvkamer-kopgevel',
-  'keuken-zijwand',
-  'woonkamer-binnenmuur',
-  'tvkamer-tuinwand',
+  'woonkamer-okerwand',
   'woonkamer-tuinwand',
+  'tvkamer-tuinwand',
+  'keuken-zijwand',
   'keuken-achterwand',
 ];
 

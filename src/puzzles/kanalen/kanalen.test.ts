@@ -189,7 +189,14 @@ test('every rooster and unit sits in a named room', () => {
 test('the plans widen from one room to the whole house', () => {
   const telling = KANAAL_LEVELS.map((l) =>
     l.bord.masks.filter((m) => m !== LEEG).length);
-  assert.deepEqual(telling, [...telling].sort((a, b) => a - b), `cells go ${telling.join(', ')}`);
+  // One room, one room, then pairs, then everything. The fourth plan is the
+  // keuken with the tv-kamer, which is fewer squares than the third's
+  // woonkamer with the keuken and still the harder drawing, so it is the
+  // rooms that are counted here and par that is checked for difficulty.
+  const eerste = telling.slice(0, 2);
+  const paren = telling.slice(2, 4);
+  assert.ok(Math.max(...eerste) < Math.min(...paren), `cells go ${telling.join(', ')}`);
+  assert.ok(Math.max(...paren) < telling[4]!, `cells go ${telling.join(', ')}`);
   const binnen = PLATTEGROND.rows.join('').split('').filter((c) => c === '#').length;
   assert.equal(telling[telling.length - 1], binnen, 'the boss should cover every room');
 });
