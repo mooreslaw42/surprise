@@ -71,6 +71,8 @@ export class Klus implements Scene {
   private volgendeHint = HINT_NA;
   private zekerTot = -1;
   private krak = -1;
+  /** Broken once already on this wall. The save's flag says the same thing for next time. */
+  private pechGehad = false;
   private praatje: Dialogue | null = null;
   private snippers: Snipper[] = [];
   private zaad = 7;
@@ -162,7 +164,11 @@ export class Klus implements Scene {
       this.volgendeHint = this.gewerkt + HINT_WEER;
     }
 
-    if (this.pech && this.gewerkt >= PECH_NA && !ctx.input.mouseDown) {
+    // Once. This used to look only at whether the wall had a tool to break,
+    // which it still did after the break, so the tool broke again the moment
+    // Pim had finished handing over a new one, and again, for ever.
+    if (this.pech && !this.pechGehad && this.gewerkt >= PECH_NA && !ctx.input.mouseDown) {
+      this.pechGehad = true;
       this.opties.save.zetVlag(`pech-${this.opties.pech}`);
       this.krak = 0;
       ctx.geluid?.('kapot');
