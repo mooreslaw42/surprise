@@ -53,7 +53,8 @@ export class OutroScene implements Scene {
   }
 
   get muziek(): Muziekkeuze | null {
-    return this.fase === 'aftiteling' ? AFTITELING_MUZIEK : MENU;
+    // Angie from the gedicht on, carrying straight on under the credits.
+    return this.fase === 'gedicht' || this.fase === 'aftiteling' ? AFTITELING_MUZIEK : MENU;
   }
 
   enter(ctx: SceneContext): void {

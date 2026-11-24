@@ -142,7 +142,8 @@ export const EIGEN: Record<string, string[]> = {
     "HOPELIJK KAN IK SNEL WEER KLEIEN!"
   ],
   "na.isolatie.2": [
-    "MIJN TINY HOUSE HEEFT RC VAN NUL. WANT ER ZIJN NOG GEEN MUREN OF DAK. HZO SAMEN BOUWEN?"
+    "MIJN TINY HOUSE HEEFT RC VAN NUL. WANT ER ZIJN NOG GEEN MUREN OF DAK.",
+    "ZO SAMEN BOUWEN?"
   ],
   "uitleg.elektra-woonkamer-tuinwand": [
     "ELK STOPCONTACT WIL EEN DRAAD NAAR DE METERKAST. SLEEP HEM ERHEEN.",
@@ -232,6 +233,7 @@ export const EIGEN: Record<string, string[]> = {
     "",
     "SINT ZAT TE DENKEN, EN PIM MOET HET NOG SCHRIJVEN:",
     "DEZE REGELS ZIJN ER ALLEEN OM TE BLIJVEN",
+    "",
     "STAAN TOT DE ECHTE ZIJN GEMAAKT.",
     "",
     "VERVANG ZE IN SRC/DATA/OUTRO.TS",
@@ -239,7 +241,7 @@ export const EIGEN: Record<string, string[]> = {
     "",
     "----------",
     "",
-    "VOND IK EIGENLIJK WEL EEN MOOIE AFSLUITER, MIJN NOTITIES"
+    "VOND IK EIGENLIJK WEL EEN MOOIE AFSLUITER: MIJN NOTITIES"
   ],
   "outro.aftiteling": [
     "DE EEUWIGE VERBOUWING",
@@ -252,6 +254,7 @@ export const EIGEN: Record<string, string[]> = {
     "MET DANK AAN",
     "MOEDER, VOOR HET GEDULD",
     "WIEP, VOOR HET VOORBEELD",
+    "MYRTHE, VOOR WIE ZE IS",
     "BLACK & DEKKER, VOOR NIETS",
     "",
     "MUZIEK: THE ROLLING STONES,",
@@ -294,7 +297,7 @@ export const EIGEN: Record<string, string[]> = {
     "WAS DAT HET AL? WEET JE HET ZEKER? GEEN BOOM IN DE TUIN OF SCHUURTJE NOG?"
   ],
   "nalevel.kanalen-1.0": [
-    "JEETJE DAT DUURDE LANG ZEG. BIJ THERMATE DEDEN WE DRIE VAN DIE SYSTEMEN IN EEN DAG"
+    "JEETJE DAT DUURDE LANG ZEG. BIJ THERMETA DEDEN WE DRIE VAN DIE SYSTEMEN IN EEN DAG"
   ],
   "na.elektra.0": [
     "ER IS LICHT! NU VOELT HET INEENS ALS EEN ECHTE KAMER! EN MET DAT PRACHTIGE PLAFOND ERBIJ, TOP DIT."
@@ -310,6 +313,15 @@ export const EIGEN: Record<string, string[]> = {
   "nalevel.kanalen-5.0": [
     "ALS HIJ MORGEN KOMT, KOMEN WE KIJKEN. MET TAART.",
     "EN APENKOPPEN."
+  ],
+  "outro.slot.3": [
+    "DOEI WOUTER! ALS JE OOIT WEER IETS SLOOPT: BEL ME. IK KOM MET DE KRUIWAGEN.",
+    "EN SNEKS."
+  ],
+  "tuinhuis.uitleg": [
+    "IK HEB HET NIET GEVRAAGD DEZE KEER. IK STA OP DE OPRIT. MET EEN AANHANGER.",
+    "ZEVEN METER. VIER METER HOOG, GEEN CENTIMETER MEER, ANDERS KOMT HIJ NIET ONDER HET VIADUCT DOOR.",
+    "EN ALLES WAT ZWAAR IS WIL BIJ DE AS. SUCCES."
   ]
 };
 
@@ -344,10 +356,18 @@ export const NAGEKEKEN: string[] = [
   "na.sloop.2",
   "na.tuinhuis.0",
   "na.tuinhuis.1",
+  "na.vloeren.0",
+  "nalevel.kanalen-1.0",
   "nalevel.kanalen-2.0",
+  "nalevel.kanalen-3.0",
   "nalevel.kanalen-4.0",
   "nalevel.kanalen-5.0",
+  "nalevel.sloop-keuken-achterwand.0",
+  "nalevel.sloop-keuken-zijwand.0",
   "nalevel.sloop-tvkamer-kopgevel.0",
+  "nalevel.sloop-tvkamer-tuinwand.0",
+  "nalevel.sloop-woonkamer-okerwand.0",
+  "nalevel.sloop-woonkamer-tuinwand.0",
   "nalevel.tuinhuis.0",
   "oplevering.eigenleiding",
   "oplevering.nee.geen",
@@ -434,6 +454,7 @@ export const NAGEKEKEN: string[] = [
   "uitleg.sloop-tvkamer-kopgevel",
   "uitleg.sloop-woonkamer-okerwand",
   "uitleg.vloeren-keuken",
+  "uitleg.vloeren-tvkamer",
   "wenk.hint",
   "wenk.metHint",
   "wenk.overslaan",

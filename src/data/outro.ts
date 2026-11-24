@@ -22,12 +22,12 @@ export const GEDICHT: readonly string[] = [
   'EN DIT VERDWIJNT VANZELF.',
 ];
 
-/** Said over the finished house, before the gedicht. Moeder gets the last word. */
+/** Said over the finished house, before the gedicht. Myrthe says goodbye. */
 export const SLOT: readonly Beat[] = [
   { wie: 'pim', tekst: ['HIJ DRAAIT. HOOR JE DAT? NEE. DAT KLOPT. DAT IS DE BEDOELING.'] },
   { wie: 'wiep', tekst: ['MOOI HOOR. IK ZAT AL EEN TIJDJE WARM, MAAR MOOI.'] },
   { wie: 'moeder', tekst: ['HET IS AF. HET IS ECHT AF.', 'DUS. MIJN KLEIATELIER.'] },
-  { wie: 'pim', tekst: ['MORGEN.'] },
+  { wie: 'myrthe', tekst: ['DOEI WOUTER! ALS JE OOIT WEER IETS SLOOPT: BEL ME. IK KOM MET DE KRUIWAGEN.', 'EN DE TAART NEEM IK OOK MEE.'] },
 ];
 
 export const AFTITELING: readonly string[] = [
