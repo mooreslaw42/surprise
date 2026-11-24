@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   alleTonen, boeken, hertz, lied, partij, stapDuur, stappenVan, toon, zelfdeKeuze,
 } from './muziek.ts';
-import { BAAS, BALLADE, BLUES, LIEDJES, MENU, OPENING, RIFF, thema } from '../data/liedjes.ts';
+import { AFTITELING_MUZIEK as AFTITELING, BAAS, LIEDJES, MENU, OPENING, thema } from '../data/liedjes.ts';
+import { ANGIE, BROWN_SUGAR, MISS_YOU, START_ME_UP } from '../data/stones.ts';
 import { Save } from './save.ts';
 import { TitleScene } from '../scenes/title.ts';
 import { IntroScene } from '../scenes/intro.ts';
@@ -133,95 +134,61 @@ test('a minute in a background tab is skipped, not played back at speed', () => 
 test('asking for the music already playing is free', () => {
   // Scenes name their music every frame, so this is what stops the riff
   // restarting sixty times a second.
-  assert.ok(zelfdeKeuze(MENU, { lied: BALLADE }));
-  assert.ok(zelfdeKeuze(thema('sloop'), thema('leeghalen')), 'same song, same key');
-  assert.ok(!zelfdeKeuze(thema('sloop'), thema('elektra')), 'transposed is a different request');
-  assert.ok(!zelfdeKeuze(thema('kanalen'), { lied: RIFF, halveTonen: -4 }), 'so is slowed down');
+  assert.ok(zelfdeKeuze(MENU, { lied: BROWN_SUGAR }));
+  assert.ok(zelfdeKeuze(thema('leeghalen'), thema('elektra')), 'same song');
+  assert.ok(!zelfdeKeuze(thema('leeghalen'), thema('sloop')), 'a different song');
+  assert.ok(!zelfdeKeuze(MENU, { lied: BROWN_SUGAR, tempo: 0.9 }), 'slowed down is a different request');
   assert.ok(!zelfdeKeuze(MENU, BAAS));
   assert.ok(zelfdeKeuze(null, null));
   assert.ok(!zelfdeKeuze(MENU, null));
 });
 
-test('the songbook is three distinct songs, all of them playable', () => {
-  assert.deepEqual(LIEDJES.map((l) => l.id), ['ballade', 'riff', 'blues']);
+test('the songbook is seven distinct songs, all of them playable', () => {
+  assert.equal(LIEDJES.length, 7);
+  assert.equal(new Set(LIEDJES.map((l) => l.id)).size, 7);
   for (const l of LIEDJES) {
     assert.ok(l.naar.length > 0, `${l.id} should credit the record it is after`);
     assert.ok(l.bpm >= 40 && l.bpm <= 220, `${l.id} at ${l.bpm}bpm`);
+    assert.equal(l.stappenPerMaat, 16);
     for (const p of l.partijen) {
-      assert.equal(p.stappen % l.stappenPerMaat, 0, `${l.id} ${p.stem} is not whole bars`);
-      assert.ok(p.stappen > 0);
+      assert.equal(p.stappen / l.stappenPerMaat, 4, `${l.id} ${p.stem} is a four-bar loop`);
       assert.ok(p.volume > 0 && p.volume <= 1, `${l.id} ${p.stem} volume ${p.volume}`);
+      assert.ok(p.perStap.some((s) => s.length > 0), `${l.id} ${p.stem} plays something`);
     }
+    assert.ok(l.partijen.some((p) => p.stem === 'bas'), `${l.id} has a bass`);
+    assert.ok(l.partijen.some((p) => p.stem === 'puls'), `${l.id} has a lead`);
   }
-});
-
-test('the shuffle comes from the grid, so nothing is shuffled twice', () => {
-  for (const l of LIEDJES) {
-    if (l.stappenPerMaat !== 16) {
-      assert.equal(l.swing, 0, `${l.id} is on a ${l.stappenPerMaat} grid and swings as well`);
-    }
-    assert.ok(l.swing >= 0 && l.swing < 0.5, `${l.id} swings ${l.swing}`);
-  }
-  assert.equal(BLUES.stappenPerMaat, 12, 'the slow blues is in twelve-eight');
-  assert.equal(BALLADE.swing, 0, 'a ballad does not swing');
 });
 
 test('every note stays in a register a square can play', () => {
-  // The riff is transposed per stage, so the check has to cover the stages
-  // rather than the song: far enough down and the bass is a rattle, far
-  // enough up and the lead whistles.
-  const keuzes = [OPENING, MENU, BAAS, ...STAGES.map((s) => thema(s.kind))];
+  const keuzes = [OPENING, MENU, BAAS, AFTITELING, ...STAGES.map((s) => thema(s.kind))];
   for (const keuze of keuzes) {
     const schuif = keuze.halveTonen ?? 0;
     const tonen = alleTonen(keuze.lied).map((t) => t + schuif);
-    const laag = Math.min(...tonen);
-    const hoog = Math.max(...tonen);
-    assert.ok(laag >= 24, `${keuze.lied.id} ${schuif >= 0 ? '+' : ''}${schuif} drops to ${laag}`);
-    assert.ok(hoog <= 96, `${keuze.lied.id} ${schuif >= 0 ? '+' : ''}${schuif} climbs to ${hoog}`);
+    assert.ok(Math.min(...tonen) >= 24, `${keuze.lied.id} drops to ${Math.min(...tonen)}`);
+    assert.ok(Math.max(...tonen) <= 96, `${keuze.lied.id} climbs to ${Math.max(...tonen)}`);
   }
 });
 
-test('every stage has something to play', () => {
+test('every stage has something to play, and the bosses play Miss You', () => {
   for (const stage of STAGES) {
-    const keuze = thema(stage.kind);
-    assert.ok(LIEDJES.includes(keuze.lied), `${stage.naam} points at a song not in the book`);
+    assert.ok(LIEDJES.includes(thema(stage.kind).lied), `${stage.naam} points at a song not in the book`);
   }
-  assert.ok(LIEDJES.includes(MENU.lied));
-  assert.ok(LIEDJES.includes(BAAS.lied));
-  assert.ok(LIEDJES.includes(OPENING.lied));
-  assert.equal(BAAS.lied, BLUES, 'the slow blues is the boss');
+  for (const k of [MENU, BAAS, OPENING, AFTITELING]) assert.ok(LIEDJES.includes(k.lied));
+  assert.equal(BAAS.lied, MISS_YOU);
+  assert.equal(AFTITELING.lied, ANGIE);
 });
 
-test('the game opens on the riff', () => {
-  // The title screen is the hook, so it gets the riff rather than the ballad
-  // — and untransposed, which makes it the same request as the sloop theme.
+test('the game opens on Start Me Up', () => {
   // Once something has been played. Before that the title is silent: see below.
   const gehoord = new Save(null);
   gehoord.record('leeghalen-woonkamer', 20, 3);
-  assert.equal(new TitleScene(gehoord).muziek?.lied, RIFF);
-  assert.equal(OPENING.halveTonen ?? 0, 0);
-  assert.ok(zelfdeKeuze(OPENING, thema('sloop')));
+  assert.equal(new TitleScene(gehoord).muziek?.lied, START_ME_UP);
 });
 
-test('the slow blues is twelve bars and the riff breathes', () => {
-  for (const p of BLUES.partijen.filter((p) => p.stem !== 'slagwerk')) {
-    assert.equal(p.stappen / BLUES.stappenPerMaat, 12, `${p.stem} is not twelve bars`);
-  }
-
-  // Eight bars of guitar over eight of bass, and the guitar stops for the
-  // back half of the last one, because it has to survive being on for
-  // twenty minutes while someone measures a wall.
-  const lead = RIFF.partijen.find((p) => p.stem === 'gitaar')!;
-  const ritme = RIFF.partijen.find((p) => p.stem === 'bas')!;
-  assert.equal(lead.stappen / RIFF.stappenPerMaat, 8);
-  assert.equal(ritme.stappen / RIFF.stappenPerMaat, 8);
-  const slot = lead.perStap.slice(-7);
-  assert.ok(slot.every((s) => s.length === 0), 'the riff should leave a gap');
-});
-
-test('the ballad is the quiet one: no drums anywhere in it', () => {
-  assert.ok(!BALLADE.partijen.some((p) => p.stem === 'slagwerk'));
-  for (const l of [RIFF, BLUES]) {
+test('Angie is the quiet one: no drums in it', () => {
+  assert.ok(!ANGIE.partijen.some((p) => p.stem === 'slagwerk'));
+  for (const l of LIEDJES.filter((l) => l !== ANGIE)) {
     assert.ok(l.partijen.some((p) => p.stem === 'slagwerk'), `${l.id} needs a kit`);
   }
 });

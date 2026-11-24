@@ -1,4 +1,4 @@
-import { BAAS, MENU } from '../data/liedjes.ts';
+import { AFTITELING_MUZIEK, MENU } from '../data/liedjes.ts';
 import { AFTITELING, GEDICHT, SLOT } from '../data/outro.ts';
 import { STAGES } from '../data/stages.ts';
 import type { Muziekkeuze } from '../engine/muziek.ts';
@@ -53,7 +53,7 @@ export class OutroScene implements Scene {
   }
 
   get muziek(): Muziekkeuze | null {
-    return this.fase === 'aftiteling' ? BAAS : MENU;
+    return this.fase === 'aftiteling' ? AFTITELING_MUZIEK : MENU;
   }
 
   enter(ctx: SceneContext): void {

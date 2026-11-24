@@ -93,32 +93,60 @@ function zeef(ctx: AudioContext, type: BiquadFilterType, hz: number, q = 1): Biq
 }
 
 /**
- * Square lead. Two of them, a few cents apart, because one square alone is a
- * test tone and two of them beating against each other is an instrument.
+ * A pulse a quarter of the cycle wide, the way the home computers of the
+ * eighties did their leads: thinner and brighter than a square, the sound of
+ * every game tune of the decade. Built once per context.
+ */
+const PULSEN = new WeakMap<AudioContext, PeriodicWave>();
+
+function pulsgolf(ctx: AudioContext): PeriodicWave {
+  let golf = PULSEN.get(ctx);
+  if (!golf) {
+    const n = 48;
+    const re = new Float32Array(n);
+    const im = new Float32Array(n);
+    const breedte = 0.25;
+    // A pulse centred on zero is all cosines: 2/(k pi) sin(k pi d) each.
+    for (let k = 1; k < n; k++) re[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * breedte);
+    golf = ctx.createPeriodicWave(re, im);
+    PULSEN.set(ctx, golf);
+  }
+  return golf;
+}
+
+/**
+ * The lead: two quarter-width pulses a few cents apart, so they beat against
+ * each other the way a chip's channels did, and a vibrato that comes in
+ * late on the long notes, as every eighties game tune did.
  */
 function puls(a: Aanslag): void {
   const { ctx, t, duur, hz } = a;
   const tot = t + duur + 0.2;
   const g = ctx.createGain();
-  omhullende(g.gain, t, duur, a.vol * 0.5, 0.006, 0.08, 0.7, 0.07);
+  omhullende(g.gain, t, duur, a.vol * 0.55, 0.004, 0.06, 0.75, 0.06);
 
-  const oscs = [-7, 7].map((cent) => {
-    const o = toon(ctx, 'square', hz, cent, t, tot);
+  const oscs = [-6, 6].map((cent) => {
+    const o = ctx.createOscillator();
+    o.setPeriodicWave(pulsgolf(ctx));
+    o.frequency.value = hz;
+    o.detune.value = cent;
+    o.start(t);
+    o.stop(tot);
     o.connect(g);
     return o;
   });
 
-  // Long notes get a slow vibrato, into the detune of both oscillators. A
-  // sixteenth does not live long enough for it to be anything but a wobble.
-  if (duur > 0.35) {
-    const lfo = toon(ctx, 'sine', 5.2, 0, t, tot);
+  if (duur > 0.25) {
+    const lfo = toon(ctx, 'sine', 6, 0, t, tot);
     const diepte = ctx.createGain();
-    diepte.gain.value = 6;
+    diepte.gain.setValueAtTime(0, t);
+    diepte.gain.linearRampToValueAtTime(0, t + 0.15);
+    diepte.gain.linearRampToValueAtTime(14, t + 0.35);
     lfo.connect(diepte);
     for (const o of oscs) diepte.connect(o.detune);
   }
 
-  const lp = zeef(ctx, 'lowpass', hz * 7 + 700, 0.9);
+  const lp = zeef(ctx, 'lowpass', hz * 10 + 2400, 0.7);
   g.connect(lp);
   lp.connect(a.uit);
   lp.connect(a.echo);

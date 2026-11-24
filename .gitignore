@@ -4,3 +4,7 @@ dist/
 .context/
 *.local
 .claude/
+
+# The Stones MIDI files tools/midi-naar-lied.ts reads. Third-party
+# transcriptions: kept locally, not republished in a public repo.
+muziek-bron/
