@@ -5,21 +5,10 @@
  */
 import { Audio } from './engine/audio.ts';
 import type { Lied, Muziekkeuze } from './engine/muziek.ts';
-import { AFTITELING_MUZIEK, BAAS, LIEDJES, MENU, OPENING, thema } from './data/liedjes.ts';
-import { STAGES } from './data/stages.ts';
+import { LIEDJES, waarSpeelt } from './data/liedjes.ts';
 
-/** Where each song plays, read off the songbook so this page cannot drift from it. */
 function waar(lied: Lied): string {
-  const plekken: string[] = [];
-  if (OPENING.lied === lied) plekken.push('titelscherm');
-  if (MENU.lied === lied) plekken.push('huiskaart');
-  if (BAAS.lied === lied) plekken.push('eindbazen');
-  if (AFTITELING_MUZIEK.lied === lied) plekken.push('aftiteling');
-  for (const stage of STAGES) {
-    if (stage.baas) continue;
-    if (thema(stage.kind).lied === lied && !plekken.includes(stage.naam.toLowerCase())) plekken.push(stage.naam.toLowerCase());
-  }
-  return plekken.join(', ') || 'nergens';
+  return waarSpeelt(lied).join(', ').toLowerCase() || 'nergens';
 }
 
 const audio = new Audio();

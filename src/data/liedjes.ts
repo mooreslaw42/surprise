@@ -1,5 +1,5 @@
 import type { Lied, Muziekkeuze } from '../engine/muziek.ts';
-import type { StageKind } from './stages.ts';
+import { STAGES, type StageKind } from './stages.ts';
 import {
   ANGIE, BROWN_SUGAR, JUMPIN_JACK_FLASH, MISS_YOU, PAINT_IT_BLACK, SATISFACTION, START_ME_UP,
 } from './stones.ts';
@@ -47,3 +47,20 @@ export const MENU: Muziekkeuze = { lied: BROWN_SUGAR };
 export const BAAS: Muziekkeuze = { lied: MISS_YOU };
 /** The credits. */
 export const AFTITELING_MUZIEK: Muziekkeuze = { lied: ANGIE };
+
+/**
+ * Where a song plays, in words, for the jukebox: read off the tables above,
+ * so it cannot drift from them.
+ */
+export function waarSpeelt(lied: Lied): string[] {
+  const plekken: string[] = [];
+  if (OPENING.lied === lied) plekken.push('TITELSCHERM');
+  if (MENU.lied === lied) plekken.push('HUISKAART');
+  if (BAAS.lied === lied) plekken.push('EINDBAZEN');
+  if (AFTITELING_MUZIEK.lied === lied) plekken.push('AFTITELING');
+  for (const stage of STAGES) {
+    if (stage.baas || THEMA[stage.kind].lied !== lied) continue;
+    if (!plekken.includes(stage.naam)) plekken.push(stage.naam);
+  }
+  return plekken;
+}

@@ -6,6 +6,7 @@ import type { Scene, SceneContext } from '../engine/scene.ts';
 import type { Save } from '../engine/save.ts';
 import { HouseMapScene } from './housemap.ts';
 import { IntroScene } from './intro.ts';
+import { JukeboxScene } from './jukebox.ts';
 
 const CEILING_H = 30;
 const WALL_Y = CEILING_H + 6;
@@ -30,6 +31,9 @@ const RAAK_Y = 124;
 const WINDOP = 0.22;
 const INSLAG = 0.42;
 const NAAR_KAART = 2.2;
+
+/** The jukebox button, on the floor at the right, clear of the hammer. */
+const JUKE = { x: WIDTH - 98, y: FLOOR_Y + 9, w: 90, h: 17 } as const;
 
 /**
  * Title screen: one wall of the house, caught mid-renovation. Finished ochre
@@ -64,6 +68,13 @@ export class TitleScene implements Scene {
     this.time += dt;
 
     if (this.zwaai < 0) {
+      // The jukebox first, so a click on its button is not also a swing.
+      // Where the press landed, not where the pointer is now: it may have left.
+      const opKnop = ctx.input.mouseClicked && this.opJukebox(ctx.input.mousePressX, ctx.input.mousePressY);
+      if (opKnop || ctx.input.justPressed('KeyJ')) {
+        ctx.push(new JukeboxScene());
+        return;
+      }
       if (!ctx.input.confirmed() && !ctx.input.mouseClicked) return;
       if (this.nieuw) {
         // No swing to wait for: the swing is there to let the title play its
@@ -84,7 +95,25 @@ export class TitleScene implements Scene {
     }
   }
 
-  render(screen: Screen, _ctx: SceneContext): void {
+  private opJukebox(x: number, y: number): boolean {
+    return x >= JUKE.x && x < JUKE.x + JUKE.w && y >= JUKE.y && y < JUKE.y + JUKE.h;
+  }
+
+  /** A small black box with a record in it. Lights up under the pointer. */
+  private drawJukebox(screen: Screen, ctx: SceneContext): void {
+    const hier = ctx.input.mouseOver && this.opJukebox(ctx.input.mouseX, ctx.input.mouseY);
+    screen.fillRect(JUKE.x + 2, JUKE.y + 2, JUKE.w, JUKE.h, C.ROET);
+    screen.fillRect(JUKE.x, JUKE.y, JUKE.w, JUKE.h, C.ZWART);
+    screen.strokeRect(JUKE.x, JUKE.y, JUKE.w, JUKE.h, hier ? C.BOTERGEEL : C.MAGENTA);
+    const px = JUKE.x + 9;
+    const py = JUKE.y + 8;
+    screen.fillEllipse(px, py, 5, 5, C.ROET);
+    screen.strokeEllipse(px, py, 3, 3, C.STEEN);
+    screen.fillEllipse(px, py, 1, 1, C.ROESTROOD);
+    screen.text('JUKEBOX  J', JUKE.x + 19, JUKE.y + 5, hier ? C.BOTERGEEL : C.KALK);
+  }
+
+  render(screen: Screen, ctx: SceneContext): void {
     screen.clear(C.ZWART);
     this.drawCeiling(screen);
     this.drawWall(screen);
@@ -98,6 +127,8 @@ export class TitleScene implements Scene {
     if (this.zwaai < 0 && Math.floor(this.time * 1.6) % 2 === 0) {
       screen.textCenteredShadow('DRUK OP ENTER OM TE SLOPEN', WIDTH / 2, 150, C.LICHTOKER, C.ZWART);
     }
+
+    if (this.zwaai < 0) this.drawJukebox(screen, ctx);
 
     screen.fillRect(0, HEIGHT - FOOTER_H, WIDTH, FOOTER_H, C.ZWART);
     screen.fillRect(0, HEIGHT - FOOTER_H, WIDTH, 1, C.STEEN);
