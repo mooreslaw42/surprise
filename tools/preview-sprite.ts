@@ -7,14 +7,14 @@ import { writeFileSync } from 'node:fs';
 import { PixelBuffer } from '../src/engine/pixelbuffer.ts';
 import { PALETTE, C } from '../src/engine/palette.ts';
 import { drawPim, PIM_W, PIM_H } from '../src/scenes/pim.ts';
-import { drawMoeder, drawWiep } from '../src/scenes/portretten.ts';
+import { drawMoeder, drawMyrthe, drawWiep } from '../src/scenes/portretten.ts';
 
 const scale = Number(process.argv[3] ?? 7);
 const pad = 4;
 // Everyone who speaks, side by side, mouth shut above and talking below.
-const buf = new PixelBuffer((PIM_W + pad) * 3 + pad, (PIM_H + pad) * 2 + pad);
+const buf = new PixelBuffer((PIM_W + pad) * 4 + pad, (PIM_H + pad) * 2 + pad);
 buf.clear(C.ZWART);
-[drawPim, drawMoeder, drawWiep].forEach((teken, i) => {
+[drawPim, drawMoeder, drawWiep, drawMyrthe].forEach((teken, i) => {
   teken(buf, pad + i * (PIM_W + pad), pad, false);
   teken(buf, pad + i * (PIM_W + pad), pad * 2 + PIM_H, true);
 });

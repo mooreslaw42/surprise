@@ -14,6 +14,56 @@ import type { Spreker } from '../scenes/portretten.ts';
 export type Beat = { readonly wie: Spreker; readonly tekst: readonly string[] };
 
 /**
+ * Myrthe, after a single level: every wall of Sloop, the tuinhuis, and every
+ * kanaalplan. Keyed by the level's id. Said on the way back to the house
+ * map the first time that level is done, before anything the phase as a
+ * whole has to say.
+ *
+ * Her thread: she takes the rubble home. The bricks, the window frame, the
+ * planks; Wiep says not to take everything, and she takes everything. Then
+ * the tuinhuis is standing and it is made of Wouter's house. After that she
+ * has a tiny house that ventilates, and an opinion about the unit.
+ */
+export const NA_LEVEL: Record<string, readonly Beat[]> = {
+  'sloop-tvkamer-kopgevel': [
+    { wie: 'myrthe', tekst: ['MOOIE STENEN. MAG IK DIE HEBBEN? NIET VOOR NIKS HOOR. VOOR IETS KLEINS.'] },
+  ],
+  'sloop-woonkamer-okerwand': [
+    { wie: 'myrthe', tekst: ['DIE GASLEIDING LAAT JE ZITTEN? JAMMER. IK HAD ER AL EEN PLEKJE VOOR.'] },
+  ],
+  'sloop-woonkamer-tuinwand': [
+    { wie: 'myrthe', tekst: ['IK STA AL MET DE KRUIWAGEN KLAAR. GEWOON DOORGAAN, IK RAAP OP.'] },
+  ],
+  'sloop-tvkamer-tuinwand': [
+    { wie: 'myrthe', tekst: ['DAT KOZIJN IS NOG PRIMA. ZONDE OM WEG TE GOOIEN. IK WEET AL WAAR HET IN KAN.'] },
+  ],
+  'sloop-keuken-zijwand': [
+    { wie: 'myrthe', tekst: ['WIEP ZEGT DAT IK NIET ALLES MOET MEENEMEN.', 'IK NEEM ALLEEN MEE WAT HANDIG IS. DUS ALLES.'] },
+  ],
+  'sloop-keuken-achterwand': [
+    { wie: 'myrthe', tekst: ['WAS DAT DE LAATSTE? DAN HEBBEN WE GENOEG. WAARVOOR, DAT HOOR JE NOG.'] },
+  ],
+  tuinhuis: [
+    { wie: 'myrthe', tekst: ['HERKEN JE HET RAAM? EN DE PLANKEN? EN DE STENEN ONDER DE AANHANGER?', 'BEDANKT VOOR HET SLOPEN. HET WAS PRECIES GENOEG.'] },
+  ],
+  'kanalen-1': [
+    { wie: 'myrthe', tekst: ['VENTILATIE? IN EEN TINY HOUSE ZET JE GEWOON EEN RAAM OPEN.', 'ALS JE EEN TINY HOUSE HEBT. EN EEN RAAM.'] },
+  ],
+  'kanalen-2': [
+    { wie: 'myrthe', tekst: ['ONZE WTW ZAT ER IN EEN KWARTIER IN. HIJ IS ZO GROOT ALS EEN BROODROOSTER.'] },
+  ],
+  'kanalen-3': [
+    { wie: 'myrthe', tekst: ['ZAL IK ANDERS EVEN BELLEN MET DIE LEVERANCIER? IK BEN HEEL GOED IN AANDRINGEN.'] },
+  ],
+  'kanalen-4': [
+    { wie: 'myrthe', tekst: ['WIEP EN IK WONEN INMIDDELS LANGER IN HET TINY HOUSE DAN JULLIE OP DIE UNIT WACHTEN.'] },
+  ],
+  'kanalen-5': [
+    { wie: 'myrthe', tekst: ['ALS HIJ MORGEN KOMT, KOMEN WE KIJKEN. MET TAART.', 'DIE TAART BEWAREN WE AL EEN TIJDJE.'] },
+  ],
+};
+
+/**
  * What is said on the way back to the house map, the first time a stage is
  * finished. Keyed by the stage's id in data/stages.ts.
  *

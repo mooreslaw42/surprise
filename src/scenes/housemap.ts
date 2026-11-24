@@ -6,7 +6,7 @@ import type { Save } from '../engine/save.ts';
 import { drawStar, STAR_W } from '../engine/ui.ts';
 import { SLOOP_LEVELS } from '../puzzles/sloop/levels.ts';
 import { ELEKTRA_LEVELS } from '../puzzles/elektra/levels.ts';
-import { NA_FASE } from '../data/praatjes.ts';
+import { NA_FASE, NA_LEVEL, type Beat } from '../data/praatjes.ts';
 import { STAGES, allesAf, blokkade, stageAf, stageLabel, stageOpen, versteFase, type Stage } from '../data/stages.ts';
 import { TUINHUIS_LEVEL } from '../puzzles/tuinhuis/levels.ts';
 import { Dialogue } from './dialogue.ts';
@@ -120,21 +120,42 @@ export class HouseMapScene implements Scene {
   }
 
   /**
-   * The first finished phase nobody has remarked on yet. Looked for every
-   * time the map is on top, which is exactly when a level has just popped;
-   * the flag is set as it is queued, so each is said once, ever.
+   * What is said on the way back from a level. Looked for every time the map
+   * is on top, which is exactly when a level has just popped; the flags are
+   * set as the lines are queued, so each is said once, ever.
+   *
+   * First Myrthe, on the level just done. Every finished level of hers that
+   * has not been remarked on is marked as said, but only the last of them in
+   * playing order is spoken: someone back with an old save hears one line,
+   * not a backlog. Then the first finished phase nobody has remarked on yet.
    */
   private zoekPraatje(): void {
+    const beats: Beat[] = [];
+    let laatste: readonly Beat[] | null = null;
     for (const stage of STAGES) {
-      if (!stageAf(stage, this.gedaan)) return;
+      for (const entry of stage.entries) {
+        const na = NA_LEVEL[entry.id];
+        if (!na || !this.save.isDone(entry.id)) continue;
+        // Its own prefix: the tuinhuis is a stage and a level with one id.
+        const vlag = `praatje-level-${entry.id}`;
+        if (this.save.vlag(vlag)) continue;
+        this.save.zetVlag(vlag);
+        laatste = na;
+      }
+    }
+    if (laatste) beats.push(...laatste);
+
+    for (const stage of STAGES) {
+      if (!stageAf(stage, this.gedaan)) break;
       const vlag = `praatje-${stage.id}`;
       if (this.save.vlag(vlag)) continue;
       this.save.zetVlag(vlag);
-      const beats = NA_FASE[stage.id];
-      if (!beats) continue;
-      this.praatjes = beats.map((b) => new Dialogue(b.tekst, SPREKER_NAAM[b.wie]));
-      return;
+      const na = NA_FASE[stage.id];
+      if (!na) continue;
+      beats.push(...na);
+      break;
     }
+    this.praatjes = beats.map((b) => new Dialogue(b.tekst, SPREKER_NAAM[b.wie]));
   }
 
   private blader(richting: number): void {

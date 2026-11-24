@@ -3,7 +3,7 @@ import type { PixelBuffer } from '../engine/pixelbuffer.ts';
 import { drawPim, PIM_W, PIM_H } from './pim.ts';
 
 /**
- * Everyone who gets a word in. All three are drawn from photographs Pim
+ * Everyone who gets a word in. All four are drawn from photographs Pim
  * sent, to the same frame and the same light, so they sit in one box without
  * the text jumping about.
  *
@@ -14,12 +14,13 @@ import { drawPim, PIM_W, PIM_H } from './pim.ts';
  * glasses, a white blouse and a smile.
  */
 
-export type Spreker = 'pim' | 'moeder' | 'wiep';
+export type Spreker = 'pim' | 'moeder' | 'wiep' | 'myrthe';
 
 export const SPREKER_NAAM: Record<Spreker, string> = {
   pim: 'PIM',
   moeder: 'MOEDER',
   wiep: 'WIEP',
+  myrthe: 'MYRTHE',
 };
 
 export const PORTRET_W = PIM_W;
@@ -30,6 +31,7 @@ export function drawPortret(
 ): void {
   if (wie === 'moeder') drawMoeder(screen, x, y, talking);
   else if (wie === 'wiep') drawWiep(screen, x, y, talking);
+  else if (wie === 'myrthe') drawMyrthe(screen, x, y, talking);
   else drawPim(screen, x, y, talking);
 }
 
@@ -194,4 +196,103 @@ export function drawWiep(screen: PixelBuffer, x: number, y: number, talking = fa
   screen.set(cx + 4, y + 21, C.HOUT);
   screen.fillRect(cx - 10, y + 24, 1, 2, C.KALK);
   lach(screen, cx, y, talking, C.ROESTROOD);
+}
+
+/**
+ * Myrthe. A great deal of dark brown hair, parted in the middle and going
+ * its own way in waves to well past the shoulders, rimless glasses that are
+ * mostly a glint, red cheeks, a hand-knitted jumper the colour of oatmeal
+ * with a ribbed neck, and the widest smile of the four.
+ */
+export function drawMyrthe(screen: PixelBuffer, x: number, y: number, talking = false): void {
+  const cx = x + 20;
+
+  // The hair behind everything: a wide cloud round the head.
+  screen.fillEllipse(cx, y + 14, 16, 13, C.ROET);
+  screen.fillEllipse(cx, y + 14, 15, 12, C.STEEN);
+
+  schouders(screen, cx, y, C.KALK, C.ZANDGRIJS, C.KALK);
+  // Knitting: a stitch here and there, so it is wool and not a blouse.
+  for (let sy = y + 41; sy < y + PORTRET_H; sy += 2) {
+    for (let sx = cx - 12 + ((sy - y) % 4); sx <= cx + 12; sx += 4) screen.set(sx, sy, C.ZANDGRIJS);
+  }
+
+  gezicht(screen, cx, y);
+
+  // The ribbed neck, high, over the throat.
+  screen.fillRect(cx - 7, y + 35, 15, 5, C.ROET);
+  screen.fillRect(cx - 6, y + 35, 13, 5, C.KALK);
+  for (let rx = cx - 6; rx <= cx + 6; rx += 2) screen.fillRect(rx, y + 35, 1, 5, C.ZANDGRIJS);
+  screen.fillRect(cx - 6, y + 35, 13, 1, C.WIT);
+
+  // The lengths, down either side and over the jumper, waving as they go.
+  const GOLF = [0, 1, 1, 0, -1, -1];
+  for (let row = y + 14; row < y + 43; row++) {
+    const g = GOLF[(row - y) % GOLF.length]!;
+    const smal = row > y + 38 ? row - (y + 38) : 0;          // the ends thin out into curls
+    const binnen = row < y + 31 ? 11 : 10;                   // closer in once past the jaw
+    // left
+    screen.fillRect(cx - 17 + g + smal, row, 1, 1, C.ROET);
+    screen.fillRect(cx - 16 + g + smal, row, 16 - binnen - smal + 1, 1, C.STEEN);
+    // right
+    screen.fillRect(cx + binnen + 1 - g, row, 16 - binnen - smal, 1, C.STEEN);
+    screen.fillRect(cx + 17 - g - smal, row, 1, 1, C.ROET);
+    // light catching a wave, shadow in the next
+    if (g === 1) {
+      screen.set(cx - 13 + g, row, C.DONKEROKER);
+      screen.set(cx + 14 - g, row, C.DONKEROKER);
+    }
+    if (g === -1) {
+      screen.set(cx - 11 + g, row, C.ROET);
+      screen.set(cx + 12 - g, row, C.ROET);
+    }
+  }
+  // Two curls that end on the jumper.
+  screen.fillRect(cx - 10, y + 41, 2, 2, C.STEEN);
+  screen.set(cx - 9, y + 43, C.STEEN);
+  screen.fillRect(cx + 10, y + 40, 2, 3, C.STEEN);
+  screen.set(cx + 9, y + 43, C.STEEN);
+
+  // The parting: hair swept off the forehead to both sides.
+  screen.fillEllipse(cx - 7, y + 9, 6, 5, C.STEEN);
+  screen.fillEllipse(cx + 8, y + 9, 5, 5, C.STEEN);
+  screen.fillEllipse(cx, y + 5, 10, 3, C.STEEN);
+  screen.fillRect(cx, y + 3, 1, 6, C.ROET);
+  screen.fillEllipse(cx - 5, y + 5, 3, 1, C.DONKEROKER);
+  screen.fillEllipse(cx + 6, y + 5, 3, 1, C.DONKEROKER);
+  screen.set(cx + 6, y + 4, C.HOUT);
+  screen.fillRect(cx - 11, y + 10, 1, 4, C.DONKEROKER);
+  screen.fillRect(cx + 12, y + 10, 1, 4, C.DONKEROKER);
+
+  ogen(screen, cx, y, false);
+  // Rimless: a bridge, two arms, and the lower edge of each glass.
+  screen.fillRect(cx - 1, y + 17, 3, 1, C.KALK);
+  screen.fillRect(cx - 10, y + 17, 2, 1, C.KALK);
+  screen.fillRect(cx + 8, y + 17, 2, 1, C.KALK);
+  for (let i = 0; i < 5; i += 2) {
+    screen.set(cx - 7 + i, y + 20, C.KALK);
+    screen.set(cx + 3 + i, y + 20, C.KALK);
+  }
+  screen.set(cx + 7, y + 16, C.WIT);
+
+  // Red cheeks.
+  screen.ditherRect(cx - 8, y + 22, 3, 2, C.ROESTROOD, C.LICHTHOUT);
+  screen.ditherRect(cx + 6, y + 22, 3, 2, C.ROESTROOD, C.LICHTOKER);
+
+  // The smile, a size up from everyone else's.
+  const my = y + 26;
+  if (talking) {
+    screen.fillEllipse(cx, my, 5, 3, C.TERRACOTTA);
+    screen.fillEllipse(cx, my, 4, 2, C.DONKERROOD);
+    screen.fillRect(cx - 3, my - 2, 7, 1, C.WIT);
+  } else {
+    screen.fillRect(cx - 5, my - 1, 11, 1, C.TERRACOTTA);
+    screen.fillRect(cx - 4, my, 9, 1, C.WIT);
+    screen.fillRect(cx - 3, my + 1, 7, 1, C.WIT);
+    screen.fillRect(cx - 3, my + 2, 7, 1, C.TERRACOTTA);
+    screen.set(cx - 4, my + 1, C.TERRACOTTA);
+    screen.set(cx + 4, my + 1, C.TERRACOTTA);
+    screen.set(cx - 6, my - 2, C.TERRACOTTA);
+    screen.set(cx + 6, my - 2, C.TERRACOTTA);
+  }
 }

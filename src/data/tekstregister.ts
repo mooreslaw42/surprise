@@ -11,7 +11,7 @@ import { EIGEN_LEIDING, UITLEG as BAAS_UITLEG, WEIGERING } from '../scenes/oplev
 import type { Spreker } from '../scenes/portretten.ts';
 import { INTRO } from './intro.ts';
 import { AFTITELING, GEDICHT, SLOT } from './outro.ts';
-import { METEN, NA_FASE, PECH, WENK } from './praatjes.ts';
+import { METEN, NA_FASE, NA_LEVEL, PECH, WENK } from './praatjes.ts';
 import { STAGES, stageLabel } from './stages.ts';
 
 /**
@@ -134,6 +134,13 @@ export function register(): Tekst[] {
     if (pech) {
       veld(`pech.${stage.id}.gereedschap`, groep, 'ZWART & DEKKER: WAT ER BREEKT', pech, 'gereedschap', 26);
       lijst(`pech.${stage.id}.tekst`, groep, 'ZWART & DEKKER: PIM, DAARNA', pech.tekst);
+    }
+    for (const entry of stage.entries) {
+      (NA_LEVEL[entry.id] ?? []).forEach((beat, i, alle) => {
+        const welk = stage.entries.length > 1 ? `${entry.titel} ${entry.vlak}` : 'HET LEVEL';
+        const beurt = alle.length > 1 ? `, BEURT ${i + 1}` : '';
+        lijst(`nalevel.${entry.id}.${i}`, groep, `NA ${welk}${beurt}`, beat.tekst, 'alineas', beat.wie);
+      });
     }
     (NA_FASE[stage.id] ?? []).forEach((beat, i) => {
       lijst(`na.${stage.id}.${i}`, groep, `NA DE FASE, BEURT ${i + 1}`, beat.tekst, 'alineas', beat.wie);

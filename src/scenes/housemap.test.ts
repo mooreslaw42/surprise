@@ -85,3 +85,51 @@ test('a finished stage reads as finished', () => {
   assert.ok(stageAf(STAGES[0]!, ALLES));
   assert.ok(!stageAf(STAGES[0]!, NIKS));
 });
+
+// ------------------------------------------------------------- Myrthe
+
+import { HouseMapScene } from './housemap.ts';
+import { Save } from '../engine/save.ts';
+import { NA_FASE, NA_LEVEL } from '../data/praatjes.ts';
+
+/** What the map would say on its next frame, as speakers. */
+function wordtGezegd(scene: HouseMapScene): string[] {
+  const s = scene as unknown as { praatjes: { naam: string }[]; zoekPraatje(): void };
+  s.praatjes = [];
+  s.zoekPraatje();
+  return s.praatjes.map((p) => p.naam);
+}
+
+test('Myrthe has a word after every Sloop wall, the tuinhuis and every kanaalplan', () => {
+  for (const stage of STAGES) {
+    const wil = stage.kind === 'sloop' || stage.kind === 'tuinhuis' || stage.kind === 'kanalen';
+    for (const entry of stage.entries) {
+      assert.equal(!!NA_LEVEL[entry.id], wil, `${entry.id}`);
+      for (const beat of NA_LEVEL[entry.id] ?? []) assert.equal(beat.wie, 'myrthe');
+    }
+  }
+});
+
+test('back from a wall, Myrthe says her line once, before what the phase has to say', () => {
+  const save = new Save(null);
+  for (const e of STAGES[0]!.entries) save.record(e.id, 1, 3);
+  const map = new HouseMapScene(save);
+  wordtGezegd(map); // Leeghalen's own beats, from finishing that phase.
+
+  const sloop = STAGES.find((s) => s.id === 'sloop')!;
+  save.record(sloop.entries[0]!.id, 1, 3);
+  assert.deepEqual(wordtGezegd(map), ['MYRTHE']);
+  assert.deepEqual(wordtGezegd(map), [], 'said once');
+
+  for (const e of sloop.entries) save.record(e.id, 1, 3);
+  const na = wordtGezegd(map);
+  assert.equal(na[0], 'MYRTHE', 'the last wall first');
+  assert.equal(na.length, 1 + NA_FASE.sloop!.length, 'then the phase');
+});
+
+test('an old save with several walls done hears one line, not a backlog', () => {
+  const save = new Save(null);
+  for (const stage of STAGES.slice(0, 2)) for (const e of stage.entries) save.record(e.id, 1, 3);
+  const zinnen = wordtGezegd(new HouseMapScene(save));
+  assert.equal(zinnen.filter((n) => n === 'MYRTHE').length, 1);
+});
