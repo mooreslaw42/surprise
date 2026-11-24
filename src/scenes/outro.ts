@@ -120,10 +120,12 @@ export class OutroScene implements Scene {
     }
     if (this.fase === 'aftiteling') {
       this.drawNacht(screen, true);
-      // Comes up once and stays, so the last screen is the whole of it.
-      const REGEL_H = 11;       // tighter than the gedicht: all of it has to fit at once
+      // Comes up once and stays. If it all fits it stops in the middle of
+      // the screen; if not, it rolls on until the last line is near the
+      // bottom, and the top has gone by, the way credits do.
+      const REGEL_H = 11;       // tighter than the gedicht
       const hoogte = AFTITELING.length * REGEL_H;
-      const eind = Math.round((HEIGHT - hoogte) / 2);
+      const eind = Math.min(Math.round((HEIGHT - hoogte) / 2), HEIGHT - 22 - hoogte);
       const y0 = Math.max(eind, HEIGHT - Math.round(t * ROL * 3));
       AFTITELING.forEach((regel, i) => {
         screen.textCentered(regel, WIDTH / 2, y0 + i * REGEL_H,

@@ -142,7 +142,7 @@ export const EIGEN: Record<string, string[]> = {
     "HOPELIJK KAN IK SNEL WEER KLEIEN!"
   ],
   "na.isolatie.2": [
-    "MIJN TINY HOUSE HEEFT RC VAN NUL. WANT ER ZIJN NOG GEEN MUREN OF DAK. HELP JE NOU?"
+    "MIJN TINY HOUSE HEEFT RC VAN NUL. WANT ER ZIJN NOG GEEN MUREN OF DAK. HZO SAMEN BOUWEN?"
   ],
   "uitleg.elektra-woonkamer-tuinwand": [
     "ELK STOPCONTACT WIL EEN DRAAD NAAR DE METERKAST. SLEEP HEM ERHEEN.",
@@ -206,7 +206,7 @@ export const EIGEN: Record<string, string[]> = {
   ],
   "na.vloeren.0": [
     "WAT EEN VLOER. DAAR MAG JE ZEKER ALLEEN OP SOKKEN OP, ZO NETJES!",
-    "HIJ KRAAKT PRECIES HETZELFDE ALS IN DE COORNHERTDREEF :)"
+    "HIJ KRAAKT PRECIES HETZELFDE ALS IN LEIDERDORP :)"
   ],
   "pech.schilderen.tekst": [
     "DE VERFSPUIT SPUIT NIET MEER. HIJ DRUPPELT. OP DE NIEUWE VLOER.",
@@ -254,7 +254,16 @@ export const EIGEN: Record<string, string[]> = {
     "WIEP, VOOR HET VOORBEELD",
     "BLACK & DEKKER, VOOR NIETS",
     "",
-    "MUZIEK NAAR DE PLATEN UIT DE KAST",
+    "MUZIEK: THE ROLLING STONES,",
+    "GESPEELD DOOR EEN COMPUTER UIT 1985",
+    "",
+    "START ME UP",
+    "BROWN SUGAR",
+    "SATISFACTION",
+    "JUMPIN' JACK FLASH",
+    "PAINT IT BLACK",
+    "MISS YOU",
+    "ANGIE",
     "",
     "5 DECEMBER 2026",
     "",
@@ -267,6 +276,40 @@ export const EIGEN: Record<string, string[]> = {
     "DAT WAS HET WIELTJE VAN DE STEEKWAGEN.",
     "BLACK & DEKKER: ALTIJD DEKKING, NOOIT GARANTIE.",
     "HIER, DE RESERVE. DIE PIEPT, MAAR HIJ ROLT."
+  ],
+  "nalevel.sloop-tvkamer-kopgevel.0": [
+    "SLOOOPPPPEEENNNN!!! SLOPENSLOPENSLOPENSLOPEN! SLOPEN! LEUK!"
+  ],
+  "nalevel.sloop-woonkamer-okerwand.0": [
+    "GEEF DIE HAMER MAAR EVEN AAN MIJ, DIT DUURT ALLEMAAL VEELSTELANG."
+  ],
+  "nalevel.sloop-woonkamer-tuinwand.0": [
+    "WAAR ZIJN DE BULLIT EN APENKOPPEN?"
+  ],
+  "nalevel.sloop-keuken-zijwand.0": [
+    "HOUTJE VOOR IN HET TYNIY HOUSE, KOZIJNTJE VOOR IN HET TINY HOUSE, SCHROEFJES VOOR IN HET TINY HOUSE.",
+    "REUSE, RECYCLE!"
+  ],
+  "nalevel.sloop-keuken-achterwand.0": [
+    "WAS DAT HET AL? WEET JE HET ZEKER? GEEN BOOM IN DE TUIN OF SCHUURTJE NOG?"
+  ],
+  "nalevel.kanalen-1.0": [
+    "JEETJE DAT DUURDE LANG ZEG. BIJ THERMATE DEDEN WE DRIE VAN DIE SYSTEMEN IN EEN DAG"
+  ],
+  "na.elektra.0": [
+    "ER IS LICHT! NU VOELT HET INEENS ALS EEN ECHTE KAMER! EN MET DAT PRACHTIGE PLAFOND ERBIJ, TOP DIT."
+  ],
+  "nalevel.kanalen-2.0": [
+    "ECHT JAMMER DIT, DRIE WEKEN SAMEN BOUWEN AAN HET TINY HOUSE WAS ECHT HET LEUKSTE OOIT...",
+    "MISSCHIEN LATER NOG EEN KEERTJE?"
+  ],
+  "nalevel.kanalen-4.0": [
+    "JE HEBT INMIDDELS EVEN LANG GEREKEND AAN DE VENTILATIE, ALS WIJ SAMEN AAN MIJN HUISWERK HEBBEN GEZETEN!",
+    "HAD JE TOCH WAT BETER OP MOETEN LETTEN TOEN ;)"
+  ],
+  "nalevel.kanalen-5.0": [
+    "ALS HIJ MORGEN KOMT, KOMEN WE KIJKEN. MET TAART.",
+    "EN APENKOPPEN."
   ]
 };
 
@@ -284,7 +327,6 @@ export const NAGEKEKEN: string[] = [
   "na.elektra.1",
   "na.isolatie.0",
   "na.isolatie.1",
-  "na.isolatie.2",
   "na.isolatie.3",
   "na.kp1.0",
   "na.kp2.0",
@@ -302,7 +344,11 @@ export const NAGEKEKEN: string[] = [
   "na.sloop.2",
   "na.tuinhuis.0",
   "na.tuinhuis.1",
-  "na.vloeren.0",
+  "nalevel.kanalen-2.0",
+  "nalevel.kanalen-4.0",
+  "nalevel.kanalen-5.0",
+  "nalevel.sloop-tvkamer-kopgevel.0",
+  "nalevel.tuinhuis.0",
   "oplevering.eigenleiding",
   "oplevering.nee.geen",
   "oplevering.nee.kabel",
@@ -330,13 +376,12 @@ export const NAGEKEKEN: string[] = [
   "pech.vloeren.gereedschap",
   "pech.vloeren.tekst",
   "praatje.elektra-keuken-achterwand",
-  "praatje.elektra-keuken-raamwand",
   "praatje.elektra-keuken-zijwand",
+  "praatje.elektra-tvkamer-deurwand",
   "praatje.elektra-tvkamer-kopgevel",
   "praatje.elektra-tvkamer-tuinwand",
   "praatje.elektra-tvkamer-zijwand",
   "praatje.elektra-woonkamer-okerwand",
-  "praatje.elektra-woonkamer-haardwand",
   "praatje.elektra-woonkamer-tuinwand",
   "praatje.isolatie-keuken",
   "praatje.isolatie-tvkamer",
@@ -369,11 +414,11 @@ export const NAGEKEKEN: string[] = [
   "tuinhuis.praatje",
   "tuinhuis.uitbalans",
   "tuinhuis.uitleg",
-  "uitleg.elektra-woonkamer-okerwand",
   "uitleg.elektra-tvkamer-zijwand",
+  "uitleg.elektra-woonkamer-okerwand",
   "uitleg.elektra-woonkamer-tuinwand",
-  "uitleg.isolatie-woonkamer",
   "uitleg.isolatie-tvkamer",
+  "uitleg.isolatie-woonkamer",
   "uitleg.kanalen-1",
   "uitleg.kanalen-2",
   "uitleg.kanalen-3",
@@ -386,10 +431,9 @@ export const NAGEKEKEN: string[] = [
   "uitleg.leeghalen-woonkamer",
   "uitleg.schilderen-tvkamer-kopgevel",
   "uitleg.schilderen-woonkamer-tuinwand",
-  "uitleg.sloop-woonkamer-okerwand",
   "uitleg.sloop-tvkamer-kopgevel",
+  "uitleg.sloop-woonkamer-okerwand",
   "uitleg.vloeren-keuken",
-  "uitleg.vloeren-woonkamer",
   "wenk.hint",
   "wenk.metHint",
   "wenk.overslaan",
