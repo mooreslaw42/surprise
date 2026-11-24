@@ -1,6 +1,6 @@
 import {
   type Doorsnede, type Plaatsing,
-  bezetting, isSolved, lozeRuimte,
+  bezetting, isSolved, lozeRuimte, opDeVloer,
 } from './model.ts';
 
 /**
@@ -21,8 +21,8 @@ export function plekken(d: Doorsnede, plaatsingen: readonly Plaatsing[], i: numb
   const grid = bezetting(d, plaatsingen);
   const out: Plaatsing[] = [];
   for (let y = 0; y + stuk.h <= d.height; y++) {
-    if (stuk.eis === 'vloer' && y !== 0) break;
-    if (stuk.eis === 'boven' && y === 0) continue;
+    if (opDeVloer(stuk) && y !== 0) break;
+    if (stuk.eis === 'boven' && y + stuk.h !== d.height) continue;
     for (let x = 0; x + stuk.w <= d.width; x++) {
       let kan = true;
       for (let cx = x; cx < x + stuk.w && kan; cx++) {
@@ -47,7 +47,7 @@ export function plekken(d: Doorsnede, plaatsingen: readonly Plaatsing[], i: numb
 export function elkeOplossing(d: Doorsnede, bezoek: (oplossing: readonly Plaatsing[]) => boolean): void {
   const gezet: Plaatsing[] = [];
   const gebruikt = new Array<boolean>(d.stukken.length).fill(false);
-  const vloerBreedte = d.stukken.reduce((n, s) => n + (s.eis === 'vloer' ? s.w : 0), 0);
+  const vloerBreedte = d.stukken.reduce((n, s) => n + (opDeVloer(s) ? s.w : 0), 0);
   if (vloerBreedte > d.width) return;
 
   const stap = (vanY: number, vanX: number): boolean => {
@@ -60,7 +60,7 @@ export function elkeOplossing(d: Doorsnede, bezoek: (oplossing: readonly Plaatsi
         if (p.y < vanY || (p.y === vanY && p.x < vanX)) continue;
         // Once the walk has left the floor nothing can be stood on it any
         // more, so a floor piece still in the tray ends this branch.
-        if (p.y > 0 && d.stukken.some((s, j) => !gebruikt[j] && s.eis === 'vloer')) continue;
+        if (p.y > 0 && d.stukken.some((s, j) => !gebruikt[j] && opDeVloer(s))) continue;
         gebruikt[i] = true;
         gezet.push(p);
         const klaar = stap(p.y, p.x);

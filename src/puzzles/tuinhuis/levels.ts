@@ -5,11 +5,10 @@ import { DOORSNEDE } from './generate.ts';
  * The tuinhuis: the boss halfway, and the one time Wiep gets what she asked
  * for. One level, one board.
  *
- * Generated rather than drawn — `generate(1205)` in generate.ts, a finished
- * house built first and handed over as loose pieces — so it is solvable by
- * construction and its par is known. Baked in here so the house never
- * changes under someone mid-game; the test holds this to what the generator
- * still prints.
+ * Chosen rather than drawn: `kies()` in generate.ts looks at every house
+ * that keeps the rules and takes the tightest one nearest the axle. Baked in
+ * here so the house never changes under someone mid-game; the test holds
+ * this to what `kies()` still prints.
  */
 export type TuinhuisLevel = {
   readonly id: string;
@@ -43,18 +42,17 @@ export const TUINHUIS_LEVEL: TuinhuisLevel = {
   afRegel: 'EEN MIDDAG. JOUW HUIS DOET ER NU TWEE JAAR OVER.',
   doorsnede: DOORSNEDE,
   par: 0,
-  // Nose to tail along the floor: douche, wc, bank, techniek, keukenblok.
-  // The vliering lies over the kitchen with the stair in front of it, and
-  // the two loose pieces stand on the vliering.
+  // The way you would build it: at the nose the bathroom and the stair,
+  // with the vliering over all three; then the sofa, the keukenblok under the
+  // window, and the techniek at the tail with the berging on it.
   oplossing: [
     { stuk: 0, x: 0, y: 0 },
     { stuk: 1, x: 2, y: 0 },
-    { stuk: 4, x: 4, y: 0 },
-    { stuk: 3, x: 7, y: 0 },
+    { stuk: 5, x: 4, y: 0 },
+    { stuk: 4, x: 6, y: 0 },
     { stuk: 2, x: 9, y: 0 },
-    { stuk: 6, x: 8, y: 2 },
-    { stuk: 5, x: 6, y: 2 },
-    { stuk: 8, x: 11, y: 4 },
-    { stuk: 7, x: 8, y: 4 },
+    { stuk: 3, x: 12, y: 0 },
+    { stuk: 7, x: 12, y: 2 },
+    { stuk: 6, x: 0, y: 4 },
   ],
 };

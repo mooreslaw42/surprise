@@ -126,7 +126,7 @@ export const STAGES: readonly Stage[] = [
       id: 'tuinhuis',
       titel: 'DE TUIN',
       vlak: 'WIEP HAAR TINY HOUSE',
-      samenvatting: '9 STUKS  4,00 M',
+      samenvatting: '8 STUKS  4,00 M',
     }],
   },
   kanaalStap(2),

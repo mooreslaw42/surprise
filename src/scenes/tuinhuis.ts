@@ -40,14 +40,13 @@ const LADE_TILE = 8;
  */
 const LADE_PLEK: Record<Soort, { x: number; y: number }> = {
   vliering: { x: 10, y: 16 },
-  keuken: { x: 66, y: 16 },
-  douche: { x: 10, y: 46 },
-  wc: { x: 34, y: 46 },
-  kasttrap: { x: 58, y: 54 },
-  techniek: { x: 82, y: 62 },
+  keuken: { x: 70, y: 16 },
+  douche: { x: 10, y: 44 },
+  wc: { x: 32, y: 44 },
+  kasttrap: { x: 54, y: 44 },
+  techniek: { x: 80, y: 60 },
   bank: { x: 10, y: 96 },
-  berging: { x: 42, y: 96 },
-  werkplek: { x: 74, y: 96 },
+  berging: { x: 46, y: 96 },
 };
 
 const METER_Y = 166;
@@ -58,8 +57,8 @@ const SLEEPDREMPEL = 4;
 
 const EIS_TEKST: Record<Stuk['eis'], string> = {
   vloer: 'MOET OP DE VLOER',
-  boven: 'MOET BOVEN LIGGEN',
-  raakt: 'MOET DE VLIERING RAKEN',
+  boven: 'MOET ONDER HET DAK',
+  raakt: 'OP DE VLOER, ONDER DE VLIERING',
   vrij: 'MAG OVERAL',
 };
 
@@ -374,11 +373,23 @@ export class TuinhuisScene implements Scene {
     screen.fillRect(BORD_X + 90, BORD_Y + 39, 1, 1, C.ROET);
     screen.fillRect(BORD_X + 63, BORD_Y + 58, 1, 1, C.ROET);
     screen.fillRect(BORD_X + 90, BORD_Y + 58, 1, 1, C.ROET);
-    // The window, from somewhere else.
-    screen.fillRect(BORD_X + 134, BORD_Y + 12, 30, 22, C.KALK);
-    screen.fillRect(BORD_X + 136, BORD_Y + 14, 26, 18, C.DIEPBLAUW);
-    screen.fillRect(BORD_X + 148, BORD_Y + 14, 2, 18, C.KALK);
-    screen.fillRect(BORD_X + 136, BORD_Y + 22, 26, 1, C.KALK);
+    // The window, from somewhere else. It is part of the puzzle: nothing
+    // may stand in front of it, so it is drawn where the rules have it.
+    const raam = this.d.raam;
+    const rx = BORD_X + raam.x * TILE;
+    const ry = BORD_Y + (this.d.height - raam.y - raam.h) * TILE;
+    const rw = raam.w * TILE;
+    const rh = raam.h * TILE;
+    screen.fillRect(rx + 1, ry + 1, rw - 2, rh - 2, C.KALK);
+    screen.fillRect(rx + 3, ry + 3, rw - 6, rh - 6, C.DIEPBLAUW);
+    screen.ditherRect(rx + 3, ry + 3, rw - 6, Math.floor((rh - 6) / 2), C.LUCHTBLAUW, C.DIEPBLAUW);
+    screen.fillRect(rx + Math.floor(rw / 2) - 1, ry + 3, 2, rh - 6, C.KALK);
+    screen.fillRect(rx + 3, ry + Math.floor(rh / 2), rw - 6, 1, C.KALK);
+    // A sill, and a plant on it, because it is Wiep's.
+    screen.fillRect(rx - 1, ry + rh - 2, rw + 2, 2, C.WIT);
+    screen.fillRect(rx + 6, ry + rh - 7, 4, 5, C.TERRACOTTA);
+    screen.fillRect(rx + 5, ry + rh - 11, 6, 4, C.MOSGROEN);
+    screen.fillRect(rx + 7, ry + rh - 13, 2, 2, C.DONKERSALIE);
 
     // A dot on every half metre, so there is something to aim at.
     for (let gy = 1; gy < this.d.height; gy++) {
@@ -549,10 +560,16 @@ export class TuinhuisScene implements Scene {
     if (zweeft) return rood(`${naam(zweeft)} STAAT NERGENS OP`);
     const vloer = eerste('vloer');
     if (vloer) return rood(`${naam(vloer)} MOET OP DE VLOER`);
+    const raam = eerste('raam');
+    if (raam) return rood(`${naam(raam)} STAAT VOOR HET RAAM`);
+    const erop = eerste('erop');
+    if (erop) return rood(`OP DE BANK EN HET AANRECHT ZET JE NIKS`);
     const boven = eerste('boven');
-    if (boven) return rood(`${naam(boven)} MAG NIET OP DE VLOER`);
+    if (boven) return rood(`${naam(boven)} MOET ONDER HET DAK`);
     const trap = eerste('trap');
-    if (trap) return rood(`${naam(trap)} RAAKT DE VLIERING NIET`);
+    if (trap) return rood(`${naam(trap)} KOMT NIET BIJ DE VLIERING`);
+    const badkamer = eerste('badkamer');
+    if (badkamer) return rood('DOUCHE EN WC HOREN NAAST ELKAAR');
     const b = balans(this.d, this.plaatsingen);
     if (b === 'neuszwaar') return rood('TE VEEL GEWICHT OP DE NEUS');
     if (b === 'staartzwaar') return rood('TE VEEL GEWICHT ACHTER DE AS');
@@ -781,25 +798,6 @@ function drawStuk(screen: Screen, stuk: Stuk, x: number, y: number, t: number): 
           vak(bx, bodem - hoog + Math.floor(hoog / 3), bw, 1, C.DONKEROKER);
         }
       }
-      break;
-    }
-    case 'werkplek': {
-      // A desk against the wall, a laptop, a lamp. Somebody has to pay for this.
-      vak(0, 0, w, h, C.DONKERSALIE);
-      vak(1, 1, w - 2, h - 2, C.LICHTSALIE);
-      const blad = Math.floor(h * 0.55);
-      vak(2, blad, w - 4, u(0.15), C.LICHTHOUT);
-      vak(2, blad + u(0.15), w - 4, 1, C.HOUT);
-      vak(3, blad + u(0.15), u(0.15), h - 1 - blad - u(0.15), C.HOUT);
-      vak(w - 3 - u(0.15), blad + u(0.15), u(0.15), h - 1 - blad - u(0.15), C.HOUT);
-      vak(w - 3 - u(0.9), blad + u(0.15) + 1, u(0.75), u(0.4), C.HOUT);
-      vak(w - 3 - u(0.55), blad + u(0.15) + 1 + Math.floor(u(0.4) / 2), u(0.2), 1, C.LICHTOKER);
-      // Laptop, open.
-      vak(u(0.5), blad - u(0.6), u(0.9), u(0.6), C.ROET);
-      vak(u(0.5) + 1, blad - u(0.6) + 1, u(0.9) - 2, Math.max(1, u(0.6) - 2), C.LUCHTBLAUW);
-      // Lamp, on.
-      vak(w - 2 - u(0.5), blad - u(0.8), 1, u(0.8), C.ASGRIJS);
-      vak(w - 2 - u(0.8), blad - u(0.8), u(0.4), u(0.2), C.BOTERGEEL);
       break;
     }
   }

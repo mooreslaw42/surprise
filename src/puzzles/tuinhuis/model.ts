@@ -9,16 +9,22 @@
  *
  * The pieces are the functions of the house, each a rectangle in section,
  * none of them turnable — a shower lying on its side is not a shower.
+ *
+ * The rules are the ones that make it a house somebody could live in, not
+ * just a stack that fits: the bed under the roof with the stair up to it,
+ * shower and wc together, nothing put down on the worktop or the sofa, and
+ * the window in the back wall left as a window.
  */
 
 export type Soort =
   | 'douche' | 'wc' | 'keuken' | 'techniek' | 'bank'
-  | 'kasttrap' | 'vliering' | 'berging' | 'werkplek';
+  | 'kasttrap' | 'vliering' | 'berging';
 
 /**
  * What a piece demands of where it ends up. `vloer` is straight on the
- * chassis, `boven` is anywhere but, `raakt` is sharing an edge with the
- * vliering, because a stair that reaches nothing is a cupboard.
+ * chassis; `boven` is up under the roof, because that is where you sleep in
+ * a tiny house; `raakt` is a stair: on the floor, and carrying the vliering,
+ * because a stair that reaches nothing is a cupboard.
  */
 export type Eis = 'vloer' | 'boven' | 'raakt' | 'vrij';
 
@@ -35,6 +41,9 @@ export type Stuk = {
 /** Where a piece sits: its left column and its bottom row. */
 export type Plaatsing = { readonly stuk: number; readonly x: number; readonly y: number };
 
+/** A rectangle of cells: left column, bottom row, size. */
+export type Vak = { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
+
 export type Doorsnede = {
   readonly width: number;
   readonly height: number;
@@ -47,32 +56,41 @@ export type Doorsnede = {
    * and costs a star.
    */
   readonly band: number;
+  /** The window in the back wall. Nothing may stand in front of it. */
+  readonly raam: Vak;
 };
 
 export const BREEDTE = 14;
 export const HOOGTE = 6;
 
 /**
- * The nine pieces, from TUINHUIS.md §3, in cells.
+ * The eight pieces, in cells.
  *
- * One departure from that table: the bank is a metre and a half long rather
- * than two. As written, the five things that have to stand on the floor are
- * fifteen cells wide between them and the floor is fourteen, so the level
- * could not be finished at all. At a metre and a half they fill the floor
- * exactly, which is "op de vloer is het druk" taken literally: the floor is
- * a question of order and nothing else.
+ * Changed from TUINHUIS.md §3 so the house that comes out is one you could
+ * live in. The kasttrap is two metres, all the way up to the vliering, so it
+ * can carry it; the keukenblok is a metre and a half. The werkplek is gone:
+ * there was no floor left for a desk, and a desk on top of a cupboard is not
+ * a desk. What has to stand on the floor fills it exactly, so the floor is a
+ * question of order and nothing else.
  */
 export const STUKKEN: readonly Stuk[] = [
   { soort: 'douche', naam: 'DOUCHE', w: 2, h: 4, kg: 180, eis: 'vloer' },
   { soort: 'wc', naam: 'WC', w: 2, h: 4, kg: 90, eis: 'vloer' },
-  { soort: 'keuken', naam: 'KEUKENBLOK', w: 5, h: 2, kg: 250, eis: 'vloer' },
+  { soort: 'keuken', naam: 'KEUKENBLOK', w: 3, h: 2, kg: 250, eis: 'vloer' },
   { soort: 'techniek', naam: 'TECHNIEK', w: 2, h: 2, kg: 300, eis: 'vloer' },
   { soort: 'bank', naam: 'BANK', w: 3, h: 2, kg: 120, eis: 'vloer' },
-  { soort: 'kasttrap', naam: 'KASTTRAP', w: 2, h: 3, kg: 110, eis: 'raakt' },
+  { soort: 'kasttrap', naam: 'KASTTRAP', w: 2, h: 4, kg: 110, eis: 'raakt' },
   { soort: 'vliering', naam: 'SLAAPVLIERING', w: 6, h: 2, kg: 220, eis: 'boven' },
-  { soort: 'berging', naam: 'BERGING', w: 3, h: 2, kg: 80, eis: 'vrij' },
-  { soort: 'werkplek', naam: 'WERKPLEK', w: 3, h: 2, kg: 90, eis: 'vrij' },
+  { soort: 'berging', naam: 'BERGING', w: 2, h: 2, kg: 80, eis: 'vrij' },
 ];
+
+/** Stands on the chassis: the floor pieces, and the stair. */
+export function opDeVloer(stuk: Stuk): boolean {
+  return stuk.eis === 'vloer' || stuk.eis === 'raakt';
+}
+
+/** You do not put things down on these: you cook on one and sit on the other. */
+const NIETS_OP: readonly Soort[] = ['keuken', 'bank'];
 
 export type FaultKind =
   | 'buiten'      // sticks out past the nose or the tail, or through the floor
@@ -80,8 +98,11 @@ export type FaultKind =
   | 'overlap'     // two things in one place
   | 'zweeft'      // not resting, all of it, on the chassis or on other pieces
   | 'vloer'       // has to stand on the floor and does not
-  | 'boven'       // the vliering, on the floor
+  | 'boven'       // the vliering, not up under the roof
   | 'trap'        // the kasttrap, reaching nothing
+  | 'raam'        // standing in front of the window
+  | 'erop'        // put down on the worktop or the sofa
+  | 'badkamer'    // douche and wc not side by side
   | 'balans';     // the whole thing, hanging wrong on the axle
 
 /** `stuk` is the piece at fault; balance is nobody's in particular. */
@@ -182,11 +203,29 @@ export function faults(d: Doorsnede, plaatsingen: readonly Plaatsing[]): Fault[]
       if (!rust) out.push({ kind: 'zweeft', stuk: p.stuk });
     }
 
-    if (stuk.eis === 'vloer' && p.y !== 0) out.push({ kind: 'vloer', stuk: p.stuk });
-    if (stuk.eis === 'boven' && p.y === 0) out.push({ kind: 'boven', stuk: p.stuk });
+    if (opDeVloer(stuk) && p.y !== 0) out.push({ kind: 'vloer', stuk: p.stuk });
+    if (stuk.eis === 'boven' && p.y + stuk.h !== d.height) out.push({ kind: 'boven', stuk: p.stuk });
+    const r = d.raam;
+    if (p.x < r.x + r.w && r.x < p.x + stuk.w && p.y < r.y + r.h && r.y < p.y + stuk.h) {
+      out.push({ kind: 'raam', stuk: p.stuk });
+    }
+    if (p.y > 0) {
+      for (let x = Math.max(0, p.x); x < Math.min(d.width, p.x + stuk.w); x++) {
+        const onder = grid[(p.y - 1) * d.width + x]!;
+        if (onder >= 0 && onder !== p.stuk && NIETS_OP.includes(d.stukken[onder]!.soort)) {
+          out.push({ kind: 'erop', stuk: p.stuk });
+          break;
+        }
+      }
+    }
     // With the vliering still in the tray the stair reaches nothing either.
     if (stuk.eis === 'raakt' && !(vliering && raken(d, p, vliering))) out.push({ kind: 'trap', stuk: p.stuk });
   }
+
+  // Only once both are in: half a bathroom is not yet a wrong one.
+  const douche = plaatsingen.find((p) => d.stukken[p.stuk]!.soort === 'douche');
+  const wc = plaatsingen.find((p) => d.stukken[p.stuk]!.soort === 'wc');
+  if (douche && wc && !raken(d, douche, wc)) out.push({ kind: 'badkamer', stuk: wc.stuk });
 
   const b = balans(d, plaatsingen);
   if (b === 'neuszwaar' || b === 'staartzwaar') out.push({ kind: 'balans', stuk: -1 });

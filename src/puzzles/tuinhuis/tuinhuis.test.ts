@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {
   type Doorsnede, type Plaatsing, type Soort,
   BREEDTE, HOOGTE, SPELING, STUKKEN,
-  balans, faults, isSolved, lozeCellen, lozeRuimte, stars, zwaartepunt,
+  balans, faults, isSolved, lozeCellen, lozeRuimte, opDeVloer, stars, zwaartepunt,
 } from './model.ts';
-import { AS, BAND, DOORSNEDE, bouw, generate, rng } from './generate.ts';
+import { AS, BAND, RAAM, kies } from './generate.ts';
 import { besteLoos, bouwvolgorde, elkeOplossing, hint, pasHintToe, plekken, solve } from './solver.ts';
 import { TUINHUIS_LEVEL } from './levels.ts';
 import { TuinhuisScene } from '../../scenes/tuinhuis.ts';
@@ -22,27 +22,22 @@ const stuk = (soort: Soort): number => d.stukken.findIndex((s) => s.soort === so
 const op = (soort: Soort, x: number, y: number): Plaatsing => ({ stuk: stuk(soort), x, y });
 const soorten = (ps: readonly Plaatsing[]) => faults(d, ps).map((f) => f.kind).sort();
 
-/** The stored house with one piece moved somewhere else. */
-function verzet(soort: Soort, x: number, y: number): Plaatsing[] {
-  return oplossing.map((p) => (p.stuk === stuk(soort) ? { ...p, x, y } : p));
-}
-
 // ---------------------------------------------------------------- the pieces
 
-test('the nine pieces are the ones in the design, in half-metre cells', () => {
-  assert.equal(STUKKEN.length, 9);
-  assert.equal(new Set(STUKKEN.map((s) => s.soort)).size, 9);
+test('the eight pieces, in half-metre cells', () => {
+  assert.equal(STUKKEN.length, 8);
+  assert.equal(new Set(STUKKEN.map((s) => s.soort)).size, 8);
   assert.equal(BREEDTE, 14);
   assert.equal(HOOGTE, 6, 'eight rows, less two of chassis');
   const kg = Object.fromEntries(STUKKEN.map((s) => [s.soort, s.kg]));
   assert.deepEqual(kg, {
     douche: 180, wc: 90, keuken: 250, techniek: 300, bank: 120,
-    kasttrap: 110, vliering: 220, berging: 80, werkplek: 90,
+    kasttrap: 110, vliering: 220, berging: 80,
   });
 });
 
 test('the floor is crowded: what must stand on it fills it exactly', () => {
-  const breed = STUKKEN.filter((s) => s.eis === 'vloer').reduce((n, s) => n + s.w, 0);
+  const breed = STUKKEN.filter(opDeVloer).reduce((n, s) => n + s.w, 0);
   assert.equal(breed, BREEDTE);
 });
 
@@ -60,7 +55,7 @@ test('the baked level is the tuinhuis, with all three of Wiep\'s beats', () => {
 });
 
 test('the stored solution is a finished house that keeps every rule', () => {
-  assert.equal(oplossing.length, 9);
+  assert.equal(oplossing.length, 8);
   assert.deepEqual(faults(d, oplossing), []);
   assert.ok(isSolved(d, oplossing));
 });
@@ -71,14 +66,28 @@ test('the stored solution is worth three stars, so the hint never costs one', ()
   assert.equal(stars(lozeRuimte(d, oplossing), TUINHUIS_LEVEL.par, true), 3);
 });
 
-test('the baked level is what the generator still prints', () => {
-  const vers = generate(1205);
+test('the baked level is what kies() still prints', () => {
+  const vers = kies();
   const sleutel = (ps: readonly Plaatsing[]) => ps.map((p) => `${p.stuk}@${p.x},${p.y}`).sort();
   assert.deepEqual(sleutel(vers.oplossing), sleutel(oplossing));
   assert.equal(vers.par, TUINHUIS_LEVEL.par);
   assert.deepEqual(vers.doorsnede, d);
   assert.equal(d.as, AS);
   assert.equal(d.band, BAND);
+  assert.deepEqual(d.raam, RAAM);
+});
+
+test('the stored house is one you could live in', () => {
+  const waar = (soort: Soort) => oplossing.find((p) => p.stuk === stuk(soort))!;
+  // The bed under the roof, the stair carrying it, the bathroom under it too.
+  assert.equal(waar('vliering').y + 2, HOOGTE);
+  for (const soort of ['douche', 'wc', 'kasttrap'] as const) {
+    const p = waar(soort);
+    assert.ok(p.x >= waar('vliering').x && p.x + 2 <= waar('vliering').x + 6, `${soort} under the vliering`);
+  }
+  // The worktop under the window, the storage on the techniek.
+  assert.equal(waar('keuken').x, RAAM.x);
+  assert.deepEqual(waar('berging'), { stuk: stuk('berging'), x: waar('techniek').x, y: 2 });
 });
 
 // ------------------------------------------------------------------ the rules
@@ -90,51 +99,59 @@ test('gravity: a piece with nothing under it floats', () => {
 });
 
 test('gravity: half on is not on', () => {
-  const keuken = op('keuken', 0, 0);
-  // The vliering is six wide and the keukenblok five: one cell hangs over.
-  assert.ok(soorten([keuken, op('vliering', 0, 2)]).includes('zweeft'));
-  // With the techniek beside the keukenblok there is something under all of it.
-  assert.ok(!soorten([keuken, op('techniek', 5, 0), op('vliering', 0, 2)]).includes('zweeft'));
+  const techniek = op('techniek', 0, 0);
+  // The berging is two wide: one cell past the techniek it hangs over air.
+  assert.ok(soorten([techniek, op('berging', 1, 2)]).includes('zweeft'));
+  assert.ok(!soorten([techniek, op('berging', 0, 2)]).includes('zweeft'));
 });
 
 test('pulling a piece out from under another leaves that one floating', () => {
-  const zonderKeuken = oplossing.filter((p) => p.stuk !== stuk('keuken'));
-  const fout = faults(d, zonderKeuken).filter((f) => f.kind === 'zweeft').map((f) => f.stuk);
+  const zonderTrap = oplossing.filter((p) => p.stuk !== stuk('kasttrap'));
+  const fout = faults(d, zonderTrap).filter((f) => f.kind === 'zweeft').map((f) => f.stuk);
   assert.ok(fout.includes(stuk('vliering')));
 });
 
-test('floor pieces have to stand on the chassis', () => {
-  // On top of the keukenblok the douche rests perfectly well, and has no drain.
-  const ps = [op('keuken', 0, 0), op('douche', 0, 2)];
+test('floor pieces have to stand on the chassis, and so does the stair', () => {
+  // On top of the techniek the douche rests perfectly well, and has no drain.
+  const ps = [op('techniek', 0, 0), op('douche', 0, 2)];
   assert.deepEqual(faults(d, ps).filter((f) => f.kind !== 'balans'), [{ kind: 'vloer', stuk: stuk('douche') }]);
-  for (const s of ['douche', 'wc', 'keuken', 'techniek', 'bank'] as const) {
-    assert.equal(d.stukken[stuk(s)]!.eis, 'vloer');
+  for (const s of ['douche', 'wc', 'keuken', 'techniek', 'bank', 'kasttrap'] as const) {
+    assert.ok(opDeVloer(d.stukken[stuk(s)]!), s);
   }
 });
 
-test('the vliering may not lie on the floor', () => {
+test('the vliering goes up under the roof', () => {
   assert.ok(soorten([op('vliering', 0, 0)]).includes('boven'));
-  assert.ok(!soorten([op('keuken', 0, 0), op('techniek', 5, 0), op('vliering', 0, 2)]).includes('boven'));
+  assert.ok(soorten([op('vliering', 0, 2)]).includes('boven'), 'halfway up is not under the roof');
+  assert.ok(!soorten([op('vliering', 0, 4)]).includes('boven'));
 });
 
-test('the kasttrap has to touch the vliering', () => {
-  // In the stored house the stair stands against the end of the vliering.
-  // Two cells towards the nose it still rests on the bank, and reaches nothing.
-  const los = verzet('kasttrap', 4, 2);
-  assert.deepEqual(faults(d, los), [{ kind: 'trap', stuk: stuk('kasttrap') }]);
-  assert.ok(!isSolved(d, los));
-});
-
-test('touching is sharing an edge: a corner does not count, and neither does no vliering', () => {
+test('the kasttrap has to carry the vliering', () => {
+  // A column of techniek and berging carries the vliering instead, and the
+  // stair stands next to it: only the corners meet, so it reaches nothing.
+  const huis = [op('douche', 0, 0), op('wc', 2, 0), op('techniek', 4, 0), op('berging', 4, 2), op('vliering', 0, 4)];
+  assert.ok(soorten([...huis, op('kasttrap', 6, 0)]).includes('trap'));
   assert.ok(soorten([op('kasttrap', 0, 0)]).includes('trap'), 'vliering still in the tray');
-  const vloer = [op('keuken', 0, 0), op('techniek', 5, 0), op('bank', 7, 0)];
-  const vliering = op('vliering', 0, 2);
-  assert.ok(!soorten([...vloer, vliering, op('kasttrap', 6, 2)]).includes('trap'), 'side by side');
-  assert.ok(soorten([...vloer, vliering, op('kasttrap', 7, 2)]).includes('trap'), 'a cell apart');
-  // Under it counts as well: a stair the vliering lies on does reach it.
-  assert.ok(!soorten([op('vliering', 0, 3), op('kasttrap', 0, 0)]).includes('trap'), 'underneath');
-  // The stair's top corner against the vliering's bottom corner is nothing.
-  assert.ok(soorten([op('vliering', 0, 3), op('kasttrap', 6, 0)]).includes('trap'), 'only the corners meet');
+  assert.ok(!soorten([op('kasttrap', 0, 0), op('vliering', 0, 4)]).includes('trap'), 'underneath');
+});
+
+test('nothing stands in front of the window', () => {
+  const voor = op('douche', RAAM.x, 0);
+  assert.deepEqual(faults(d, [voor]).filter((f) => f.kind === 'raam'), [{ kind: 'raam', stuk: stuk('douche') }]);
+  // Under the sill is fine: the worktop is a metre high and the window starts there.
+  assert.ok(!soorten([op('keuken', RAAM.x, 0)]).includes('raam'));
+});
+
+test('nothing is put down on the worktop or the sofa', () => {
+  assert.ok(soorten([op('keuken', 0, 0), op('berging', 0, 2)]).includes('erop'));
+  assert.ok(soorten([op('bank', 0, 0), op('berging', 1, 2)]).includes('erop'));
+  assert.ok(!soorten([op('techniek', 0, 0), op('berging', 0, 2)]).includes('erop'));
+});
+
+test('douche and wc stand side by side', () => {
+  assert.ok(soorten([op('douche', 0, 0), op('wc', 3, 0)]).includes('badkamer'));
+  assert.ok(!soorten([op('douche', 0, 0), op('wc', 2, 0)]).includes('badkamer'));
+  assert.ok(!soorten([op('douche', 0, 0)]).includes('badkamer'), 'not until both are in');
 });
 
 test('nothing above four metres', () => {
@@ -157,18 +174,23 @@ test('two pieces cannot be in one place', () => {
   assert.ok(!soorten([op('bank', 0, 0), op('techniek', 3, 0)]).includes('overlap'));
 });
 
-test('off balance: the same house turned end for end keeps every rule but one', () => {
-  const gespiegeld = oplossing.map((p) => ({ ...p, x: d.width - p.x - d.stukken[p.stuk]!.w }));
-  assert.deepEqual(faults(d, gespiegeld), [{ kind: 'balans', stuk: -1 }]);
-  assert.equal(balans(d, gespiegeld), 'neuszwaar');
-  assert.ok(!isSolved(d, gespiegeld));
+test('off balance: a house can keep every rule but that one', () => {
+  let scheef: Plaatsing[] | null = null;
+  elkeOplossing({ ...d, band: 100 }, (o) => {
+    const b = balans(d, o);
+    if (b === 'neuszwaar' || b === 'staartzwaar') { scheef = [...o]; return true; }
+    return false;
+  });
+  assert.ok(scheef);
+  assert.deepEqual(faults(d, scheef), [{ kind: 'balans', stuk: -1 }]);
+  assert.ok(!isSolved(d, scheef));
 });
 
 test('an unfinished house is not solved, however tidy', () => {
   assert.ok(!isSolved(d, []));
-  assert.ok(!isSolved(d, oplossing.slice(0, 8)));
-  // Nine placements of eight pieces is not nine pieces.
-  assert.ok(!isSolved(d, [...oplossing.slice(0, 8), oplossing[0]!]));
+  assert.ok(!isSolved(d, oplossing.slice(0, 7)));
+  // Eight placements of seven pieces is not eight pieces.
+  assert.ok(!isSolved(d, [...oplossing.slice(0, 7), oplossing[0]!]));
 });
 
 // ---------------------------------------------------------------- the balance
@@ -205,27 +227,20 @@ test('the band is tight: most houses that keep every other rule do not tow', () 
     if (balans(d, o) === 'netjes') netjes++;
     return false;
   });
-  assert.ok(alle > 1000, `plenty of ways to build it wrong (${alle})`);
+  assert.ok(alle > 50, `plenty of ways to build it wrong (${alle})`);
   assert.ok(goed > 0 && goed < alle / 4, `${goed} of ${alle} tow`);
-  assert.ok(netjes > 0 && netjes < alle / 8, `${netjes} of ${alle} tow tidily`);
+  assert.ok(netjes > 0 && netjes < alle / 6, `${netjes} of ${alle} tow tidily`);
 });
 
-test('packing the tray in order, heavy end wherever it falls, does not tow', () => {
-  // Floor pieces nose to tail in tray order, the rest wherever they first fit.
+test('packing the floor in tray order leaves the vliering nowhere to go', () => {
   const naief: Plaatsing[] = [];
   let x = 0;
   d.stukken.forEach((s, i) => {
-    if (s.eis !== 'vloer') return;
+    if (!opDeVloer(s)) return;
     naief.push({ stuk: i, x, y: 0 });
     x += s.w;
   });
-  for (const soort of ['vliering', 'kasttrap', 'berging', 'werkplek'] as const) {
-    const kan = plekken(d, naief, stuk(soort))
-      .filter((p) => !faults(d, [...naief, p]).some((f) => f.kind === 'trap'));
-    assert.ok(kan.length > 0, `${soort} fits somewhere`);
-    naief.push(kan[0]!);
-  }
-  assert.deepEqual(faults(d, naief), [{ kind: 'balans', stuk: -1 }]);
+  assert.deepEqual(plekken(d, naief, stuk('vliering')), []);
 });
 
 // ------------------------------------------------------------ dead space, stars
@@ -236,7 +251,7 @@ test('dead space is the empty cells that are not part of the room', () => {
   const spleet = [op('douche', 0, 0), op('wc', 3, 0), op('keuken', 5, 0), op('techniek', 10, 0)];
   assert.equal(lozeRuimte(d, spleet), 0, 'the slot is still open at the top');
   // A lid on the slot makes it a hole.
-  const dicht = [...spleet, op('berging', 0, 4)];
+  const dicht = [...spleet, op('vliering', 0, 4)];
   assert.deepEqual(lozeCellen(d, dicht), [2, 16, 30, 44]);
   assert.equal(lozeRuimte(d, dicht), 4);
 });
@@ -257,32 +272,14 @@ test('stars: one off for towing only just inside the band, and never below one',
   assert.equal(stars(SPELING + 1, 0, false), 1);
 });
 
-// --------------------------------------------------------------- the generator
+// ------------------------------------------------------------- the choosing
 
-test('every house the generator builds keeps every rule, for many seeds', () => {
-  for (let seed = 1; seed <= 400; seed++) {
-    const huis = bouw(DOORSNEDE, rng(seed));
-    assert.deepEqual(faults(DOORSNEDE, huis), [], `seed ${seed}`);
-    assert.ok(isSolved(DOORSNEDE, huis), `seed ${seed}`);
-  }
-});
-
-test('the generator is deterministic, and its par and solution agree', () => {
-  for (const seed of [1, 7, 512, 1205]) {
-    const a = generate(seed, 60);
-    const b = generate(seed, 60);
-    assert.deepEqual(a, b, `seed ${seed}`);
-    assert.ok(isSolved(a.doorsnede, a.oplossing), `seed ${seed}`);
-    assert.equal(a.par, lozeRuimte(a.doorsnede, a.oplossing), `seed ${seed}`);
-  }
-});
-
-test('the generator does not always build the same house', () => {
-  const huizen = new Set<string>();
-  for (let seed = 1; seed <= 60; seed++) {
-    huizen.add(bouw(DOORSNEDE, rng(seed)).map((p) => `${p.stuk}@${p.x},${p.y}`).sort().join(' '));
-  }
-  assert.ok(huizen.size >= 10, `${huizen.size} different houses in 60`);
+test('kies() looks at every house, and its par and solution agree', () => {
+  const a = kies();
+  assert.ok(a.huizen > 1, `${a.huizen} houses keep every rule`);
+  assert.ok(isSolved(a.doorsnede, a.oplossing));
+  assert.equal(a.par, lozeRuimte(a.doorsnede, a.oplossing));
+  assert.equal(balans(a.doorsnede, a.oplossing), 'netjes');
 });
 
 // ------------------------------------------------------------------ the solver
@@ -293,7 +290,7 @@ test('the solver finds a house on its own, so the level is provably solvable', (
   assert.ok(isSolved(d, gevonden));
 });
 
-test('par is not just the generator\'s best: no house at all is tighter', () => {
+test('par is the tightest house there is', () => {
   assert.equal(besteLoos(d), TUINHUIS_LEVEL.par);
 });
 
@@ -303,9 +300,9 @@ test('the solver says so when there is no house to find', () => {
   assert.equal(besteLoos({ ...d, as: -5 }), null);
 });
 
-test('hints build the stored house from the floor up, nine of them', () => {
+test('hints build the stored house from the floor up, eight of them', () => {
   let ps: Plaatsing[] = [];
-  for (let n = 0; n < 9; n++) {
+  for (let n = 0; n < 8; n++) {
     const volgende = hint(oplossing, ps);
     assert.ok(volgende, `hint ${n + 1}`);
     ps = pasHintToe(d, oplossing, ps);
@@ -315,7 +312,7 @@ test('hints build the stored house from the floor up, nine of them', () => {
   }
   assert.ok(isSolved(d, ps));
   assert.equal(hint(oplossing, ps), null);
-  assert.deepEqual(bouwvolgorde(oplossing).map((p) => p.y), [0, 0, 0, 0, 0, 2, 2, 4, 4]);
+  assert.deepEqual(bouwvolgorde(oplossing).map((p) => p.y), [0, 0, 0, 0, 0, 0, 2, 4]);
 });
 
 test('a hint clears out whatever is standing where its piece goes', () => {
@@ -447,13 +444,13 @@ test('scene: a drop near the edge is pulled inside the section', () => {
   assert.deepEqual(gezet(scene), [op('douche', 0, 0)]);
 });
 
-test('scene: H nine times builds the house, records it once, and Enter leaves', () => {
+test('scene: H eight times builds the house, records it once, and Enter leaves', () => {
   const { scene, save } = nieuw();
-  for (let n = 0; n < 9; n++) {
+  for (let n = 0; n < STUKKEN.length; n++) {
     assert.equal(save.get('tuinhuis'), undefined, 'not before it is finished');
     scene.update(1 / 60, context(stil, ['KeyH']));
     // Wiep may have something to say about the balance halfway.
-    if (n < 8) lees(scene);
+    if (n < STUKKEN.length - 1) lees(scene);
   }
   assert.ok(isSolved(d, gezet(scene)));
   assert.deepEqual(save.get('tuinhuis'), { swings: TUINHUIS_LEVEL.par, stars: 3 });
@@ -521,10 +518,10 @@ test('scene: draws inside the screen in every state without throwing', () => {
   scene.update(1 / 60, context({ x: 300, y: 60, clicked: true, released: true }));
   teken();                                            // a douche in mid air: faults showing
   scene.update(1 / 60, context(stil, ['KeyR']));
-  for (let n = 0; n < 9; n++) {
+  for (let n = 0; n < STUKKEN.length; n++) {
     scene.update(1 / 60, context(stil, ['KeyH']));
     teken();
-    if (n < 8) lees(scene);
+    if (n < STUKKEN.length - 1) lees(scene);
   }
   teken();                                            // the win panel
   assert.deepEqual(save.get('tuinhuis'), { swings: 0, stars: 3 });

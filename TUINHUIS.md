@@ -82,6 +82,13 @@ zijn het chassis. Wat overblijft is 14 × 6 om een huis in te proppen.
 | BERGING | 1,5 × 1,0 | vrij | 80 |
 | WERKPLEK | 1,5 × 1,0 | vrij | 90 |
 
+> **Herzien (november 2026):** zo gebouwd was het een stapel, geen huis — een
+> werkplek boven op de slaapvliering, en alles voor het raam. Nu: acht stukken,
+> geen werkplek. De vliering ligt onder het dak, de kasttrap is 2,0 hoog en
+> draagt hem, douche en wc staan naast elkaar, op bank en aanrecht staat niets,
+> en voor het raam (boven het aanrecht) mag niets staan. Keukenblok 1,5 breed,
+> berging 1,0 × 1,0, as op 3,75 m. Zie `src/puzzles/tuinhuis/model.ts`.
+
 Samen 68 van de 84 vakken. Het past, maar niet ruim, en niet op veel manieren.
 
 ### Twee regels, en ze knellen allebei
