@@ -414,7 +414,8 @@ Everything that was a design or a line in the plan and is now in the game:
 - **Six ventilation levels**: five plans, each with a later delivery date,
   and the boss.
 - **The outro**: the house at night with the lights on, Moeder's last word,
-  the gedicht scrolling, the video if `public/outro.mp4` exists, credits.
+  the gedicht scrolling (Pim's placeholder joke, kept on purpose), credits.
+  No video.
 - **Moeder and Wiep** have faces and say something after every phase. All of
   that copy is in `data/praatjes.ts` and `data/outro.ts`, and all of it is
   a draft.
@@ -482,10 +483,6 @@ The data is all in `data/`, so both are data edits rather than rewrites.
 - Final title
 - Final surface selection (needs floor plan)
 - Ceiling heights, window and door positions — from CamToPlan export plus video
-- Outro video from Pim, as `public/outro.mp4`
-- The gedicht, in `data/outro.ts`
-- Pim's read-through of `data/praatjes.ts`
-- What Moeder and Wiep actually look like (`scenes/portretten.ts` is a guess)
 - Box art and poster; og:image; CRT vignette
 
 

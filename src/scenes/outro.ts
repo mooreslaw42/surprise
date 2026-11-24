@@ -1,5 +1,5 @@
 import { BAAS, MENU } from '../data/liedjes.ts';
-import { AFTITELING, GEDICHT, GEDICHT_CONCEPT_REGEL, SLOT, VIDEO } from '../data/outro.ts';
+import { AFTITELING, GEDICHT, SLOT } from '../data/outro.ts';
 import { STAGES } from '../data/stages.ts';
 import type { Muziekkeuze } from '../engine/muziek.ts';
 import { C } from '../engine/palette.ts';
@@ -12,15 +12,15 @@ import { SPREKER_NAAM } from './portretten.ts';
 /**
  * After the last level: the house, finished, at night, with the lights on.
  *
- * Five beats, each ended with Enter. The house and the score; Moeder
- * getting the last word; the gedicht, scrolling; the video message, if
- * there is one; and the credits over the slow blues.
+ * Four beats, each ended with Enter. The house and the score; Moeder
+ * getting the last word; the gedicht, scrolling; and the credits over the
+ * slow blues.
  *
  * The plan says no sentiment, and this keeps to it until the gedicht, which
  * is Pim's and can be as sentimental as he likes.
  */
 
-type Fase = 'huis' | 'slot' | 'gedicht' | 'video' | 'aftiteling';
+type Fase = 'huis' | 'slot' | 'gedicht' | 'aftiteling';
 
 const REGEL_H = 12;
 const ROL = 11;           // pixels a second: slow enough to read aloud
@@ -34,8 +34,6 @@ export class OutroScene implements Scene {
   private sinds = 0;
   private beat = 0;
   private praatje: Dialogue | null = null;
-  private video: HTMLVideoElement | null = null;
-  private videoKlaar = false;
   private readonly vlokken: Vlok[] = [];
 
   constructor(save: Save) {
@@ -55,16 +53,11 @@ export class OutroScene implements Scene {
   }
 
   get muziek(): Muziekkeuze | null {
-    if (this.fase === 'video') return null;
     return this.fase === 'aftiteling' ? BAAS : MENU;
   }
 
   enter(ctx: SceneContext): void {
     ctx.geluid?.('fanfare');
-  }
-
-  exit(_ctx: SceneContext): void {
-    this.stopVideo();
   }
 
   private naar(fase: Fase): void {
@@ -75,42 +68,13 @@ export class OutroScene implements Scene {
       this.praatje = this.volgendeBeat();
       if (!this.praatje) this.naar('gedicht');
     } else if (fase === 'gedicht' && GEDICHT.length === 0) {
-      this.naar('video');
-    } else if (fase === 'video') {
-      this.startVideo();
+      this.naar('aftiteling');
     }
   }
 
   private volgendeBeat(): Dialogue | null {
     const beat = SLOT[this.beat];
     return beat ? new Dialogue(beat.tekst, SPREKER_NAAM[beat.wie]) : null;
-  }
-
-  /**
-   * The video sits over the canvas as a real element: a pixel buffer is no
-   * place to play a film. If the file is not there the element errors, and
-   * that is the whole of the missing-video handling.
-   */
-  private startVideo(): void {
-    this.videoKlaar = false;
-    if (typeof document === 'undefined') { this.videoKlaar = true; return; }
-    const v = document.createElement('video');
-    v.src = new URL(VIDEO, document.baseURI).href;
-    v.playsInline = true;
-    v.style.cssText =
-      'position:fixed;inset:0;width:100vw;height:100vh;background:#000;object-fit:contain;z-index:10;cursor:none';
-    const klaar = (): void => { this.videoKlaar = true; };
-    v.addEventListener('ended', klaar);
-    v.addEventListener('error', klaar);
-    document.body.appendChild(v);
-    this.video = v;
-    v.play().catch(klaar);
-  }
-
-  private stopVideo(): void {
-    this.video?.pause();
-    this.video?.remove();
-    this.video = null;
   }
 
   update(dt: number, ctx: SceneContext): void {
@@ -134,13 +98,7 @@ export class OutroScene implements Scene {
         }
         break;
       case 'gedicht':
-        if ((t > 1 && door) || t > this.gedichtDuur() + 4) this.naar('video');
-        break;
-      case 'video':
-        if (this.videoKlaar || ctx.input.justPressed('Escape') || (t > 1 && ctx.input.confirmed())) {
-          this.stopVideo();
-          this.naar('aftiteling');
-        }
+        if ((t > 1 && door) || t > this.gedichtDuur() + 4) this.naar('aftiteling');
         break;
       case 'aftiteling':
         if (t > 2 && (door || ctx.input.justPressed('Escape'))) ctx.pop();
@@ -157,12 +115,7 @@ export class OutroScene implements Scene {
     if (this.fase === 'gedicht') {
       this.drawNacht(screen, true);
       this.drawRol(screen, GEDICHT, t, C.KALK);
-      if (GEDICHT[0] === GEDICHT_CONCEPT_REGEL) screen.text('CONCEPT', WIDTH - 48, 4, C.ROESTROOD);
       this.drawEnter(screen, t > 1);
-      return;
-    }
-    if (this.fase === 'video') {
-      screen.clear(C.ZWART);
       return;
     }
     if (this.fase === 'aftiteling') {

@@ -1,8 +1,8 @@
 import type { Beat } from './praatjes.ts';
 
 /**
- * The end of the game, as copy. Everything in this file is Pim's to write;
- * what is here now is a stand-in so the outro can be seen running.
+ * The end of the game, as copy. Pim's own wording is in teksten.eigen.ts
+ * and wins over what is written here.
  */
 
 /**
@@ -21,16 +21,6 @@ export const GEDICHT: readonly string[] = [
   'VERVANG ZE IN SRC/DATA/OUTRO.TS',
   'EN DIT VERDWIJNT VANZELF.',
 ];
-
-/** While the gedicht still opens with this, the screen says CONCEPT. */
-export const GEDICHT_CONCEPT_REGEL = 'HIER KOMT HET GEDICHT.';
-
-/**
- * The video message. Put the file at public/outro.mp4 and it plays after the
- * gedicht, full window, with sound. No file, no video: the outro notices and
- * carries on to the credits.
- */
-export const VIDEO = 'outro.mp4';
 
 /** Said over the finished house, before the gedicht. Moeder gets the last word. */
 export const SLOT: readonly Beat[] = [
